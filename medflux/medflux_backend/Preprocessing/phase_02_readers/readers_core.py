@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import time
+import re
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 try:
     import fitz  # PyMuPDF
@@ -120,8 +121,10 @@ class UnifiedReaders:
         self._warnings: List[str] = []
         self._page_decisions: List[str] = []
         self._tables: List[TableRecord] = []
+        self._blocks: List[Dict[str, Any]] = []
         self._table_flags: Set[int] = set()
         self._table_candidates: Dict[int, Dict[str, float]] = {}
+        self._block_counter: int = 0
         self._t0 = time.time()
 
     # ------------------------------------------------------------------
@@ -132,19 +135,20 @@ class UnifiedReaders:
         self._warnings.clear()
         self._page_decisions.clear()
         self._tables.clear()
+        self._blocks.clear()
         self._table_flags.clear()
         self._table_candidates.clear()
+        self._block_counter = 0
         self._t0 = time.time()
 
     def _log_warning(self, code: str) -> None:
         if code not in self._warnings:
             self._warnings.append(code)
 
-    def _native_page_data(self, page) -> Dict[str, float]:
+    def _native_page_data(self, page, page_no: int) -> Dict[str, Any]:
         start = time.perf_counter()
         text = ""
-        block_count = 0
-        words = 0
+        blocks: List[Dict[str, Any]] = []
         try:
             text = page.get_text("text") or ""
         except Exception:
@@ -153,17 +157,15 @@ class UnifiedReaders:
             blocks_dict = page.get_text("dict") or {}
         except Exception:
             blocks_dict = {}
-        blocks = blocks_dict.get("blocks", []) if isinstance(blocks_dict, dict) else []
+        if isinstance(blocks_dict, dict):
+            try:
+                blocks = self._build_block_entries(blocks_dict, page_no)
+            except Exception:
+                blocks = []
         block_count = len(blocks)
         if not text and blocks:
-            try:
-                text = "\n".join(span.get("text", "") for block in blocks for line in block.get("lines", []) for span in line.get("spans", []))
-            except Exception:
-                text = ""
-        if text:
-            words = len(text.split())
-        else:
-            words = 0
+            text = "\n".join(entry.get("text_raw", "") for entry in blocks).strip()
+        words = len(text.split()) if text else 0
         conf = self._estimate_native_conf(text, block_count, words)
         elapsed = (time.perf_counter() - start) * 1000.0
         return {
@@ -172,7 +174,140 @@ class UnifiedReaders:
             "words": words,
             "block_count": block_count,
             "time_ms": elapsed,
+            "blocks": blocks,
         }
+
+    def _build_block_entries(self, blocks_dict: Dict[str, Any], page_no: int) -> List[Dict[str, Any]]:
+        entries: List[Dict[str, Any]] = []
+        blocks = blocks_dict.get("blocks") or []
+        for idx, block in enumerate(blocks):
+            if block.get("type") not in (None, 0):
+                continue
+            lines = block.get("lines") or []
+            text_lines: List[str] = []
+            font_sizes: List[float] = []
+            for line in lines:
+                spans = line.get("spans") or []
+                parts: List[str] = []
+                for span in spans:
+                    piece = span.get("text") or ""
+                    if piece:
+                        parts.append(piece)
+                    size = span.get("size")
+                    if size is not None:
+                        try:
+                            font_sizes.append(float(size))
+                        except Exception:
+                            continue
+                line_text = "".join(parts).strip("\n")
+                if line_text:
+                    text_lines.append(line_text)
+            text_raw = "\n".join(text_lines).strip()
+            if not text_raw:
+                continue
+            entry = {
+                "id": f"{page_no}-{idx}",
+                "page": page_no,
+                "text_raw": text_raw,
+                "text_lines": text_lines,
+                "bbox": list(block.get("bbox") or []),
+                "reading_order_index": None,
+                "is_heading_like": self._is_heading_like(text_raw, font_sizes, text_lines),
+                "is_list_like": self._is_list_like(text_raw),
+                "ocr_conf_avg": None,
+            }
+            entries.append(entry)
+        return entries
+
+    def _is_heading_like(self, text_raw: str, font_sizes: List[float], text_lines: List[str]) -> bool:
+        trimmed = text_raw.strip()
+        if not trimmed:
+            return False
+        words = trimmed.split()
+        if len(words) > 12:
+            return False
+        alpha_count = sum(1 for c in trimmed if c.isalpha())
+        upper_count = sum(1 for c in trimmed if c.isupper())
+        uppercase_ratio = (upper_count / alpha_count) if alpha_count else 0.0
+        max_size = max(font_sizes) if font_sizes else 0.0
+        mean_size = (sum(font_sizes) / len(font_sizes)) if font_sizes else 0.0
+        if uppercase_ratio >= 0.6 and len(words) <= 8:
+            return True
+        if max_size and max_size >= max(14.0, mean_size * 1.2):
+            return True
+        if len(text_lines) == 1 and len(words) <= 6 and uppercase_ratio >= 0.4:
+            return True
+        return False
+
+    def _is_list_like(self, text_raw: str) -> bool:
+        stripped = (text_raw or "").lstrip()
+        if not stripped:
+            return False
+        bullet_prefixes = ("- ", "* ", "+ ", "\u2022", "\u2022 ")
+        if stripped.startswith(bullet_prefixes):
+            return True
+        if re.match(r"^([0-9]+[\\).]|[a-zA-Z][\\).])\\s+", stripped):
+            return True
+        return False
+
+    def _record_page_blocks(
+        self,
+        page_no: int,
+        decision: str,
+        native_blocks: List[Dict[str, Any]],
+        final_text: str,
+        ocr_avg_conf: Optional[float],
+    ) -> None:
+        decision_lower = (decision or "").lower()
+        blocks_to_use = native_blocks or []
+        if blocks_to_use:
+            for block in blocks_to_use:
+                entry = {
+                    "id": block.get("id") or f"{page_no}-{self._block_counter}",
+                    "page": page_no,
+                    "text_raw": block.get("text_raw", ""),
+                    "text_lines": list(block.get("text_lines") or []),
+                    "bbox": list(block.get("bbox") or []),
+                    "reading_order_index": self._block_counter,
+                    "is_heading_like": bool(block.get("is_heading_like")),
+                    "is_list_like": bool(block.get("is_list_like")),
+                    "ocr_conf_avg": block.get("ocr_conf_avg"),
+                }
+                if "ocr" in decision_lower and ocr_avg_conf is not None:
+                    entry["ocr_conf_avg"] = ocr_avg_conf
+                self._blocks.append(entry)
+                self._block_counter += 1
+        else:
+            self._add_simple_block(page_no, final_text, decision, ocr_avg_conf)
+
+    def _add_simple_block(
+        self,
+        page_no: int,
+        text: str,
+        decision: str,
+        ocr_avg_conf: Optional[float],
+        bbox: Optional[List[float]] = None,
+    ) -> None:
+        stripped = (text or "").strip()
+        if not stripped:
+            return
+        lines = [line.strip() for line in stripped.splitlines() if line.strip()] or [stripped]
+        normalized_text = "\n".join(lines)
+        decision_lower = (decision or "").lower()
+        entry = {
+            "id": f"{page_no}-block-{self._block_counter}",
+            "page": page_no,
+            "text_raw": normalized_text,
+            "text_lines": lines,
+            "bbox": list(bbox) if bbox else None,
+            "reading_order_index": self._block_counter,
+            "is_heading_like": self._is_heading_like(normalized_text, [], lines),
+            "is_list_like": self._is_list_like(lines[0] if lines else normalized_text),
+            "ocr_conf_avg": ocr_avg_conf if (ocr_avg_conf is not None and "ocr" in decision_lower) else None,
+        }
+        self._blocks.append(entry)
+        self._block_counter += 1
+
 
     @staticmethod
     def _estimate_native_conf(text: str, block_count: int, words: int) -> float:
@@ -417,6 +552,7 @@ class UnifiedReaders:
             )
         )
         self._page_decisions.append("ocr")
+        self._add_simple_block(1, text, "ocr", conf)
 
     def _docx_native(self, path: Path) -> None:
         start = time.perf_counter()
@@ -440,6 +576,7 @@ class UnifiedReaders:
             )
         )
         self._page_decisions.append("native")
+        self._add_simple_block(1, text, "native", None)
 
     def _text_native(self, path: Path) -> None:
         start = time.perf_counter()
@@ -463,6 +600,7 @@ class UnifiedReaders:
             )
         )
         self._page_decisions.append("native")
+        self._add_simple_block(1, text, "native", None)
 
     def _fallback_pdf_native(self, path: Path) -> None:
         try:
@@ -484,6 +622,7 @@ class UnifiedReaders:
             )
         )
         self._page_decisions.append("native")
+        self._add_simple_block(1, text, "native", None)
 
     def _process_pdf(self, path: Path) -> None:
         if fitz is None:
@@ -502,7 +641,7 @@ class UnifiedReaders:
         mode = (self.opts.mode or "mixed").lower()
         for index, page in enumerate(doc):
             page_no = index + 1
-            native_data = self._native_page_data(page)
+            native_data = self._native_page_data(page, page_no)
             coverage, image_count = self._image_stats(page)
             native_data["coverage"] = coverage
             native_data["image_count"] = image_count
@@ -542,7 +681,14 @@ class UnifiedReaders:
             final_conf = native_conf
             final_words = native_words
             final_time = time_ms
+            native_blocks = native_data.get("blocks") or []
             ocr_data = ocr_lookup.get(page_no)
+            ocr_avg_conf = None
+            if ocr_data and ocr_data.get("avg_conf") is not None:
+                try:
+                    ocr_avg_conf = float(ocr_data.get("avg_conf") or 0.0)
+                except Exception:
+                    ocr_avg_conf = float(ocr_data.get("avg_conf"))
             if mode == "ocr":
                 final_text, final_conf, final_words, final_time = self._apply_ocr_result(native_text, ocr_data)
                 decision = "ocr"
@@ -571,6 +717,7 @@ class UnifiedReaders:
                 elif not native_text.strip():
                     final_text, final_conf, final_words, final_time = self._apply_ocr_result(native_text, ocr_data)
                     decision = "ocr"
+            self._record_page_blocks(page_no, decision, native_blocks, final_text, ocr_avg_conf)
             if not final_text.strip():
                 self._log_warning(f"empty_page_text:p{page_no}")
             self._records.append(
@@ -623,6 +770,7 @@ class UnifiedReaders:
             page_decisions=self._page_decisions,
         )
         summary_dict = asdict(summary)
+        summary_dict["text_blocks_count"] = len(self._blocks)
         summary_dict["table_pages"] = sorted(self._table_flags)
         summary_dict["table_stats"] = [
             {"page": int(page), **metrics}
@@ -666,6 +814,11 @@ class UnifiedReaders:
                     f"# file={record.file} page={record.page} source={record.source} conf={record.conf:.2f} time_ms={record.time_ms:.2f}\n"
                 )
                 handle.write(record.text.strip() + "\n\n")
+        blocks_path = self.readers_dir / "text_blocks.jsonl"
+        if self._blocks:
+            with open(blocks_path, "w", encoding="utf-8") as handle:
+                for block in self._blocks:
+                    handle.write(json.dumps(block, ensure_ascii=False) + "\n")
         tables_path = self.readers_dir / "tables.jsonl"
         if self._tables:
             with open(tables_path, "w", encoding="utf-8") as handle:
@@ -694,6 +847,7 @@ class UnifiedReaders:
             "tables_count": len(self._tables),
             "table_pages": sorted(self._table_flags),
             "table_stats": table_stats,
+            "text_blocks_count": len(self._blocks),
         }
         summary_path = self.readers_dir / "readers_summary.json"
         summary_path.write_text(json.dumps({"summary": summary}, ensure_ascii=False, indent=2), encoding="utf-8")

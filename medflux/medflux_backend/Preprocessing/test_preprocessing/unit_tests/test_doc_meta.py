@@ -28,3 +28,6 @@ def test_doc_meta_written(tmp_path, payload):
     assert doc_meta["file_type"] in {"txt", "pdf_text", "docx", "pdf_scan", "pdf_scan_hybrid", "image"}
     assert doc_meta["timings_ms"]["detect"] is not None
     assert doc_meta["detected_encodings"]["primary"] in {"utf-8", None}
+    text_blocks_file = (outdir / sample.stem / doc_meta["text_blocks_path"]).resolve()
+    assert text_blocks_file.exists()
+    assert doc_meta["text_blocks_count"] >= 1
