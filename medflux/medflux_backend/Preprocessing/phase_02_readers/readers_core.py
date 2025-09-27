@@ -141,6 +141,7 @@ class UnifiedReaders:
         self._table_candidates: Dict[int, Dict[str, float]] = {}
         self._page_language_hints: Dict[int, str] = {}
         self._page_locale_hints: Dict[int, str] = {}
+        self._tool_events: List[Dict[str, Any]] = []
         self._block_counter: int = 0
         self._t0 = time.time()
 
@@ -158,12 +159,28 @@ class UnifiedReaders:
         self._table_candidates.clear()
         self._page_language_hints.clear()
         self._page_locale_hints.clear()
+        self._tool_events.clear()
         self._block_counter = 0
         self._t0 = time.time()
 
     def _log_warning(self, code: str) -> None:
         if code not in self._warnings:
             self._warnings.append(code)
+
+    def _log_tool_event(
+        self,
+        step: str,
+        status: str,
+        page: Optional[int] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        entry: Dict[str, Any] = {"step": step, "status": status}
+        if page is not None:
+            entry["page"] = int(page)
+        if details:
+            entry["details"] = details
+        self._tool_events.append(entry)
+
     def _infer_language_hint(self, text: str) -> str:
         if not text:
             return 'unknown'
@@ -459,6 +476,7 @@ class UnifiedReaders:
         if table_text:
             record["table_text"] = table_text
         self._tables_raw.append(record)
+        self._log_tool_event("table_extract", status, page=page_no, details={"tool": extraction_tool})
 
 
     @staticmethod
@@ -531,9 +549,11 @@ class UnifiedReaders:
     def _run_ocr(self, pdf_path: Path, pages: List[int]) -> Dict[int, Dict[str, object]]:
         if pytesseract is None or Image is None:
             self._log_warning("ocr_unavailable")
+            self._log_tool_event("ocr_runner", "unavailable", details={"reason": "pytesseract_missing"})
             return {}
         if ocr_runner is None:
             self._log_warning("ocr_runner_missing")
+            self._log_tool_event("ocr_runner", "unavailable", details={"reason": "runner_missing"})
             return {}
         try:
             debug_dir = None
@@ -553,12 +573,15 @@ class UnifiedReaders:
             )
         except Exception as exc:  # pragma: no cover - external OCR errors
             self._log_warning(f"ocr_runner_error:{exc}")
+            self._log_tool_event("ocr_runner", "error", details={"error": str(exc), "pages": pages})
             return {}
         lookup: Dict[int, Dict[str, object]] = {}
         for item in results:
             page_no = int(item.get("page_no", 0) or 0)
             if page_no > 0:
                 lookup[page_no] = item
+        status = "ok" if lookup else "empty"
+        self._log_tool_event("ocr_runner", status, details={"pages": pages, "covered": sorted(lookup.keys()), "lang": self.opts.lang})
         return lookup
 
     def _apply_ocr_result(self, fallback_text: str, ocr_data: Optional[Dict[str, object]]) -> Tuple[str, float, int, float]:
@@ -719,12 +742,15 @@ class UnifiedReaders:
     def _ocr_image_file(self, path: Path) -> None:
         if Image is None or pytesseract is None:
             self._log_warning("image_ocr_unavailable")
+            self._log_tool_event("image_ocr", "unavailable")
             return
         start = time.perf_counter()
         try:
             image = Image.open(path).convert("RGB")
+            self._log_tool_event("image_open", "ok", details={"file": str(path)})
         except Exception as exc:
             self._log_warning(f"read_image_error:{exc}")
+            self._log_tool_event("image_open", "error", details={"file": str(path), "error": str(exc)})
             return
         try:
             cfg = f"-l {getattr(self.opts, 'lang', 'eng')} --oem {getattr(self.opts, 'oem', 3)} --psm {getattr(self.opts, 'psm', 6)}"
@@ -733,8 +759,10 @@ class UnifiedReaders:
             confs = data.get("conf", []) or []
             text = " \n".join(word for word in words if word and word.strip() and word != "-1")
             conf = _safe_avg_conf(confs)
+            self._log_tool_event("pytesseract", "ok", details={"file": str(path), "lang": getattr(self.opts, 'lang', 'eng')})
         except Exception as exc:
             self._log_warning(f"fallback_ocr_error:{exc}")
+            self._log_tool_event("pytesseract", "error", details={"file": str(path), "error": str(exc)})
             text, conf = "", 0.0
         elapsed = (time.perf_counter() - start) * 1000.0
         self._records.append(
@@ -758,10 +786,12 @@ class UnifiedReaders:
             text = read_docx_to_text(str(path))
         except Exception as exc:
             self._log_warning(f"docx_error:{exc}")
+            self._log_tool_event("docx_reader", "error", details={"file": str(path), "error": str(exc)})
             return
         elapsed = (time.perf_counter() - start) * 1000.0
         words = len(text.split()) if text else 0
         conf = 90.0 if text else 0.0
+        self._log_tool_event("docx_reader", "ok", details={"file": str(path), "words": words})
         self._records.append(
             PageRecord(
                 file=str(path),
@@ -782,10 +812,12 @@ class UnifiedReaders:
             text = Path(path).read_text("utf-8", errors="replace")
         except Exception as exc:
             self._log_warning(f"text_error:{exc}")
+            self._log_tool_event("text_reader", "error", details={"file": str(path), "error": str(exc)})
             return
         elapsed = (time.perf_counter() - start) * 1000.0
         words = len(text.split()) if text else 0
         conf = 92.0 if text else 0.0
+        self._log_tool_event("text_reader", "ok", details={"file": str(path), "words": words})
         self._records.append(
             PageRecord(
                 file=str(path),
@@ -805,9 +837,11 @@ class UnifiedReaders:
             text = read_pdf_text(str(path))
         except Exception as exc:
             self._log_warning(f"pdf_native_error:{exc}")
+            self._log_tool_event("pdf_native", "error", details={"file": str(path), "error": str(exc)})
             return
         words = len(text.split()) if text else 0
         conf = 80.0 if text else 0.0
+        self._log_tool_event("pdf_native", "ok", details={"file": str(path), "words": words})
         self._records.append(
             PageRecord(
                 file=str(path),
@@ -825,12 +859,15 @@ class UnifiedReaders:
     def _process_pdf(self, path: Path) -> None:
         if fitz is None:
             self._log_warning("pymupdf_missing")
+            self._log_tool_event("pymupdf", "missing", details={"file": str(path)})
             self._fallback_pdf_native(path)
             return
         try:
             doc = fitz.open(path)
+            self._log_tool_event("pymupdf_open", "ok", details={"file": str(path)})
         except Exception as exc:
             self._log_warning(f"pdf_open_error:{exc}")
+            self._log_tool_event("pymupdf_open", "error", details={"file": str(path), "error": str(exc)})
             self._fallback_pdf_native(path)
             return
         native_map: Dict[int, Dict[str, float]] = {}
@@ -983,9 +1020,12 @@ class UnifiedReaders:
             {"page": page, "locale": self._page_locale_hints.get(page, "unknown")}
             for page in sorted(self._page_locale_hints)
         ]
+        tool_log = [dict(event) for event in self._tool_events]
+        summary_dict["tool_log"] = tool_log
         return {
             "summary": summary_dict,
             "pages_count": len(self._page_decisions),
+            "tool_log": tool_log,
             "tables_count": len(self._tables),
             "tables_cells": sum(sum(len(row) for row in tbl.rows) for tbl in self._tables),
             "outdir": str(self.readers_dir),
@@ -1068,9 +1108,16 @@ class UnifiedReaders:
                 {"page": page, "locale": self._page_locale_hints.get(page, "unknown")}
                 for page in sorted(self._page_locale_hints)
             ],
+            "tool_log": [dict(event) for event in self._tool_events],
         }
         summary_path = self.readers_dir / "readers_summary.json"
-        summary_path.write_text(json.dumps({"summary": summary}, ensure_ascii=False, indent=2), encoding="utf-8")
+        payload = {"summary": summary, "tool_log": summary["tool_log"]}
+        summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        if self._tool_events:
+            log_path = self.readers_dir / "tool_log.jsonl"
+            with open(log_path, "w", encoding="utf-8") as handle:
+                for event in self._tool_events:
+                    handle.write(json.dumps(event, ensure_ascii=False) + "\n")
         try:
             _enrich_summary_on_disk(self.readers_dir, self.opts)
         except Exception as exc:

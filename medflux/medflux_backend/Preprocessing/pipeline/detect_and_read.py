@@ -223,6 +223,18 @@ def assemble_doc_meta(
     }
     if reader_summary.get("table_stats") is not None:
         doc_meta["table_stats"] = reader_summary.get("table_stats")
+    qa_flags = dict(reader_summary.get("qa_flags") or {})
+    warnings_list = list(reader_summary.get("warnings") or [])
+    doc_meta["qa"] = {
+        "needs_review": bool(qa_flags.get("manual_review")),
+        "pages": list(qa_flags.get("pages") or []),
+        "warnings": warnings_list,
+    }
+    doc_meta["processing_log"] = list(reader_summary.get("tool_log") or [])
+    if reader_summary.get("per_page_stats") is not None:
+        doc_meta["per_page_stats"] = reader_summary.get("per_page_stats")
+    if reader_summary.get("thresholds") is not None:
+        doc_meta["thresholds"] = reader_summary.get("thresholds")
     return doc_meta
 
 
@@ -267,11 +279,37 @@ def run_one(
     )
 
     readers_result = UnifiedReaders(outdir, options).process([input_path])
-    decision = {"file": str(input_path), **params, "summary": readers_result.get("summary", {})}
+    summary: Dict[str, Any] = dict(readers_result.get("summary", {}) or {})
+    tool_log = list(readers_result.get("tool_log") or summary.get("tool_log") or [])
+    if tool_log:
+        summary["tool_log"] = tool_log
+
+    summary_path = outdir / "readers" / "readers_summary.json"
+    qa_flags: Dict[str, Any] = {}
+    if summary_path.exists():
+        try:
+            payload = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary = dict(payload.get("summary", summary) or summary)
+            disk_tool_log = payload.get("tool_log")
+            if disk_tool_log:
+                tool_log = list(disk_tool_log)
+                summary["tool_log"] = tool_log
+            qa_flags = dict(payload.get("flags", {}) or {})
+            if "thresholds" in payload:
+                summary.setdefault("thresholds", payload.get("thresholds"))
+            if "per_page_stats" in payload:
+                summary.setdefault("per_page_stats", payload.get("per_page_stats"))
+        except Exception:
+            qa_flags = {}
+    summary.setdefault("warnings", list(summary.get("warnings", [])))
+    summary["qa_flags"] = qa_flags
+    summary.setdefault("tool_log", tool_log)
+
+    decision = {"file": str(input_path), **params, "summary": summary}
     (outdir / "detect_decision.json").write_text(
         json.dumps(decision, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    return decision, readers_result, outdir
+    return decision, {**readers_result, "summary": summary, "tool_log": tool_log}, outdir
 
 
 def parse_args() -> argparse.Namespace:

@@ -36,6 +36,10 @@ def test_doc_meta_written(tmp_path, payload):
     assert doc_meta["tables_raw_count"] >= 0
     assert doc_meta["detected_languages"]["by_page"]
     assert doc_meta["locale_hints"]["by_page"]
+    assert "qa" in doc_meta
+    assert isinstance(doc_meta["qa"]["warnings"], list)
+    assert "processing_log" in doc_meta
+    assert isinstance(doc_meta["processing_log"], list)
 
 
 def _baseline_reader_summary(pages: int) -> dict:
@@ -49,6 +53,11 @@ def _baseline_reader_summary(pages: int) -> dict:
         "lang_per_page": [],
         "locale_per_page": [],
         "timings_ms": {"total_ms": 10.0},
+        "warnings": [],
+        "tool_log": [],
+        "qa_flags": {"manual_review": False, "pages": []},
+        "per_page_stats": [],
+        "thresholds": {},
     }
 
 
@@ -88,6 +97,8 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     assert doc_meta["detected_languages"]["overall"] == ["de", "en"]
     for entry in doc_meta["detected_languages"]["by_page"]:
         assert entry["languages"] == ["de", "en"]
+    assert doc_meta["qa"]["needs_review"] is False
+    assert doc_meta["processing_log"] == []
 
 
 def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
@@ -104,6 +115,8 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
 
     assert doc_meta["detected_languages"]["overall"] == ["de", "en"]
     assert doc_meta["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
+    assert doc_meta["qa"]["needs_review"] is False
+    assert doc_meta["processing_log"] == []
 
 
 def test_split_lang_field_aliases():

@@ -40,30 +40,69 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 ### doc_meta.json language payload
 
 ```
+
 {
+
   "detected_languages": {
+
     "overall": ["de", "en"],
+
     "by_page": [
+
       {"page": 1, "languages": ["de"]},
+
       {"page": 2, "languages": ["de", "en"]}
+
     ]
+
   },
+
   "locale_hints": {
+
     "overall": "de",
+
     "by_page": [
+
       {"page": 1, "locale": "de"},
+
       {"page": 2, "locale": "mixed"}
+
     ]
-  }
+
+  },
+
+  "qa": {
+
+    "needs_review": false,
+
+    "pages": [],
+
+    "warnings": []
+
+  },
+
+  "processing_log": [
+
+    {"step": "pymupdf_open", "status": "ok"},
+
+    {"step": "ocr_runner", "status": "ok", "details": {"pages": [2, 8], "lang": "deu+eng"}},
+
+    {"step": "table_extract", "status": "fallback", "page": 2, "details": {"tool": "camelot"}}
+
+  ]
+
 }
+
 ```
 
 - `detected_languages.by_page` originates from reader heuristics (keywords, OCR tokens, block hints). Pages that only surface `unknown` fall back to the detector/CLI language defaults.
 - `detected_languages.overall` contains deduplicated language codes returned by the per-page hints or, when no confident hints exist, the fallback defaults.
 - `locale_hints.by_page` exposes lightweight number/date style detection per page (`de`, `en`, `mixed`, or `unknown`).
 - `locale_hints.overall` collapses all page hints to a single best guess, preferring confident page hits over `unknown` and resorting to `mixed` when conflicting evidence exists.
+- `qa.needs_review` surfaces the enrichment flags (warnings + per-page low confidence) so you can short-circuit manual validation when false.
+- `processing_log` lists the document-level tool chain (major readers, fallbacks, table extractors) so downstream stages understand how content was produced.
 
-Use these hints to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`).
+Use these hints and logs to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`).
 
 
 ## Running tests
