@@ -32,6 +32,9 @@ python -m medflux_backend.Preprocessing.pipeline.detect_and_read
 
 All output artefacts (reports, per-file summaries, raw readers output) end up inside the folder passed to --outdir.
 
+The detect phase now surfaces a lightweight table detector. Per-file summaries include a `table_stats` list and `table_pages` flag,
+and you can tune the heuristics via `--table-detect-min-area` and `--table-detect-max-cells` when running the CLI.
+
 ## Running tests
 
 `powershell

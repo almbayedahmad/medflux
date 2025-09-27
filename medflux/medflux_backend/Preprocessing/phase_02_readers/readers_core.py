@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import time
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 try:
     import fitz  # PyMuPDF
@@ -59,6 +59,8 @@ class ReaderOptions:
     tables_mode: str = "light"
     save_table_crops: bool = False
     tables_min_words: int = 12
+    table_detect_min_area: float = 9000.0
+    table_detect_max_cells: int = 600
     blocks_threshold: int = 3
     native_ocr_overlay: bool = False
     overlay_area_thr: float = 0.35
@@ -93,6 +95,7 @@ class TableRecord:
     page: int
     rows: List[List[str]]
     decision: str
+    metrics: Optional[Dict[str, float]] = None
 
 
 def _safe_avg_conf(conf_list) -> float:
@@ -117,6 +120,8 @@ class UnifiedReaders:
         self._warnings: List[str] = []
         self._page_decisions: List[str] = []
         self._tables: List[TableRecord] = []
+        self._table_flags: Set[int] = set()
+        self._table_candidates: Dict[int, Dict[str, float]] = {}
         self._t0 = time.time()
 
     # ------------------------------------------------------------------
@@ -127,6 +132,8 @@ class UnifiedReaders:
         self._warnings.clear()
         self._page_decisions.clear()
         self._tables.clear()
+        self._table_flags.clear()
+        self._table_candidates.clear()
         self._t0 = time.time()
 
     def _log_warning(self, code: str) -> None:
@@ -299,13 +306,18 @@ class UnifiedReaders:
         decision: str,
         ocr_data: Optional[Dict[str, object]],
     ) -> None:
+        mode_value = (self.opts.tables_mode or "off").lower()
         if extract_tables_from_image is None or np is None or fitz is None:
-            if (self.opts.tables_mode or "off").lower() != "off":
+            if mode_value != "off":
                 self._log_warning("tables_unavailable")
             return
-        if (self.opts.tables_mode or "off").lower() == "off":
+        if mode_value == "off":
             return
-        dpi_hint = int(ocr_data.get("dpi") or self.opts.dpi or 300) if ocr_data else max(self.opts.dpi, 220)
+        detect_only = mode_value in {"detect", "detect-only", "check", "flag"}
+        if detect_only:
+            dpi_hint = max(int(getattr(self.opts, "dpi", 220)) or 220, 220)
+        else:
+            dpi_hint = int(ocr_data.get("dpi") or self.opts.dpi or 300) if ocr_data else max(self.opts.dpi, 220)
         zoom = max(dpi_hint / 72.0, 2.0)
         try:
             pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
@@ -326,29 +338,52 @@ class UnifiedReaders:
             self._log_warning(f"table_np_error:p{page_no}:{exc}")
             return
         export_dir = None
-        if self.opts.save_table_crops:
+        if self.opts.save_table_crops and not detect_only:
             export_dir = str(self.readers_dir / "tables")
-        sensitivity = "high" if (self.opts.tables_mode or "light").lower() == "full" else "normal"
+        sensitivity = "high" if mode_value == "full" else "normal"
         try:
-            rows = extract_tables_from_image(
+            rows, metrics = extract_tables_from_image(
                 arr,
                 lang=self.opts.lang,
                 sensitivity=sensitivity,
                 export_dir=export_dir,
                 page_tag=f"{page_no:04d}",
                 allow_borderless=True,
+                ocr_cells=not detect_only,
             )
         except Exception as exc:
             self._log_warning(f"table_extract_error:p{page_no}:{exc}")
             return
         if not rows:
             return
-        min_words = max(int(getattr(self.opts, "tables_min_words", 0)), 0)
-        total_words = sum(len(str(cell).split()) for row in rows for cell in row)
-        if min_words and total_words < min_words:
-            return
-        table_record = TableRecord(file=str(pdf_path), page=page_no, rows=rows, decision=decision)
+        cell_count = int(metrics.get("cell_count", 0) or 0)
+        avg_cell_area = float(metrics.get("avg_cell_area", 0.0) or 0.0)
+        metrics_clean = {
+            "rows": int(metrics.get("rows", 0) or 0),
+            "cols": int(metrics.get("cols", 0) or 0),
+            "cell_count": cell_count,
+            "avg_cell_height": float(metrics.get("avg_cell_height", 0.0) or 0.0),
+            "avg_cell_width": float(metrics.get("avg_cell_width", 0.0) or 0.0),
+            "avg_cell_area": avg_cell_area,
+        }
+        if detect_only:
+            min_area = float(getattr(self.opts, "table_detect_min_area", 9000.0) or 0.0)
+            max_cells = int(getattr(self.opts, "table_detect_max_cells", 600) or 0)
+            if cell_count == 0 or cell_count > max_cells or avg_cell_area < min_area:
+                self._log_warning(
+                    f"table_candidate_filtered:p{page_no}:cells{cell_count}:area{avg_cell_area:.0f}"
+                )
+                return
+            rows = [["" for _ in row] for row in rows]
+        else:
+            min_words = max(int(getattr(self.opts, "tables_min_words", 0)), 0)
+            total_words = sum(len(str(cell).split()) for row in rows for cell in row)
+            if min_words and total_words < min_words:
+                return
+        table_record = TableRecord(file=str(pdf_path), page=page_no, rows=rows, decision=decision, metrics=metrics_clean)
         self._tables.append(table_record)
+        self._table_flags.add(page_no)
+        self._table_candidates[page_no] = metrics_clean
     def _ocr_image_file(self, path: Path) -> None:
         if Image is None or pytesseract is None:
             self._log_warning("image_ocr_unavailable")
@@ -587,8 +622,14 @@ class UnifiedReaders:
             timings_ms={"total_ms": total_ms},
             page_decisions=self._page_decisions,
         )
+        summary_dict = asdict(summary)
+        summary_dict["table_pages"] = sorted(self._table_flags)
+        summary_dict["table_stats"] = [
+            {"page": int(page), **metrics}
+            for page, metrics in sorted(self._table_candidates.items())
+        ]
         return {
-            "summary": asdict(summary),
+            "summary": summary_dict,
             "pages_count": len(self._page_decisions),
             "tables_count": len(self._tables),
             "tables_cells": sum(sum(len(row) for row in tbl.rows) for tbl in self._tables),
@@ -629,24 +670,20 @@ class UnifiedReaders:
         if self._tables:
             with open(tables_path, "w", encoding="utf-8") as handle:
                 for table in self._tables:
-                    handle.write(
-                        json.dumps(
-                            {
-                                "file": table.file,
-                                "page": table.page,
-                                "decision": table.decision,
-                                "rows": table.rows,
-                            },
-                            ensure_ascii=False,
-                        )
-                        + "\n"
-                    )
+                    payload = {"file": table.file, "page": table.page, "decision": table.decision, "rows": table.rows}
+                    if table.metrics:
+                        payload["metrics"] = table.metrics
+                    handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
             (self.readers_dir / "tables.json").write_text(
                 json.dumps({"tables": [asdict(table) for table in self._tables]}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
         avg_conf = _safe_avg_conf([record.conf for record in self._records])
         total_ms = (time.time() - self._t0) * 1000.0
+        table_stats = [
+            {"page": int(page), **metrics}
+            for page, metrics in sorted(self._table_candidates.items())
+        ]
         summary = {
             "files": list({record.file for record in self._records}) or [str(p) for p in inputs],
             "page_count": len(self._page_decisions),
@@ -655,6 +692,8 @@ class UnifiedReaders:
             "timings_ms": {"total_ms": total_ms},
             "page_decisions": self._page_decisions,
             "tables_count": len(self._tables),
+            "table_pages": sorted(self._table_flags),
+            "table_stats": table_stats,
         }
         summary_path = self.readers_dir / "readers_summary.json"
         summary_path.write_text(json.dumps({"summary": summary}, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -664,7 +703,6 @@ class UnifiedReaders:
             self._log_warning(f"enrich_error:{exc}")
 
 
-# === auto-added: enrich readers_summary with per-page statistics and review flags ===
 def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
     """Enrich readers_summary.json with per-page statistics and review flags."""
     import csv

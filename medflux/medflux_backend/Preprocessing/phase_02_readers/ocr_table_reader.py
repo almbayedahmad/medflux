@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 try:
@@ -86,70 +86,125 @@ def extract_tables_from_image(
     export_dir: Optional[str] = None,
     page_tag: Optional[str] = None,
     allow_borderless: bool = True,
-) -> List[List[str]]:
+    ocr_cells: bool = True,
+) -> Tuple[List[List[str]], Dict[str, float]]:
     """
     Detect a simple table grid and return it as rows of cell text (rows -> cells).
     Runs without Tesseract (cells become empty strings) and saves a diagnostic PNG
     when export_dir/page_tag is supplied.
+    When ocr_cells is False, skips per-cell OCR and only flags table layout.
+    Returns both the detected cells and basic grid metrics for downstream filters.
     """
     _ensure_cv2()
 
     export_root: Optional[Path] = None
     if export_dir:
-        export_root = Path(export_dir); _safe_mkdir(export_root)
-        if page_tag: _safe_mkdir(export_root / "tables_pages")
+        export_root = Path(export_dir)
+        _safe_mkdir(export_root)
+        if page_tag:
+            _safe_mkdir(export_root / "tables_pages")
 
     gray = _to_gray(img)
     binv = _binarize(gray)
     horiz, vert, _ = _extract_line_maps(binv, sensitivity=sensitivity)
 
     if np.count_nonzero(horiz) == 0 and np.count_nonzero(vert) == 0:
-        if allow_borderless:
-            if export_root is not None and page_tag:
-                try: cv2.imwrite(str((export_root / "tables_pages" / f"{page_tag}.png").resolve()), img)
-                except Exception: pass
-            return []
+        if allow_borderless and export_root is not None and page_tag:
+            try:
+                cv2.imwrite(str((export_root / "tables_pages" / f"{page_tag}.png").resolve()), img)
+            except Exception:
+                pass
+        return [], {
+            "rows": 0,
+            "cols": 0,
+            "cell_count": 0,
+            "avg_cell_height": 0.0,
+            "avg_cell_width": 0.0,
+            "avg_cell_area": 0.0,
+        }
 
     row_lines = _project_peaks(horiz, axis=1, min_gap=3)
-    col_lines = _project_peaks(vert,  axis=0, min_gap=3)
+    col_lines = _project_peaks(vert, axis=0, min_gap=3)
 
     if len(row_lines) < 2 or len(col_lines) < 2:
         if export_root is not None and page_tag:
-            try: cv2.imwrite(str((export_root / "tables_pages" / f"{page_tag}.png").resolve()), img)
-            except Exception: pass
-        return []
+            try:
+                cv2.imwrite(str((export_root / "tables_pages" / f"{page_tag}.png").resolve()), img)
+            except Exception:
+                pass
+        return [], {
+            "rows": max(len(row_lines) - 1, 0),
+            "cols": max(len(col_lines) - 1, 0),
+            "cell_count": 0,
+            "avg_cell_height": 0.0,
+            "avg_cell_width": 0.0,
+            "avg_cell_area": 0.0,
+        }
 
     def _dedup(vals: List[int], tol: int = 2) -> List[int]:
-        if not vals: return vals
-        vals = sorted(vals); keep = [vals[0]]
+        if not vals:
+            return vals
+        vals = sorted(vals)
+        keep = [vals[0]]
         for v in vals[1:]:
-            if abs(v - keep[-1]) > tol: keep.append(v)
+            if abs(v - keep[-1]) > tol:
+                keep.append(v)
         return keep
 
     row_lines = _dedup(row_lines, 2)
     col_lines = _dedup(col_lines, 2)
 
+    row_count = max(len(row_lines) - 1, 0)
+    col_count = max(len(col_lines) - 1, 0)
+    if row_count == 0 or col_count == 0:
+        return [], {
+            "rows": row_count,
+            "cols": col_count,
+            "cell_count": 0,
+            "avg_cell_height": 0.0,
+            "avg_cell_width": 0.0,
+            "avg_cell_area": 0.0,
+        }
+
+    span_height = float(row_lines[-1] - row_lines[0]) if row_count else 0.0
+    span_width = float(col_lines[-1] - col_lines[0]) if col_count else 0.0
+    avg_cell_height = span_height / row_count if row_count else 0.0
+    avg_cell_width = span_width / col_count if col_count else 0.0
+    metrics: Dict[str, float] = {
+        "rows": float(row_count),
+        "cols": float(col_count),
+        "cell_count": float(row_count * col_count),
+        "avg_cell_height": avg_cell_height,
+        "avg_cell_width": avg_cell_width,
+        "avg_cell_area": avg_cell_height * avg_cell_width,
+    }
+
     rows_text: List[List[str]] = []
-    for r in range(len(row_lines) - 1):
+    for r in range(row_count):
         y1, y2 = row_lines[r], row_lines[r + 1]
         row_cells: List[str] = []
-        for c in range(len(col_lines) - 1):
+        for c in range(col_count):
             x1, x2 = col_lines[c], col_lines[c + 1]
             cell = _crop_cell(gray, y1, y2, x1, x2, pad=1)
-            row_cells.append("" if cell.size == 0 else _ocr_cell(cell, lang=lang))
+            if cell.size == 0 or not ocr_cells:
+                row_cells.append("")
+            else:
+                row_cells.append(_ocr_cell(cell, lang=lang))
         rows_text.append(row_cells)
 
     if export_root is not None:
         try:
             vis = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-            for y in row_lines: cv2.line(vis, (0, y), (vis.shape[1]-1, y), (0,255,0), 1)
-            for x in col_lines: cv2.line(vis, (x, 0), (x, vis.shape[0]-1), (255,0,0), 1)
+            for y in row_lines:
+                cv2.line(vis, (0, y), (vis.shape[1] - 1, y), (0, 255, 0), 1)
+            for x in col_lines:
+                cv2.line(vis, (x, 0), (x, vis.shape[0] - 1), (255, 0, 0), 1)
             outpng = (export_root / ("tables_pages" if page_tag else ".") / (f"{page_tag}.png" if page_tag else "tables_debug.png")).resolve()
             cv2.imwrite(str(outpng), vis)
         except Exception:
             pass
 
-    return rows_text
+    return rows_text, metrics
 
 
 

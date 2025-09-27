@@ -63,6 +63,8 @@ def run_one(input_path: Path, outdir_base: Path, params: Dict[str, Any], args: a
         tables_mode=params.get("tables_mode", args.tables_default),
         save_table_crops=args.save_table_crops,
         tables_min_words=args.tables_min_words,
+        table_detect_min_area=args.table_detect_min_area,
+        table_detect_max_cells=args.table_detect_max_cells,
         blocks_threshold=params.get("blocks_threshold", args.blocks_threshold),
         native_ocr_overlay=True,
         overlay_area_thr=0.12,
@@ -90,9 +92,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pre", action="store_true")
     parser.add_argument("--export-xlsx", action="store_true")
     parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--tables-default", default="light")
+    parser.add_argument("--tables-default", default="detect")
     parser.add_argument("--save-table-crops", action="store_true")
     parser.add_argument("--tables-min-words", type=int, default=12)
+    parser.add_argument("--table-detect-min-area", type=float, default=9000.0)
+    parser.add_argument("--table-detect-max-cells", type=int, default=600)
     return parser.parse_args()
 
 

@@ -23,7 +23,7 @@ DEFAULT_RECO: Dict[str, Any] = {
     "mode": "native",
     "dpi": 200,
     "psm": 6,
-    "tables_mode": "light",
+    "tables_mode": "detect",
     "lang": "deu+eng",
 }
 
@@ -225,11 +225,11 @@ def detect_file_type(
         confidence = float(meta.get("confidence", 0.0))
         if scanned is True:
             file_type = FileType.PDF_SCANNED
-            recommended: Dict[str, Any] = {"mode": "ocr", "dpi": 320, "psm": 6, "tables_mode": "light", "lang": "deu+eng"}
+            recommended: Dict[str, Any] = {"mode": "ocr", "dpi": 320, "psm": 6, "tables_mode": "detect", "lang": "deu+eng"}
             ocr_rec = True
         elif mixed:
             file_type = FileType.PDF_MIXED
-            recommended = {"mode": "mixed", "dpi": 300, "psm": 6, "tables_mode": "light", "lang": "deu+eng"}
+            recommended = {"mode": "mixed", "dpi": 300, "psm": 6, "tables_mode": "detect", "lang": "deu+eng"}
             ocr_rec = True
         else:
             file_type = FileType.PDF_TEXT
@@ -255,7 +255,7 @@ def detect_file_type(
         )
 
     if ext in DOCX_EXTS or (mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"):
-        recommended = {"mode": "native", "tables_mode": "light", "lang": "deu+eng"}
+        recommended = {"mode": "native", "tables_mode": "detect", "lang": "deu+eng"}
         return FileTypeResult(path, ext, mime, FileType.DOCX, False, {"note": "docx"}, confidence=0.95, recommended=recommended)
 
     if ext in TXT_EXTS or (mime and (mime.startswith("text/") or "json" in mime or "yaml" in mime or "csv" in mime)):
@@ -263,7 +263,7 @@ def detect_file_type(
         return FileTypeResult(path, ext, mime, FileType.TXT, False, {"note": "text"}, confidence=0.95, recommended=recommended)
 
     if ext in IMAGE_EXTS or (mime and mime.startswith("image/")):
-        recommended = {"mode": "ocr", "dpi": 320, "psm": 6, "tables_mode": "light", "lang": "deu+eng"}
+        recommended = {"mode": "ocr", "dpi": 320, "psm": 6, "tables_mode": "detect", "lang": "deu+eng"}
         return FileTypeResult(path, ext, mime, FileType.IMAGE, True, {"note": "image"}, confidence=0.95, recommended=recommended)
 
     return FileTypeResult(
@@ -274,7 +274,7 @@ def detect_file_type(
         False,
         {"note": "unknown"},
         confidence=0.3,
-        recommended={"mode": "mixed", "tables_mode": "light", "lang": "deu+eng"},
+        recommended={"mode": "mixed", "tables_mode": "detect", "lang": "deu+eng"},
     )
 
 
