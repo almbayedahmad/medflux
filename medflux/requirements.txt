@@ -10,6 +10,6 @@ python-docx==1.2.0
 pymupdf
 Pillow
 chardet
-numpy==1.26.4
-opencv-python-headless==4.10.0.84
+numpy>=1.26.4
+opencv-python-headless>=4.10.0.84
 pytesseract==0.3.13
