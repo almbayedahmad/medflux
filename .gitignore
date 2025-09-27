@@ -1,0 +1,15 @@
+# Bytecode caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+C:/venvs/
+
+# Local pipeline artefacts
+output/
+backend/Preprocessing/test_preprocessing/results_tests/__pycache__/
+
+# Logs / temp files
+*.log
+*.tmp
+
