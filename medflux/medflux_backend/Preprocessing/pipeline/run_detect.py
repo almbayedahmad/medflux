@@ -6,10 +6,8 @@ Simple runner for the improved detector with CLI flags to tune sampling and sens
 
 import json
 import argparse
-from pathlib import Path
-
-from .detector_improved import (
-    detect_many_improved,
+from ..phase_00_detect_type.file_type_detector import (
+    detect_many,
     DEFAULT_SAMPLE_PAGES,
     DEFAULT_TOPK_IMAGE_PAGES,
     DEFAULT_IMG_AREA_THR,
@@ -29,7 +27,7 @@ def main():
     ap.add_argument("--blocks-th", type=int, default=DEFAULT_BLOCKS_THR)
     args = ap.parse_args()
 
-    res = detect_many_improved(
+    res = detect_many(
         args.paths,
         sample_pages=args.sample_pages,
         topk_image_pages=args.topk_image_pages,
