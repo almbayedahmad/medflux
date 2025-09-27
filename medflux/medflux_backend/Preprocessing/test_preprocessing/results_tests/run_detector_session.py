@@ -1,6 +1,6 @@
 import argparse, json, time
 from pathlib import Path
-from backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
+from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
 
 def main():
     ap = argparse.ArgumentParser()

@@ -38,37 +38,11 @@ def _load_unified_text(readers_dir: Path) -> str:
     return ""
 
 # ===================== Detection (robust import) =====================
-_detect = None
-try:
-    from backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type as _detect
-except Exception:
-    try:
-        from file_type_detector import detect_file_type as _detect
-    except Exception:
-        _detect = None
+from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
 
-def _fallback_detect(file_path: Path) -> dict:
-    ext = file_path.suffix.lower()
-    mime, _ = mimetypes.guess_type(str(file_path))
-    kind = "docx" if ext == ".docx" else ("pdf" if ext == ".pdf" else ("image" if ext in {".png",".jpg",".jpeg",".tif",".tiff"} else "unknown"))
-    return {
-        "file_path": str(file_path),
-        "ext": ext,
-        "mime": mime or "application/octet-stream",
-        "file_type": kind,
-        "recommended": {
-            "mode": "native" if kind in {"docx"} else ("mixed" if kind == "pdf" else "ocr"),
-            "lang": "deu+eng",
-            "dpi": 300,
-            "psm": 6,
-            "tables_mode": "light"
-        }
-    }
 
 def run_detection(file_path: Path) -> dict:
-    if _detect is None:
-        return _fallback_detect(file_path)
-    res = _detect(file_path)  # May return a dataclass instance
+    res = detect_file_type(file_path)  # May return a dataclass instance
     try:
         res = asdict(res)
     except Exception:
@@ -76,7 +50,7 @@ def run_detection(file_path: Path) -> dict:
     return _convert(res)
 
 # ===================== Readers =====================
-from backend.Preprocessing.phase_02_readers.readers_core import UnifiedReaders, ReaderOptions
+from medflux_backend.Preprocessing.phase_02_readers.readers_core import UnifiedReaders, ReaderOptions
 
 def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> dict:
     opts = ReaderOptions(
@@ -101,10 +75,10 @@ def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> 
 # Import the normalisation module when available; otherwise use the unified_text fallback
 _run_encoding = None
 try:
-    from backend.Preprocessing.phase_01_encoding.encoding_core import run_encoding as _run_encoding
+    from medflux_backend.Preprocessing.phase_01_encoding.encoding_core import run_encoding as _run_encoding
 except Exception:
     try:
-        from backend.Preprocessing.phase_01_encoding.encoder import encode_file as _run_encoding
+        from medflux_backend.Preprocessing.phase_01_encoding.encoder import encode_file as _run_encoding
     except Exception:
         _run_encoding = None
 

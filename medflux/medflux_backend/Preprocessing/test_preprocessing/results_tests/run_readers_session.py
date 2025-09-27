@@ -1,7 +1,7 @@
 import argparse, time, json
 from pathlib import Path
 from dataclasses import asdict
-from backend.Preprocessing.phase_02_readers.readers_core import UnifiedReaders, ReaderOptions
+from medflux_backend.Preprocessing.phase_02_readers.readers_core import UnifiedReaders, ReaderOptions
 
 
 def _convert(obj):
