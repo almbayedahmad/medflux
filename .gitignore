@@ -1,0 +1,10 @@
+# Ignore everything outside the Medflux project tree
+*
+*/
+!.gitignore
+!OneDrive/
+OneDrive/*
+!OneDrive/Desktop/
+OneDrive/Desktop/*
+!OneDrive/Desktop/Medflux/
+!OneDrive/Desktop/Medflux/**
