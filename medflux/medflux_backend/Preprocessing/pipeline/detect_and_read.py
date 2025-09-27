@@ -2,8 +2,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -11,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
 from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
+from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
 
 
 def quick_detect(input_path: Path) -> Dict[str, Any]:
@@ -24,6 +26,7 @@ def quick_detect(input_path: Path) -> Dict[str, Any]:
         "tables_mode": recommended.get("tables_mode", "light"),
         "file_type": result.file_type.value,
         "confidence": result.confidence,
+        "details": result.details or {},
     }
 
 
@@ -45,7 +48,111 @@ def decide_params(meta: Dict[str, Any], args: argparse.Namespace) -> Dict[str, A
     }
 
 
-def run_one(input_path: Path, outdir_base: Path, params: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
+def detect_encoding_meta(input_path: Path, file_type: str) -> Dict[str, Any]:
+    """Return a normalised encoding payload for doc_meta."""
+    payload: Dict[str, Any] = {
+        "primary": None,
+        "confidence": None,
+        "bom": False,
+        "is_utf8": None,
+        "sample_len": 0,
+    }
+    if file_type in {"txt"}:
+        info = detect_text_encoding(str(input_path))
+        payload.update(
+            {
+                "primary": info.encoding,
+                "confidence": info.confidence,
+                "bom": info.bom,
+                "is_utf8": info.is_utf8,
+                "sample_len": info.sample_len,
+            }
+        )
+    return payload
+
+
+def map_file_type_for_meta(raw: str) -> str:
+    mapping = {
+        "pdf_text": "pdf_text",
+        "pdf_scanned": "pdf_scan",
+        "pdf_mixed": "pdf_scan_hybrid",
+        "docx": "docx",
+        "image": "image",
+        "txt": "txt",
+    }
+    return mapping.get((raw or "").lower(), raw or "unknown")
+
+
+def assemble_doc_meta(
+    input_path: Path,
+    detect_meta: Dict[str, Any],
+    decision: Dict[str, Any],
+    encoding_meta: Dict[str, Any],
+    reader_summary: Dict[str, Any],
+    timings_ms: Dict[str, Any],
+) -> Dict[str, Any]:
+    pages_count = int(reader_summary.get("page_count") or 0)
+    page_decisions: List[str] = list(reader_summary.get("page_decisions") or [])
+    has_ocr = any("ocr" in (entry or "").lower() for entry in page_decisions)
+    avg_conf_all = float(reader_summary.get("avg_conf") or 0.0)
+    avg_ocr_conf = avg_conf_all if has_ocr else 0.0
+
+    lang_field = decision.get("lang") or detect_meta.get("lang") or ""
+    languages_overall = [entry.strip() for entry in lang_field.split("+") if entry.strip()]
+    if not languages_overall:
+        languages_overall = ["und"]
+    languages_by_page = [
+        {"page": idx + 1, "languages": languages_overall}
+        for idx in range(pages_count)
+    ]
+
+    timings_payload: Dict[str, Any] = {
+        "detect": _maybe_round(timings_ms.get("detect")),
+        "encoding": _maybe_round(timings_ms.get("encoding")),
+        "readers": _maybe_round(timings_ms.get("readers")),
+        "cleaning": timings_ms.get("cleaning"),
+        "normalization": timings_ms.get("normalization"),
+        "segmentation": timings_ms.get("segmentation"),
+        "merge": timings_ms.get("merge"),
+    }
+    total_ms = sum(
+        value for value in timings_payload.values() if isinstance(value, (int, float))
+    )
+    timings_payload["total"] = _maybe_round(total_ms)
+
+    doc_meta = {
+        "file_name": input_path.name,
+        "file_type": map_file_type_for_meta(detect_meta.get("file_type")),
+        "pages_count": pages_count,
+        "detected_encodings": encoding_meta,
+        "detected_languages": {
+            "overall": languages_overall,
+            "by_page": languages_by_page,
+        },
+        "has_ocr": has_ocr,
+        "avg_ocr_conf": avg_ocr_conf,
+        "table_pages": reader_summary.get("table_pages", []),
+        "timings_ms": timings_payload,
+    }
+    if reader_summary.get("table_stats") is not None:
+        doc_meta["table_stats"] = reader_summary.get("table_stats")
+    return doc_meta
+
+
+def _maybe_round(value: Any, digits: int = 2) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return round(float(value), digits)
+    return value
+
+
+def run_one(
+    input_path: Path,
+    outdir_base: Path,
+    params: Dict[str, Any],
+    args: argparse.Namespace,
+) -> Tuple[Dict[str, Any], Dict[str, Any], Path]:
     outdir = outdir_base / input_path.stem
     outdir.mkdir(parents=True, exist_ok=True)
 
@@ -72,10 +179,12 @@ def run_one(input_path: Path, outdir_base: Path, params: Dict[str, Any], args: a
         overlay_if_any_image=True,
     )
 
-    result = UnifiedReaders(outdir, options).process([input_path])
-    decision = {"file": str(input_path), **params, "summary": result.get("summary", {})}
-    (outdir / "detect_decision.json").write_text(json.dumps(decision, ensure_ascii=False, indent=2), encoding="utf-8")
-    return decision
+    readers_result = UnifiedReaders(outdir, options).process([input_path])
+    decision = {"file": str(input_path), **params, "summary": readers_result.get("summary", {})}
+    (outdir / "detect_decision.json").write_text(
+        json.dumps(decision, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return decision, readers_result, outdir
 
 
 def parse_args() -> argparse.Namespace:
@@ -105,15 +214,55 @@ def main() -> None:
     outdir_base = Path(args.outdir)
     outdir_base.mkdir(parents=True, exist_ok=True)
 
-    decisions = []
+    decisions: List[Dict[str, Any]] = []
+    metadata_entries: List[Dict[str, Any]] = []
+
     for raw_input in args.inputs:
         input_path = Path(raw_input)
-        meta = quick_detect(input_path)
-        params = decide_params(meta, args)
-        decisions.append(run_one(input_path, outdir_base, params, args))
+
+        timings: Dict[str, Any] = {
+            "cleaning": None,
+            "normalization": None,
+            "segmentation": None,
+            "merge": None,
+        }
+
+        detect_start = time.perf_counter()
+        detect_meta = quick_detect(input_path)
+        timings["detect"] = (time.perf_counter() - detect_start) * 1000.0
+
+        encoding_start = time.perf_counter()
+        encoding_meta = detect_encoding_meta(input_path, detect_meta.get("file_type", ""))
+        timings["encoding"] = (time.perf_counter() - encoding_start) * 1000.0
+
+        params = decide_params(detect_meta, args)
+
+        readers_start = time.perf_counter()
+        decision, readers_result, file_outdir = run_one(input_path, outdir_base, params, args)
+        readers_elapsed = (time.perf_counter() - readers_start) * 1000.0
+        summary = decision.get("summary", {})
+        timings["readers"] = summary.get("timings_ms", {}).get("total_ms", readers_elapsed)
+
+        doc_meta = assemble_doc_meta(
+            input_path=input_path,
+            detect_meta=detect_meta,
+            decision=decision,
+            encoding_meta=encoding_meta,
+            reader_summary=summary,
+            timings_ms=timings,
+        )
+        (file_outdir / "doc_meta.json").write_text(
+            json.dumps(doc_meta, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+        decisions.append(decision)
+        metadata_entries.append(doc_meta)
 
     report_path = outdir_base / "detect_and_read_report.json"
-    report_path.write_text(json.dumps({"decisions": decisions}, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps({"decisions": decisions, "doc_meta": metadata_entries}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     print({"outdir": str(outdir_base), "count": len(decisions)})
 
 
