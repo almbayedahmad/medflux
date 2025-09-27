@@ -34,3 +34,79 @@ def test_doc_meta_written(tmp_path, payload):
     tables_raw_file = (outdir / sample.stem / doc_meta["tables_raw_path"]).resolve()
     assert tables_raw_file.exists()
     assert doc_meta["tables_raw_count"] >= 0
+    assert doc_meta["detected_languages"]["by_page"]
+    assert doc_meta["locale_hints"]["by_page"]
+
+
+def _baseline_reader_summary(pages: int) -> dict:
+    return {
+        "page_count": pages,
+        "page_decisions": ["native"] * pages,
+        "avg_conf": 90.0,
+        "text_blocks_count": 0,
+        "tables_raw_count": 0,
+        "table_pages": [],
+        "lang_per_page": [],
+        "locale_per_page": [],
+        "timings_ms": {"total_ms": 10.0},
+    }
+
+
+def _baseline_encoding_meta() -> dict:
+    return {
+        "primary": None,
+        "confidence": None,
+        "bom": False,
+        "is_utf8": None,
+        "sample_len": 0,
+    }
+
+
+def _baseline_timings() -> dict:
+    return {
+        "detect": 1.0,
+        "encoding": 0.5,
+        "readers": 2.0,
+        "cleaning": None,
+        "normalization": None,
+        "segmentation": None,
+        "merge": None,
+    }
+
+
+def test_doc_meta_falls_back_to_decision_language(tmp_path):
+    summary = _baseline_reader_summary(pages=2)
+    doc_meta = detect_and_read.assemble_doc_meta(
+        input_path=tmp_path / 'sample.pdf',
+        detect_meta={"file_type": "pdf_text"},
+        decision={"lang": "deu+eng"},
+        encoding_meta=_baseline_encoding_meta(),
+        reader_summary=summary,
+        timings_ms=_baseline_timings(),
+    )
+
+    assert doc_meta["detected_languages"]["overall"] == ["de", "en"]
+    for entry in doc_meta["detected_languages"]["by_page"]:
+        assert entry["languages"] == ["de", "en"]
+
+
+def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
+    summary = _baseline_reader_summary(pages=1)
+    summary["lang_per_page"] = [{"page": 1, "lang": "unknown"}]
+    doc_meta = detect_and_read.assemble_doc_meta(
+        input_path=tmp_path / 'sample.pdf',
+        detect_meta={"file_type": "pdf_text"},
+        decision={"lang": "deu+eng"},
+        encoding_meta=_baseline_encoding_meta(),
+        reader_summary=summary,
+        timings_ms=_baseline_timings(),
+    )
+
+    assert doc_meta["detected_languages"]["overall"] == ["de", "en"]
+    assert doc_meta["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
+
+
+def test_split_lang_field_aliases():
+    assert detect_and_read._split_lang_field('deu+eng') == ['de', 'en']
+    assert detect_and_read._split_lang_field(['english', 'de']) == ['en', 'de']
+    assert detect_and_read._split_lang_field('') == []

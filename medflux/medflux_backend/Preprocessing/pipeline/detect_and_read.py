@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -13,6 +14,44 @@ if str(PROJECT_ROOT) not in sys.path:
 from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
 from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
 from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
+
+
+LANG_ALIAS_MAP = {
+    "deu": "de",
+    "ger": "de",
+    "german": "de",
+    "de": "de",
+    "eng": "en",
+    "english": "en",
+    "en": "en",
+}
+
+
+def _normalise_lang_code(raw: str) -> str:
+    value = (raw or "").strip().lower()
+    if not value:
+        return ""
+    if value in {"und", "unknown"}:
+        return "unknown"
+    if value == "mixed":
+        return "mixed"
+    return LANG_ALIAS_MAP.get(value, value)
+
+
+def _split_lang_field(raw: Any) -> List[str]:
+    tokens: List[str] = []
+    if isinstance(raw, str):
+        parts = re.split(r"[+;,/\\s]+", raw)
+        for part in parts:
+            normalised = _normalise_lang_code(part)
+            if normalised:
+                tokens.append(normalised)
+    elif isinstance(raw, (list, tuple, set)):
+        for item in raw:
+            normalised = _normalise_lang_code(str(item))
+            if normalised:
+                tokens.append(normalised)
+    return tokens
 
 
 def quick_detect(input_path: Path) -> Dict[str, Any]:
@@ -99,14 +138,52 @@ def assemble_doc_meta(
     avg_conf_all = float(reader_summary.get("avg_conf") or 0.0)
     avg_ocr_conf = avg_conf_all if has_ocr else 0.0
 
-    lang_field = decision.get("lang") or detect_meta.get("lang") or ""
-    languages_overall = [entry.strip() for entry in lang_field.split("+") if entry.strip()]
-    if not languages_overall:
-        languages_overall = ["und"]
-    languages_by_page = [
-        {"page": idx + 1, "languages": languages_overall}
-        for idx in range(pages_count)
-    ]
+    fallback_langs = _split_lang_field(decision.get("lang")) or _split_lang_field(detect_meta.get("lang"))
+    if not fallback_langs:
+        fallback_langs = ["und"]
+
+    lang_per_page = reader_summary.get("lang_per_page") or []
+    locale_per_page = reader_summary.get("locale_per_page") or []
+
+    languages_by_page: List[Dict[str, Any]] = []
+    lang_values: List[str] = []
+    if lang_per_page:
+        for idx, item in enumerate(lang_per_page):
+            page_no = int(item.get("page") or idx + 1)
+            page_langs = _split_lang_field(item.get("lang"))
+            if not page_langs or all(val in {"unknown", "und"} for val in page_langs):
+                page_langs = list(fallback_langs)
+            languages_by_page.append({"page": page_no, "languages": page_langs})
+            lang_values.extend(page_langs)
+    else:
+        for idx in range(pages_count):
+            languages_by_page.append({"page": idx + 1, "languages": list(fallback_langs)})
+        lang_values.extend(fallback_langs)
+
+    filtered_langs = [val for val in lang_values if val not in {"unknown", "und"}]
+    if filtered_langs:
+        languages_overall = sorted(set(filtered_langs))
+    else:
+        languages_overall = sorted(set(fallback_langs)) or ["und"]
+
+    locale_by_page: List[Dict[str, Any]] = []
+    locale_values: List[str] = []
+    if locale_per_page:
+        for item in locale_per_page:
+            loc = item.get("locale", "unknown") or "unknown"
+            locale_values.append(loc)
+            locale_by_page.append({"page": item.get("page", 0), "locale": loc})
+    else:
+        locale_by_page = [
+            {"page": idx + 1, "locale": "unknown"}
+            for idx in range(pages_count)
+        ]
+    overall_locale = "unknown"
+    locale_filtered = [val for val in locale_values if val not in ("unknown", "mixed")]
+    if locale_filtered:
+        overall_locale = sorted(set(locale_filtered))[0]
+    elif locale_values:
+        overall_locale = "mixed" if len(set(locale_values)) > 1 else locale_values[0]
 
     timings_payload: Dict[str, Any] = {
         "detect": _maybe_round(timings_ms.get("detect")),
@@ -130,6 +207,10 @@ def assemble_doc_meta(
         "detected_languages": {
             "overall": languages_overall,
             "by_page": languages_by_page,
+        },
+        "locale_hints": {
+            "overall": overall_locale,
+            "by_page": locale_by_page,
         },
         "has_ocr": has_ocr,
         "avg_ocr_conf": avg_ocr_conf,

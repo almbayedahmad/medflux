@@ -35,7 +35,36 @@ All output artefacts (reports, per-file summaries, raw readers output) end up in
 The detect phase now surfaces a lightweight table detector. Per-file summaries include a `table_stats` list and `table_pages` flag,
 and you can tune the heuristics via `--table-detect-min-area` and `--table-detect-max-cells` when running the CLI.
 
-Every processed document also emits a `doc_meta.json` alongside the readers output. The metadata captures file type, page count, encoding and language hints, OCR presence, plus per-stage timings so downstream merge/cleaning steps can reuse the signals without reprocessing the original files. Companion files `text_blocks.jsonl` and `tables_raw.jsonl` expose reading-order blocks and raw table structures (bbox, extraction source, cell grid) for downstream merge logic.
+Every processed document also emits a `doc_meta.json` alongside the readers output. The metadata captures file type, page count, encoding and language hints, OCR presence, plus per-stage timings so downstream merge/cleaning steps can reuse the signals without reprocessing the original files. Companion files `text_blocks.jsonl` and `tables_raw.jsonl` expose reading-order blocks and raw table structures (bbox, extraction source, cell grid) for downstream merge logic, while `doc_meta.json` adds page-level language and locale hints that later phases can refine.
+
+### doc_meta.json language payload
+
+```
+{
+  "detected_languages": {
+    "overall": ["de", "en"],
+    "by_page": [
+      {"page": 1, "languages": ["de"]},
+      {"page": 2, "languages": ["de", "en"]}
+    ]
+  },
+  "locale_hints": {
+    "overall": "de",
+    "by_page": [
+      {"page": 1, "locale": "de"},
+      {"page": 2, "locale": "mixed"}
+    ]
+  }
+}
+```
+
+- `detected_languages.by_page` originates from reader heuristics (keywords, OCR tokens, block hints). Pages that only surface `unknown` fall back to the detector/CLI language defaults.
+- `detected_languages.overall` contains deduplicated language codes returned by the per-page hints or, when no confident hints exist, the fallback defaults.
+- `locale_hints.by_page` exposes lightweight number/date style detection per page (`de`, `en`, `mixed`, or `unknown`).
+- `locale_hints.overall` collapses all page hints to a single best guess, preferring confident page hits over `unknown` and resorting to `mixed` when conflicting evidence exists.
+
+Use these hints to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`).
+
 
 ## Running tests
 

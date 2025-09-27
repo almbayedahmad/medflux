@@ -7,6 +7,20 @@ import re
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Tuple, Set
 
+DE_TRIGGER_CHARS = {'ä', 'ö', 'ü', 'ß'}
+DE_KEYWORDS = {
+    'und', 'der', 'die', 'das', 'ein', 'eine', 'ist', 'nicht', 'mit', 'für', 'aus', 'dem', 'den', 'des', 'bei', 'oder', 'wir', 'sie', 'dass', 'zum', 'zur', 'über',
+}
+EN_KEYWORDS = {
+    'the', 'and', 'for', 'with', 'from', 'this', 'that', 'your', 'you', 'please', 'dear', 'hello', 'thank', 'invoice', 'date', 'page', 'tax',
+}
+DATE_KEYWORDS_DE = {
+    'januar', 'februar', 'märz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember',
+}
+DATE_KEYWORDS_EN = {
+    'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+}
+
 try:
     import fitz  # PyMuPDF
 except Exception:  # pragma: no cover - optional deps at runtime
@@ -125,6 +139,8 @@ class UnifiedReaders:
         self._blocks: List[Dict[str, Any]] = []
         self._table_flags: Set[int] = set()
         self._table_candidates: Dict[int, Dict[str, float]] = {}
+        self._page_language_hints: Dict[int, str] = {}
+        self._page_locale_hints: Dict[int, str] = {}
         self._block_counter: int = 0
         self._t0 = time.time()
 
@@ -140,12 +156,71 @@ class UnifiedReaders:
         self._blocks.clear()
         self._table_flags.clear()
         self._table_candidates.clear()
+        self._page_language_hints.clear()
+        self._page_locale_hints.clear()
         self._block_counter = 0
         self._t0 = time.time()
 
     def _log_warning(self, code: str) -> None:
         if code not in self._warnings:
             self._warnings.append(code)
+    def _infer_language_hint(self, text: str) -> str:
+        if not text:
+            return 'unknown'
+        normalized = re.sub(r'[^A-Za-zäöüÄÖÜß ]', ' ', text).lower()
+        tokens = [tok for tok in normalized.split() if tok]
+        if not tokens:
+            return 'unknown'
+        de_scores = sum(1 for tok in tokens if DE_TRIGGER_CHARS.intersection(tok) or tok in DE_KEYWORDS)
+        en_scores = sum(1 for tok in tokens if tok in EN_KEYWORDS)
+        if any(tok in DATE_KEYWORDS_DE for tok in tokens):
+            de_scores += 1
+        if any(tok in DATE_KEYWORDS_EN for tok in tokens):
+            en_scores += 1
+        if de_scores == 0 and en_scores == 0:
+            return 'unknown'
+        if de_scores > 0 and en_scores > 0 and abs(de_scores - en_scores) <= 1:
+            return 'mixed'
+        return 'de' if de_scores > en_scores else 'en'
+
+    def _infer_locale_hint(self, text: str) -> str:
+        if not text:
+            return 'unknown'
+        has_de = False
+        has_en = False
+        if re.search(r'\b\d{1,2}\.\d{1,2}\.\d{2,4}\b', text):
+            has_de = True
+        if re.search(r'\b\d{1,2}/\d{1,2}/\d{2,4}\b', text):
+            has_en = True
+        if re.search(r'\d+,\d{2}\b', text) and re.search(r'\d{1,3}(\.\d{3})+\b', text):
+            has_de = True
+        if re.search(r'\d+\.\d{2}\b', text) and re.search(r'\d{1,3}(,\d{3})+\b', text):
+            has_en = True
+        if has_de and has_en:
+            return 'mixed'
+        if has_de:
+            return 'de'
+        if has_en:
+            return 'en'
+        return 'unknown'
+
+    @staticmethod
+    def _merge_hint(existing: Optional[str], new_hint: str) -> str:
+        new_hint = new_hint or 'unknown'
+        if new_hint == 'unknown':
+            return existing or 'unknown'
+        if not existing or existing == 'unknown':
+            return new_hint
+        if existing == new_hint:
+            return existing
+        return 'mixed'
+
+    def _update_page_hints(self, page_no: int, text: str) -> None:
+        lang_hint = self._infer_language_hint(text)
+        locale_hint = self._infer_locale_hint(text)
+        self._page_language_hints[page_no] = self._merge_hint(self._page_language_hints.get(page_no), lang_hint)
+        self._page_locale_hints[page_no] = self._merge_hint(self._page_locale_hints.get(page_no), locale_hint)
+
 
     def _native_page_data(self, page, page_no: int) -> Dict[str, Any]:
         start = time.perf_counter()
@@ -264,6 +339,8 @@ class UnifiedReaders:
         blocks_to_use = native_blocks or []
         if blocks_to_use:
             for block in blocks_to_use:
+                lang_hint = block.get("lang_hint") or self._infer_language_hint(block.get("text_raw", ""))
+                locale_hint = block.get("locale_hint") or self._infer_locale_hint(block.get("text_raw", ""))
                 entry = {
                     "id": block.get("id") or f"{page_no}-{self._block_counter}",
                     "page": page_no,
@@ -274,13 +351,19 @@ class UnifiedReaders:
                     "is_heading_like": bool(block.get("is_heading_like")),
                     "is_list_like": bool(block.get("is_list_like")),
                     "ocr_conf_avg": block.get("ocr_conf_avg"),
+                    "lang_hint": lang_hint,
+                    "locale_hint": locale_hint,
                 }
                 if "ocr" in decision_lower and ocr_avg_conf is not None:
                     entry["ocr_conf_avg"] = ocr_avg_conf
                 self._blocks.append(entry)
                 self._block_counter += 1
+                self._page_language_hints[page_no] = self._merge_hint(self._page_language_hints.get(page_no), lang_hint)
+                self._page_locale_hints[page_no] = self._merge_hint(self._page_locale_hints.get(page_no), locale_hint)
         else:
             self._add_simple_block(page_no, final_text, decision, ocr_avg_conf)
+
+        self._update_page_hints(page_no, final_text)
 
     def _add_simple_block(
         self,
@@ -296,6 +379,8 @@ class UnifiedReaders:
         lines = [line.strip() for line in stripped.splitlines() if line.strip()] or [stripped]
         normalized_text = "\n".join(lines)
         decision_lower = (decision or "").lower()
+        lang_hint = self._infer_language_hint(normalized_text)
+        locale_hint = self._infer_locale_hint(normalized_text)
         entry = {
             "id": f"{page_no}-block-{self._block_counter}",
             "page": page_no,
@@ -306,9 +391,13 @@ class UnifiedReaders:
             "is_heading_like": self._is_heading_like(normalized_text, [], lines),
             "is_list_like": self._is_list_like(lines[0] if lines else normalized_text),
             "ocr_conf_avg": ocr_avg_conf if (ocr_avg_conf is not None and "ocr" in decision_lower) else None,
+            "lang_hint": lang_hint,
+            "locale_hint": locale_hint,
         }
         self._blocks.append(entry)
         self._block_counter += 1
+        self._page_language_hints[page_no] = self._merge_hint(self._page_language_hints.get(page_no), lang_hint)
+        self._page_locale_hints[page_no] = self._merge_hint(self._page_locale_hints.get(page_no), locale_hint)
 
     def _compute_table_bbox(self, geometry: Dict[str, Any], page, zoom: float) -> Optional[List[float]]:
         row_lines = geometry.get("row_lines") or []
@@ -521,7 +610,7 @@ class UnifiedReaders:
             pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
         except Exception as exc:
             self._log_warning(f"table_render_error:p{page_no}:{exc}")
-            tool = "ocr" if detect_only or "ocr" in (decision or "").lower() else "camelot"
+            tool = "ocr" if "ocr" in (decision or "").lower() else "camelot"
             self._append_table_raw(page_no, tool, "failed")
             return
         try:
@@ -536,7 +625,7 @@ class UnifiedReaders:
                     arr = arr[:, :, :3]
         except Exception as exc:
             self._log_warning(f"table_np_error:p{page_no}:{exc}")
-            tool = "ocr" if detect_only or "ocr" in (decision or "").lower() else "camelot"
+            tool = "ocr" if "ocr" in (decision or "").lower() else "camelot"
             self._append_table_raw(page_no, tool, "failed")
             return
         export_dir = None
@@ -555,7 +644,7 @@ class UnifiedReaders:
             )
         except Exception as exc:
             self._log_warning(f"table_extract_error:p{page_no}:{exc}")
-            tool = "ocr" if detect_only or "ocr" in (decision or "").lower() else "camelot"
+            tool = "ocr" if "ocr" in (decision or "").lower() else "camelot"
             self._append_table_raw(page_no, tool, "failed")
             return
         geometry = geometry or {}
@@ -572,7 +661,7 @@ class UnifiedReaders:
         geometry["zoom"] = zoom
         table_bbox = self._compute_table_bbox(geometry, page, zoom)
         decision_lower = (decision or "").lower()
-        extraction_tool = "ocr" if "ocr" in decision_lower or detect_only else "camelot"
+        extraction_tool = "ocr" if "ocr" in decision_lower else "camelot"
         if not rows:
             table_text = None
             status = "failed"
@@ -661,6 +750,7 @@ class UnifiedReaders:
         )
         self._page_decisions.append("ocr")
         self._add_simple_block(1, text, "ocr", conf)
+        self._update_page_hints(1, text)
 
     def _docx_native(self, path: Path) -> None:
         start = time.perf_counter()
@@ -879,12 +969,20 @@ class UnifiedReaders:
         )
         summary_dict = asdict(summary)
         summary_dict["text_blocks_count"] = len(self._blocks)
+        summary_dict["tables_raw_count"] = len(self._tables_raw)
         summary_dict["table_pages"] = sorted(self._table_flags)
         summary_dict["table_stats"] = [
             {"page": int(page), **metrics}
             for page, metrics in sorted(self._table_candidates.items())
         ]
-        summary_dict["tables_raw_count"] = len(self._tables_raw)
+        summary_dict["lang_per_page"] = [
+            {"page": page, "lang": self._page_language_hints.get(page, "unknown")}
+            for page in sorted(self._page_language_hints)
+        ]
+        summary_dict["locale_per_page"] = [
+            {"page": page, "locale": self._page_locale_hints.get(page, "unknown")}
+            for page in sorted(self._page_locale_hints)
+        ]
         return {
             "summary": summary_dict,
             "pages_count": len(self._page_decisions),
@@ -962,6 +1060,14 @@ class UnifiedReaders:
             "table_stats": table_stats,
             "text_blocks_count": len(self._blocks),
             "tables_raw_count": len(self._tables_raw),
+            "lang_per_page": [
+                {"page": page, "lang": self._page_language_hints.get(page, "unknown")}
+                for page in sorted(self._page_language_hints)
+            ],
+            "locale_per_page": [
+                {"page": page, "locale": self._page_locale_hints.get(page, "unknown")}
+                for page in sorted(self._page_locale_hints)
+            ],
         }
         summary_path = self.readers_dir / "readers_summary.json"
         summary_path.write_text(json.dumps({"summary": summary}, ensure_ascii=False, indent=2), encoding="utf-8")

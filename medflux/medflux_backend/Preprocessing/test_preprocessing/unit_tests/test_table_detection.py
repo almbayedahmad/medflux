@@ -71,6 +71,8 @@ def test_table_candidate_passes_threshold(monkeypatch, reader):
         "avg_cell_width": 40.0,
         "avg_cell_area": 16000.0,
     }
+    assert reader._tables_raw
+    assert reader._tables_raw[0]["status"] == "ok"
     assert warnings == []
 
 
@@ -97,4 +99,6 @@ def test_table_candidate_filtered(monkeypatch, reader):
 
     assert reader._table_flags == set()
     assert reader._tables == []
+    assert reader._tables_raw
+    assert reader._tables_raw[-1]["status"] in {"failed", "fallback"}
     assert warnings and "table_candidate_filtered:p2" in warnings[0]
