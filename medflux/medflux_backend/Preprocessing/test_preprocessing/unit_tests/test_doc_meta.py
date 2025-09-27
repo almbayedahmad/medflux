@@ -31,3 +31,6 @@ def test_doc_meta_written(tmp_path, payload):
     text_blocks_file = (outdir / sample.stem / doc_meta["text_blocks_path"]).resolve()
     assert text_blocks_file.exists()
     assert doc_meta["text_blocks_count"] >= 1
+    tables_raw_file = (outdir / sample.stem / doc_meta["tables_raw_path"]).resolve()
+    assert tables_raw_file.exists()
+    assert doc_meta["tables_raw_count"] >= 0

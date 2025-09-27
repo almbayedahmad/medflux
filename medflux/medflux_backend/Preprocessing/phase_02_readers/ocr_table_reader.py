@@ -87,7 +87,7 @@ def extract_tables_from_image(
     page_tag: Optional[str] = None,
     allow_borderless: bool = True,
     ocr_cells: bool = True,
-) -> Tuple[List[List[str]], Dict[str, float]]:
+) -> Tuple[List[List[str]], Dict[str, float], Dict[str, Any]]:
     """
     Detect a simple table grid and return it as rows of cell text (rows -> cells).
     Runs without Tesseract (cells become empty strings) and saves a diagnostic PNG
@@ -108,20 +108,29 @@ def extract_tables_from_image(
     binv = _binarize(gray)
     horiz, vert, _ = _extract_line_maps(binv, sensitivity=sensitivity)
 
+    def _return_empty(metadata: Dict[str, float]) -> Tuple[List[List[str]], Dict[str, float], Dict[str, Any]]:
+        geometry: Dict[str, Any] = {
+            "row_lines": [],
+            "col_lines": [],
+            "image_width": int(gray.shape[1]),
+            "image_height": int(gray.shape[0]),
+        }
+        return [], metadata, geometry
+
     if np.count_nonzero(horiz) == 0 and np.count_nonzero(vert) == 0:
         if allow_borderless and export_root is not None and page_tag:
             try:
                 cv2.imwrite(str((export_root / "tables_pages" / f"{page_tag}.png").resolve()), img)
             except Exception:
                 pass
-        return [], {
+        return _return_empty({
             "rows": 0,
             "cols": 0,
             "cell_count": 0,
             "avg_cell_height": 0.0,
             "avg_cell_width": 0.0,
             "avg_cell_area": 0.0,
-        }
+        })
 
     row_lines = _project_peaks(horiz, axis=1, min_gap=3)
     col_lines = _project_peaks(vert, axis=0, min_gap=3)
@@ -132,14 +141,14 @@ def extract_tables_from_image(
                 cv2.imwrite(str((export_root / "tables_pages" / f"{page_tag}.png").resolve()), img)
             except Exception:
                 pass
-        return [], {
+        return _return_empty({
             "rows": max(len(row_lines) - 1, 0),
             "cols": max(len(col_lines) - 1, 0),
             "cell_count": 0,
             "avg_cell_height": 0.0,
             "avg_cell_width": 0.0,
             "avg_cell_area": 0.0,
-        }
+        })
 
     def _dedup(vals: List[int], tol: int = 2) -> List[int]:
         if not vals:
@@ -157,14 +166,14 @@ def extract_tables_from_image(
     row_count = max(len(row_lines) - 1, 0)
     col_count = max(len(col_lines) - 1, 0)
     if row_count == 0 or col_count == 0:
-        return [], {
+        return _return_empty({
             "rows": row_count,
             "cols": col_count,
             "cell_count": 0,
             "avg_cell_height": 0.0,
             "avg_cell_width": 0.0,
             "avg_cell_area": 0.0,
-        }
+        })
 
     span_height = float(row_lines[-1] - row_lines[0]) if row_count else 0.0
     span_width = float(col_lines[-1] - col_lines[0]) if col_count else 0.0
@@ -204,7 +213,15 @@ def extract_tables_from_image(
         except Exception:
             pass
 
-    return rows_text, metrics
+    geometry: Dict[str, Any] = {
+        "row_lines": [int(v) for v in row_lines],
+        "col_lines": [int(v) for v in col_lines],
+        "image_width": int(gray.shape[1]),
+        "image_height": int(gray.shape[0]),
+    }
+
+    return rows_text, metrics, geometry
+
 
 
 

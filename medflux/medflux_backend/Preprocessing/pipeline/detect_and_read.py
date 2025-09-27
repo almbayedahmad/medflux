@@ -94,6 +94,7 @@ def assemble_doc_meta(
     pages_count = int(reader_summary.get("page_count") or 0)
     page_decisions: List[str] = list(reader_summary.get("page_decisions") or [])
     text_blocks_count = int(reader_summary.get("text_blocks_count") or 0)
+    tables_raw_count = int(reader_summary.get("tables_raw_count") or 0)
     has_ocr = any("ocr" in (entry or "").lower() for entry in page_decisions)
     avg_conf_all = float(reader_summary.get("avg_conf") or 0.0)
     avg_ocr_conf = avg_conf_all if has_ocr else 0.0
@@ -135,6 +136,8 @@ def assemble_doc_meta(
         "table_pages": reader_summary.get("table_pages", []),
         "text_blocks_count": text_blocks_count,
         "text_blocks_path": "readers/text_blocks.jsonl",
+        "tables_raw_count": tables_raw_count,
+        "tables_raw_path": "readers/tables_raw.jsonl",
         "timings_ms": timings_payload,
     }
     if reader_summary.get("table_stats") is not None:

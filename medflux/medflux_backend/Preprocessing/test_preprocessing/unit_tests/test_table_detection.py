@@ -17,6 +17,16 @@ class _DummyPixmap:
 
 
 class _DummyPage:
+    class _Rect:
+        def __init__(self):
+            self.x0 = 0.0
+            self.y0 = 0.0
+            self.width = 595.0
+            self.height = 842.0
+
+    def __init__(self):
+        self.rect = self._Rect()
+
     def get_pixmap(self, matrix, alpha=False):  # pragma: no cover - stub only
         return _DummyPixmap()
 
@@ -46,6 +56,7 @@ def test_table_candidate_passes_threshold(monkeypatch, reader):
                 "avg_cell_width": 40.0,
                 "avg_cell_area": 16000.0,
             },
+            {"row_lines": [0, 50, 100], "col_lines": [0, 60, 120], "image_width": 200, "image_height": 200},
         )
 
     monkeypatch.setattr(readers_core, "extract_tables_from_image", fake_extract)
@@ -78,6 +89,7 @@ def test_table_candidate_filtered(monkeypatch, reader):
                 "avg_cell_width": 10.0,
                 "avg_cell_area": 1000.0,
             },
+            {"row_lines": [0, 10, 20], "col_lines": [0, 5, 10], "image_width": 40, "image_height": 40},
         )
 
     monkeypatch.setattr(readers_core, "extract_tables_from_image", fake_extract)

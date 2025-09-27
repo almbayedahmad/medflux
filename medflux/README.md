@@ -35,7 +35,7 @@ All output artefacts (reports, per-file summaries, raw readers output) end up in
 The detect phase now surfaces a lightweight table detector. Per-file summaries include a `table_stats` list and `table_pages` flag,
 and you can tune the heuristics via `--table-detect-min-area` and `--table-detect-max-cells` when running the CLI.
 
-Every processed document also emits a `doc_meta.json` alongside the readers output. The metadata captures file type, page count, encoding and language hints, OCR presence, plus per-stage timings so downstream merge/cleaning steps can reuse the signals without reprocessing the original files. A companion `text_blocks.jsonl` holds reading-order blocks with light layout flags (heading/list) that the merge stage can stitch together later.
+Every processed document also emits a `doc_meta.json` alongside the readers output. The metadata captures file type, page count, encoding and language hints, OCR presence, plus per-stage timings so downstream merge/cleaning steps can reuse the signals without reprocessing the original files. Companion files `text_blocks.jsonl` and `tables_raw.jsonl` expose reading-order blocks and raw table structures (bbox, extraction source, cell grid) for downstream merge logic.
 
 ## Running tests
 
