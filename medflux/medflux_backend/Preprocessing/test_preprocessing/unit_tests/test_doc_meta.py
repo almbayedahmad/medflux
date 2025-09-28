@@ -40,6 +40,11 @@ def test_doc_meta_written(tmp_path, payload):
     assert isinstance(doc_meta["qa"]["warnings"], list)
     assert "processing_log" in doc_meta
     assert isinstance(doc_meta["processing_log"], list)
+    artifacts_file = (outdir / sample.stem / doc_meta["visual_artifacts_path"]).resolve()
+    assert artifacts_file.exists()
+    assert doc_meta["visual_artifacts_count"] >= 0
+    assert doc_meta.get("per_page_stats")
+    assert "chars" in doc_meta["per_page_stats"][0]
 
 
 def _baseline_reader_summary(pages: int) -> dict:
@@ -99,6 +104,8 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
         assert entry["languages"] == ["de", "en"]
     assert doc_meta["qa"]["needs_review"] is False
     assert doc_meta["processing_log"] == []
+    assert doc_meta["visual_artifacts_count"] == 0
+    assert doc_meta.get("per_page_stats") == []
 
 
 def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
@@ -117,6 +124,8 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
     assert doc_meta["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
     assert doc_meta["qa"]["needs_review"] is False
     assert doc_meta["processing_log"] == []
+    assert doc_meta["visual_artifacts_count"] == 0
+    assert doc_meta.get("per_page_stats") == []
 
 
 def test_split_lang_field_aliases():

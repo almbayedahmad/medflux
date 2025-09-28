@@ -89,7 +89,11 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 
     {"step": "table_extract", "status": "fallback", "page": 2, "details": {"tool": "camelot"}}
 
-  ]
+  ],
+
+  "visual_artifacts_count": 1,
+
+  "visual_artifacts_path": "readers/visual_artifacts.jsonl"
 
 }
 
@@ -101,8 +105,10 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 - `locale_hints.overall` collapses all page hints to a single best guess, preferring confident page hits over `unknown` and resorting to `mixed` when conflicting evidence exists.
 - `qa.needs_review` surfaces the enrichment flags (warnings + per-page low confidence) so you can short-circuit manual validation when false.
 - `processing_log` lists the document-level tool chain (major readers, fallbacks, table extractors) so downstream stages understand how content was produced.
+- `visual_artifacts_path` (plus `visual_artifacts_count`) enumerates detected stamps/signatures/logos with page-level bounding boxes for UI overlays.
+- `per_page_stats` includes `chars`, `ocr_words`, and `ocr_conf_avg` so QA layers can tune thresholds without re-reading the full text dumps.
 
-Use these hints and logs to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`).
+Use these hints, stats, and logs to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`, or rerunning OCR when `qa.needs_review` is true).
 
 
 ## Running tests

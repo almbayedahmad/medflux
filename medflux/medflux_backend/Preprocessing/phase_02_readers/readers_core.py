@@ -102,6 +102,8 @@ class PageRecord:
     conf: float = 0.0
     time_ms: float = 0.0
     words: int = 0
+    chars: int = 0
+    ocr_conf_avg: Optional[float] = None
 
 
 @dataclass
@@ -142,6 +144,7 @@ class UnifiedReaders:
         self._page_language_hints: Dict[int, str] = {}
         self._page_locale_hints: Dict[int, str] = {}
         self._tool_events: List[Dict[str, Any]] = []
+        self._visual_artifacts: List[Dict[str, Any]] = []
         self._block_counter: int = 0
         self._t0 = time.time()
 
@@ -160,6 +163,7 @@ class UnifiedReaders:
         self._page_language_hints.clear()
         self._page_locale_hints.clear()
         self._tool_events.clear()
+        self._visual_artifacts.clear()
         self._block_counter = 0
         self._t0 = time.time()
 
@@ -180,6 +184,107 @@ class UnifiedReaders:
         if details:
             entry["details"] = details
         self._tool_events.append(entry)
+
+    def _extract_style_features(self, text: str, font_sizes: List[float], spans_meta: List[Dict[str, Any]]) -> Dict[str, Any]:
+        text = text or ""
+        char_count = len(text)
+        alpha_chars = sum(1 for c in text if c.isalpha())
+        uppercase_chars = sum(1 for c in text if c.isalpha() and c.isupper())
+        is_upper = bool(alpha_chars) and (uppercase_chars / alpha_chars) >= 0.75
+        font_avg: Optional[float] = None
+        if font_sizes:
+            try:
+                font_avg = round(sum(font_sizes) / max(len(font_sizes), 1), 2)
+            except Exception:
+                font_avg = None
+        fonts = [str(meta.get("font") or "") for meta in spans_meta]
+        flags = [int(meta.get("flags") or 0) for meta in spans_meta]
+        is_bold = any("bold" in font.lower() for font in fonts if font) or any(flag & 2 for flag in flags)
+        return {
+            "font_size_avg": font_avg,
+            "is_bold": is_bold,
+            "is_upper": is_upper,
+            "char_count": char_count,
+        }
+
+    def _classify_visual_artifact(self, bbox: List[float], page_rect) -> Optional[Tuple[str, float]]:
+        if not bbox or page_rect is None:
+            return None
+        try:
+            x0, y0, x1, y1 = bbox
+        except Exception:
+            return None
+        width = max(float(x1) - float(x0), 0.0)
+        height = max(float(y1) - float(y0), 0.0)
+        if width <= 0.0 or height <= 0.0:
+            return None
+        page_area = max(page_rect.width * page_rect.height, 1.0)
+        area_ratio = (width * height) / page_area
+        if area_ratio < 5e-4:
+            return None
+        aspect = width / height if height else 0.0
+        center_y = ((float(y0) + float(y1)) / 2.0) / max(page_rect.height, 1.0)
+        if center_y > 0.6 and aspect >= 2.5 and area_ratio < 0.1:
+            confidence = min(1.0, 0.55 + min((aspect - 2.5) * 0.1, 0.4))
+            return "signature", confidence
+        if 0.5 <= aspect <= 1.5 and 0.003 <= area_ratio <= 0.1:
+            confidence = min(1.0, 0.6 + (0.1 - abs(aspect - 1.0)) * 1.2)
+            return "stamp", confidence
+        if center_y < 0.25 and area_ratio <= 0.15:
+            confidence = min(1.0, 0.6 + (0.15 - area_ratio) * 1.5)
+            return "logo", confidence
+        return None
+
+    def _collect_image_artifacts(self, page, page_no: int) -> None:
+        if fitz is None:
+            return
+        try:
+            images = page.get_images(full=True)
+        except Exception:
+            return
+        if not images:
+            return
+        page_rect = getattr(page, "rect", None)
+        if page_rect is None:
+            return
+        for image in images:
+            xref = image[0]
+            bbox = None
+            try:
+                info = page.get_image_info(xref)
+                if isinstance(info, list) and info:
+                    bbox = info[0].get("bbox")
+                elif isinstance(info, dict):
+                    bbox = info.get("bbox")
+            except Exception:
+                bbox = None
+            if bbox is None:
+                continue
+            if hasattr(bbox, "tolist"):
+                coords = list(bbox.tolist())
+            elif isinstance(bbox, (list, tuple)):
+                coords = list(bbox)
+            else:
+                coords = None
+            if not coords or len(coords) < 4:
+                continue
+            coords = [float(coords[0]), float(coords[1]), float(coords[2]), float(coords[3])]
+            classified = self._classify_visual_artifact(coords, page_rect)
+            if not classified:
+                continue
+            kind, confidence = classified
+            entry = {
+                "page": page_no,
+                "bbox": [round(value, 2) for value in coords],
+                "kind": kind,
+                "confidence": round(confidence, 2),
+                "source": "image",
+            }
+            self._visual_artifacts.append(entry)
+            self._log_tool_event("visual_artifact", "detected", page=page_no, details={
+                "kind": kind,
+                "confidence": entry["confidence"],
+            })
 
     def _infer_language_hint(self, text: str) -> str:
         if not text:
@@ -280,6 +385,7 @@ class UnifiedReaders:
             lines = block.get("lines") or []
             text_lines: List[str] = []
             font_sizes: List[float] = []
+            spans_meta: List[Dict[str, Any]] = []
             for line in lines:
                 spans = line.get("spans") or []
                 parts: List[str] = []
@@ -287,6 +393,13 @@ class UnifiedReaders:
                     piece = span.get("text") or ""
                     if piece:
                         parts.append(piece)
+                    spans_meta.append(
+                        {
+                            "font": span.get("font"),
+                            "flags": span.get("flags"),
+                            "size": span.get("size"),
+                        }
+                    )
                     size = span.get("size")
                     if size is not None:
                         try:
@@ -310,6 +423,7 @@ class UnifiedReaders:
                 "is_list_like": self._is_list_like(text_raw),
                 "ocr_conf_avg": None,
             }
+            entry.update(self._extract_style_features(text_raw, font_sizes, spans_meta))
             entries.append(entry)
         return entries
 
@@ -370,6 +484,10 @@ class UnifiedReaders:
                     "ocr_conf_avg": block.get("ocr_conf_avg"),
                     "lang_hint": lang_hint,
                     "locale_hint": locale_hint,
+                    "font_size_avg": block.get("font_size_avg"),
+                    "is_bold": bool(block.get("is_bold")),
+                    "is_upper": bool(block.get("is_upper")),
+                    "char_count": int(block.get("char_count") or len(block.get("text_raw", ""))),
                 }
                 if "ocr" in decision_lower and ocr_avg_conf is not None:
                     entry["ocr_conf_avg"] = ocr_avg_conf
@@ -411,6 +529,7 @@ class UnifiedReaders:
             "lang_hint": lang_hint,
             "locale_hint": locale_hint,
         }
+        entry.update(self._extract_style_features(normalized_text, [], []))
         self._blocks.append(entry)
         self._block_counter += 1
         self._page_language_hints[page_no] = self._merge_hint(self._page_language_hints.get(page_no), lang_hint)
@@ -774,6 +893,8 @@ class UnifiedReaders:
                 conf=conf,
                 time_ms=elapsed,
                 words=len(text.split()),
+                chars=len(text or ""),
+                ocr_conf_avg=conf if text else None,
             )
         )
         self._page_decisions.append("ocr")
@@ -801,6 +922,7 @@ class UnifiedReaders:
                 conf=conf,
                 time_ms=elapsed,
                 words=words,
+                chars=len(text or ""),
             )
         )
         self._page_decisions.append("native")
@@ -827,6 +949,7 @@ class UnifiedReaders:
                 conf=conf,
                 time_ms=elapsed,
                 words=words,
+                chars=len(text or ""),
             )
         )
         self._page_decisions.append("native")
@@ -851,6 +974,7 @@ class UnifiedReaders:
                 conf=conf,
                 time_ms=0.0,
                 words=words,
+                chars=len(text or ""),
             )
         )
         self._page_decisions.append("native")
@@ -878,6 +1002,7 @@ class UnifiedReaders:
             page_no = index + 1
             native_data = self._native_page_data(page, page_no)
             coverage, image_count = self._image_stats(page)
+            self._collect_image_artifacts(page, page_no)
             native_data["coverage"] = coverage
             native_data["image_count"] = image_count
             native_map[page_no] = native_data
@@ -964,6 +1089,8 @@ class UnifiedReaders:
                     conf=round(final_conf, 2),
                     time_ms=round(final_time, 2),
                     words=final_words,
+                    chars=len(final_text or ""),
+                    ocr_conf_avg=ocr_avg_conf,
                 )
             )
             self._page_decisions.append(decision)
@@ -1012,6 +1139,7 @@ class UnifiedReaders:
             {"page": int(page), **metrics}
             for page, metrics in sorted(self._table_candidates.items())
         ]
+        summary_dict["visual_artifacts_count"] = len(self._visual_artifacts)
         summary_dict["lang_per_page"] = [
             {"page": page, "lang": self._page_language_hints.get(page, "unknown")}
             for page in sorted(self._page_language_hints)
@@ -1026,6 +1154,7 @@ class UnifiedReaders:
             "summary": summary_dict,
             "pages_count": len(self._page_decisions),
             "tool_log": tool_log,
+            "visual_artifacts_count": len(self._visual_artifacts),
             "tables_count": len(self._tables),
             "tables_cells": sum(sum(len(row) for row in tbl.rows) for tbl in self._tables),
             "outdir": str(self.readers_dir),
@@ -1049,6 +1178,8 @@ class UnifiedReaders:
                             "conf": record.conf,
                             "time_ms": record.time_ms,
                             "words": record.words,
+                            "chars": record.chars,
+                            **({"ocr_conf_avg": record.ocr_conf_avg} if record.ocr_conf_avg is not None else {}),
                         },
                         ensure_ascii=False,
                     )
@@ -1057,10 +1188,14 @@ class UnifiedReaders:
         txt_path = self.readers_dir / "unified_text.txt"
         with open(txt_path, "w", encoding="utf-8") as handle:
             for record in self._records:
-                handle.write(
-                    f"# file={record.file} page={record.page} source={record.source} conf={record.conf:.2f} time_ms={record.time_ms:.2f}\n"
+                header = (
+                    f"# file={record.file} page={record.page} source={record.source} "
+                    f"conf={record.conf:.2f} time_ms={record.time_ms:.2f} words={record.words} chars={record.chars}"
                 )
-                handle.write(record.text.strip() + "\n\n")
+                if record.ocr_conf_avg is not None:
+                    header += f" ocr_conf_avg={record.ocr_conf_avg:.2f}"
+                handle.write(header + "\n")
+                handle.write((record.text or "").strip() + "\n\n")
         blocks_path = self.readers_dir / "text_blocks.jsonl"
         if self._blocks:
             with open(blocks_path, "w", encoding="utf-8") as handle:
@@ -1082,6 +1217,10 @@ class UnifiedReaders:
                 json.dumps({"tables": [asdict(table) for table in self._tables]}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+        artifacts_path = self.readers_dir / "visual_artifacts.jsonl"
+        with open(artifacts_path, "w", encoding="utf-8") as handle:
+            for artifact in self._visual_artifacts:
+                handle.write(json.dumps(artifact, ensure_ascii=False) + "\n")
         avg_conf = _safe_avg_conf([record.conf for record in self._records])
         total_ms = (time.time() - self._t0) * 1000.0
         table_stats = [
@@ -1100,6 +1239,7 @@ class UnifiedReaders:
             "table_stats": table_stats,
             "text_blocks_count": len(self._blocks),
             "tables_raw_count": len(self._tables_raw),
+            "visual_artifacts_count": len(self._visual_artifacts),
             "lang_per_page": [
                 {"page": page, "lang": self._page_language_hints.get(page, "unknown")}
                 for page in sorted(self._page_language_hints)
@@ -1191,12 +1331,16 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
         time_ms = float(record.get("time_ms") or 0.0)
         words = int(record.get("words") or 0)
         cells = int(tables_cells.get(page, 0))
+        chars = int(record.get("chars") or len(str(record.get("text", ""))))
+        ocr_conf_avg = record.get("ocr_conf_avg")
         per_page.append(
             {
                 "page": page,
                 "source": source,
                 "conf": conf,
                 "ocr_words": words,
+                "chars": chars,
+                "ocr_conf_avg": ocr_conf_avg,
                 "has_table": cells > 0,
                 "table_cells": cells,
                 "decision": decision,

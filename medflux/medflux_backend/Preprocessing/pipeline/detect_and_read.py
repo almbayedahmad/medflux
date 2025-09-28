@@ -219,6 +219,8 @@ def assemble_doc_meta(
         "text_blocks_path": "readers/text_blocks.jsonl",
         "tables_raw_count": tables_raw_count,
         "tables_raw_path": "readers/tables_raw.jsonl",
+        "visual_artifacts_count": int(reader_summary.get("visual_artifacts_count") or 0),
+        "visual_artifacts_path": "readers/visual_artifacts.jsonl",
         "timings_ms": timings_payload,
     }
     if reader_summary.get("table_stats") is not None:
@@ -304,6 +306,9 @@ def run_one(
     summary.setdefault("warnings", list(summary.get("warnings", [])))
     summary["qa_flags"] = qa_flags
     summary.setdefault("tool_log", tool_log)
+
+    visual_count = int(summary.get("visual_artifacts_count") or readers_result.get("visual_artifacts_count") or 0)
+    summary["visual_artifacts_count"] = visual_count
 
     decision = {"file": str(input_path), **params, "summary": summary}
     (outdir / "detect_decision.json").write_text(
