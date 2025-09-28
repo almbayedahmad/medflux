@@ -122,6 +122,7 @@ def map_file_type_for_meta(raw: str) -> str:
     return mapping.get((raw or "").lower(), raw or "unknown")
 
 
+
 def assemble_doc_meta(
     input_path: Path,
     detect_meta: Dict[str, Any],
@@ -138,7 +139,9 @@ def assemble_doc_meta(
     avg_conf_all = float(reader_summary.get("avg_conf") or 0.0)
     avg_ocr_conf = avg_conf_all if has_ocr else 0.0
 
-    fallback_langs = _split_lang_field(decision.get("lang")) or _split_lang_field(detect_meta.get("lang"))
+    fallback_langs = _split_lang_field(decision.get("lang")) or _split_lang_field(
+        detect_meta.get("lang")
+    )
     if not fallback_langs:
         fallback_langs = ["und"]
 
@@ -170,9 +173,10 @@ def assemble_doc_meta(
     locale_values: List[str] = []
     if locale_per_page:
         for item in locale_per_page:
-            loc = item.get("locale", "unknown") or "unknown"
+            page_no = int(item.get("page") or len(locale_by_page) + 1)
+            loc = item.get("locale") or "unknown"
             locale_values.append(loc)
-            locale_by_page.append({"page": item.get("page", 0), "locale": loc})
+            locale_by_page.append({"page": page_no, "locale": loc})
     else:
         locale_by_page = [
             {"page": idx + 1, "locale": "unknown"}
@@ -225,13 +229,21 @@ def assemble_doc_meta(
     }
     if reader_summary.get("table_stats") is not None:
         doc_meta["table_stats"] = reader_summary.get("table_stats")
+
     qa_flags = dict(reader_summary.get("qa_flags") or {})
     warnings_list = list(reader_summary.get("warnings") or [])
+    qa_payload = dict(reader_summary.get("qa") or {})
+
     doc_meta["qa"] = {
         "needs_review": bool(qa_flags.get("manual_review")),
         "pages": list(qa_flags.get("pages") or []),
         "warnings": warnings_list,
+        "low_conf_pages": list(qa_payload.get("low_conf_pages") or []),
+        "low_text_pages": list(qa_payload.get("low_text_pages") or []),
+        "tables_fail": bool(qa_payload.get("tables_fail")),
+        "reasons": list(qa_payload.get("reasons") or []),
     }
+
     doc_meta["processing_log"] = list(reader_summary.get("tool_log") or [])
     if reader_summary.get("per_page_stats") is not None:
         doc_meta["per_page_stats"] = reader_summary.get("per_page_stats")
@@ -246,6 +258,7 @@ def _maybe_round(value: Any, digits: int = 2) -> Any:
     if isinstance(value, (int, float)):
         return round(float(value), digits)
     return value
+
 
 
 def run_one(
@@ -288,26 +301,39 @@ def run_one(
 
     summary_path = outdir / "readers" / "readers_summary.json"
     qa_flags: Dict[str, Any] = {}
+    qa_payload: Dict[str, Any] = {}
+
     if summary_path.exists():
         try:
             payload = json.loads(summary_path.read_text(encoding="utf-8"))
             summary = dict(payload.get("summary", summary) or summary)
+
             disk_tool_log = payload.get("tool_log")
             if disk_tool_log:
                 tool_log = list(disk_tool_log)
                 summary["tool_log"] = tool_log
+
             qa_flags = dict(payload.get("flags", {}) or {})
+            qa_payload = dict(payload.get("qa", {}) or {})
+
             if "thresholds" in payload:
                 summary.setdefault("thresholds", payload.get("thresholds"))
             if "per_page_stats" in payload:
                 summary.setdefault("per_page_stats", payload.get("per_page_stats"))
         except Exception:
             qa_flags = {}
+            qa_payload = {}
+
     summary.setdefault("warnings", list(summary.get("warnings", [])))
     summary["qa_flags"] = qa_flags
+    summary.setdefault("qa", qa_payload)
     summary.setdefault("tool_log", tool_log)
 
-    visual_count = int(summary.get("visual_artifacts_count") or readers_result.get("visual_artifacts_count") or 0)
+    visual_count = int(
+        summary.get("visual_artifacts_count")
+        or readers_result.get("visual_artifacts_count")
+        or 0
+    )
     summary["visual_artifacts_count"] = visual_count
 
     decision = {"file": str(input_path), **params, "summary": summary}

@@ -45,6 +45,14 @@ def test_doc_meta_written(tmp_path, payload):
     assert doc_meta["visual_artifacts_count"] >= 0
     assert doc_meta.get("per_page_stats")
     assert "chars" in doc_meta["per_page_stats"][0]
+    assert "low_conf_pages" in doc_meta["qa"]
+    assert isinstance(doc_meta["qa"]["low_conf_pages"], list)
+    assert "low_text_pages" in doc_meta["qa"]
+    assert isinstance(doc_meta["qa"]["low_text_pages"], list)
+    assert "tables_fail" in doc_meta["qa"]
+    assert isinstance(doc_meta["qa"]["tables_fail"], bool)
+    assert "reasons" in doc_meta["qa"]
+    assert isinstance(doc_meta["qa"]["reasons"], list)
 
 
 def _baseline_reader_summary(pages: int) -> dict:
@@ -63,6 +71,7 @@ def _baseline_reader_summary(pages: int) -> dict:
         "qa_flags": {"manual_review": False, "pages": []},
         "per_page_stats": [],
         "thresholds": {},
+        "qa": {},
     }
 
 
@@ -106,6 +115,10 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     assert doc_meta["processing_log"] == []
     assert doc_meta["visual_artifacts_count"] == 0
     assert doc_meta.get("per_page_stats") == []
+    assert doc_meta["qa"]["low_conf_pages"] == []
+    assert doc_meta["qa"]["low_text_pages"] == []
+    assert doc_meta["qa"]["tables_fail"] is False
+    assert doc_meta["qa"]["reasons"] == []
 
 
 def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):

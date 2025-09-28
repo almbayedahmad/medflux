@@ -108,6 +108,14 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 - `visual_artifacts_path` (plus `visual_artifacts_count`) enumerates detected stamps/signatures/logos with page-level bounding boxes for UI overlays.
 - `per_page_stats` includes `chars`, `ocr_words`, and `ocr_conf_avg` so QA layers can tune thresholds without re-reading the full text dumps.
 
+### QA thresholds & actions
+
+- `qa.low_conf_pages` marks pages where OCR confidence dropped below 70. Re-run OCR (prefer `deu+eng` with deskew/denoise at 300–400 dpi) and keep the page on manual review if it stays low.
+- `qa.low_text_pages` flags pages with fewer than 10 OCR words but high confidence (covers, photos, stamps). Treat them as intentional non-text pages, not OCR failures.
+- `qa.tables_fail` indicates every table extraction attempt failed. Enable fallbacks (Camelot → Tabula → OCR table crops) and mark the document for manual review.
+- `qa.reasons` aggregates these triggers so downstream tooling can explain why `needs_review` flipped.
+
+
 Use these hints, stats, and logs to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`, or rerunning OCR when `qa.needs_review` is true).
 
 
