@@ -29,6 +29,7 @@ python -m medflux_backend.Preprocessing.pipeline.detect_and_read
     samples\Sample.txt 
     --outdir output\run_20250927_1528
 `
+> **Note**: When invoking the CLI directly with `python -m medflux_backend...` make sure the repository root is on `PYTHONPATH` (e.g. PowerShell: `$env:PYTHONPATH='.'`).
 
 All output artefacts (reports, per-file summaries, raw readers output) end up inside the folder passed to --outdir.
 
@@ -106,7 +107,9 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 - `qa.needs_review` surfaces the enrichment flags (warnings + per-page low confidence) so you can short-circuit manual validation when false.
 - `processing_log` lists the document-level tool chain (major readers, fallbacks, table extractors) so downstream stages understand how content was produced.
 - `visual_artifacts_path` (plus `visual_artifacts_count`) enumerates detected stamps/signatures/logos with page-level bounding boxes for UI overlays.
-- `per_page_stats` includes `chars`, `ocr_words`, and `ocr_conf_avg` so QA layers can tune thresholds without re-reading the full text dumps.
+- `per_page_stats` now carries `lang`, `locale`, `tables_found`, per-page timings, and the derived `flags` (for example `low_conf_page`, `low_text_page`) alongside the legacy counters.
+- `timings_ms` breaks readers work into fine-grained slices (text extraction, OCR, table detection/extraction, language hint detection) in addition to the total runtime.
+- `text_blocks`, `tables_raw`, and `artifacts` are mirrored inline in `doc_meta.json` while retaining their JSONL export paths for downstream consumers.
 
 ### QA thresholds & actions
 
@@ -118,6 +121,12 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 
 Use these hints, stats, and logs to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`, or rerunning OCR when `qa.needs_review` is true).
 
+
+### Metadata builder
+
+The consolidated metadata schema lives under `medflux_backend/Preprocessing/output_structure/readers_outputs/`.
+The `builder.py` entry point assembles `doc_meta.json` by loading reader summaries, timers, text blocks, tables, QA flags, and log events.
+Adjustments to the JSON contract should happen in `components.py`, with coverage in `test_doc_meta.py`.
 
 ## Running tests
 

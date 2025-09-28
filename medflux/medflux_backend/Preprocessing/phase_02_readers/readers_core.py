@@ -1,6 +1,7 @@
 from __future__ import annotations
 """Lightweight readers shim with native, OCR, and document handlers."""
 from pathlib import Path
+from collections import defaultdict
 import json
 import time
 import re
@@ -146,6 +147,8 @@ class UnifiedReaders:
         self._tool_events: List[Dict[str, Any]] = []
         self._visual_artifacts: List[Dict[str, Any]] = []
         self._block_counter: int = 0
+        self._timings: defaultdict[str, float] = defaultdict(float)
+        self._table_counts: defaultdict[int, int] = defaultdict(int)
         self._t0 = time.time()
 
     # ------------------------------------------------------------------
@@ -164,6 +167,8 @@ class UnifiedReaders:
         self._page_locale_hints.clear()
         self._tool_events.clear()
         self._visual_artifacts.clear()
+        self._timings.clear()
+        self._table_counts.clear()
         self._block_counter = 0
         self._t0 = time.time()
 
@@ -338,10 +343,12 @@ class UnifiedReaders:
         return 'mixed'
 
     def _update_page_hints(self, page_no: int, text: str) -> None:
+        start = time.perf_counter()
         lang_hint = self._infer_language_hint(text)
         locale_hint = self._infer_locale_hint(text)
         self._page_language_hints[page_no] = self._merge_hint(self._page_language_hints.get(page_no), lang_hint)
         self._page_locale_hints[page_no] = self._merge_hint(self._page_locale_hints.get(page_no), locale_hint)
+        self._timings["lang_detect"] += (time.perf_counter() - start) * 1000.0
 
 
     def _native_page_data(self, page, page_no: int) -> Dict[str, Any]:
@@ -367,6 +374,7 @@ class UnifiedReaders:
         words = len(text.split()) if text else 0
         conf = self._estimate_native_conf(text, block_count, words)
         elapsed = (time.perf_counter() - start) * 1000.0
+        self._timings["text_extract"] += elapsed
         return {
             "text": text,
             "conf": conf,
@@ -595,6 +603,8 @@ class UnifiedReaders:
         if table_text:
             record["table_text"] = table_text
         self._tables_raw.append(record)
+        if status == "ok":
+            self._table_counts[page_no] += 1
         self._log_tool_event("table_extract", status, page=page_no, details={"tool": extraction_tool})
 
 
@@ -678,6 +688,7 @@ class UnifiedReaders:
             debug_dir = None
             if self.opts.verbose:
                 debug_dir = self.readers_dir / "ocr_debug"
+            start = time.perf_counter()
             results = ocr_runner.ocr_pages(
                 str(pdf_path),
                 page_numbers_1based=pages,
@@ -690,6 +701,7 @@ class UnifiedReaders:
                 outdir=debug_dir,
                 dpi_mode=self.opts.dpi_mode,
             )
+            self._timings["ocr"] += (time.perf_counter() - start) * 1000.0
         except Exception as exc:  # pragma: no cover - external OCR errors
             self._log_warning(f"ocr_runner_error:{exc}")
             self._log_tool_event("ocr_runner", "error", details={"error": str(exc), "pages": pages})
@@ -774,6 +786,7 @@ class UnifiedReaders:
         if self.opts.save_table_crops and not detect_only:
             export_dir = str(self.readers_dir / "tables")
         sensitivity = "high" if mode_value == "full" else "normal"
+        start_extract = time.perf_counter()
         try:
             rows, metrics, geometry = extract_tables_from_image(
                 arr,
@@ -785,10 +798,20 @@ class UnifiedReaders:
                 ocr_cells=not detect_only,
             )
         except Exception as exc:
+            elapsed = (time.perf_counter() - start_extract) * 1000.0
+            if detect_only:
+                self._timings["table_detect"] += elapsed
+            else:
+                self._timings["table_extract"] += elapsed
             self._log_warning(f"table_extract_error:p{page_no}:{exc}")
             tool = "ocr" if "ocr" in (decision or "").lower() else "camelot"
             self._append_table_raw(page_no, tool, "failed")
             return
+        elapsed = (time.perf_counter() - start_extract) * 1000.0
+        if detect_only:
+            self._timings["table_detect"] += elapsed
+        else:
+            self._timings["table_extract"] += elapsed
         geometry = geometry or {}
         geometry.setdefault("row_lines", [])
         geometry.setdefault("col_lines", [])
@@ -1148,6 +1171,13 @@ class UnifiedReaders:
             {"page": page, "locale": self._page_locale_hints.get(page, "unknown")}
             for page in sorted(self._page_locale_hints)
         ]
+        if self._timings:
+            timings_payload = dict(summary_dict.get("timings_ms") or {})
+            for key, value in self._timings.items():
+                timings_payload[key] = round(float(value), 2)
+            summary_dict["timings_ms"] = timings_payload
+        if self._table_counts:
+            summary_dict["table_counts"] = {int(page): count for page, count in sorted(self._table_counts.items())}
         tool_log = [dict(event) for event in self._tool_events]
         summary_dict["tool_log"] = tool_log
         return {
@@ -1250,6 +1280,13 @@ class UnifiedReaders:
             ],
             "tool_log": [dict(event) for event in self._tool_events],
         }
+        if self._timings:
+            timings_payload = dict(summary.get("timings_ms") or {})
+            for key, value in self._timings.items():
+                timings_payload[key] = round(float(value), 2)
+            summary["timings_ms"] = timings_payload
+        if self._table_counts:
+            summary["table_counts"] = {int(page): count for page, count in sorted(self._table_counts.items())}
         summary_path = self.readers_dir / "readers_summary.json"
         payload = {"summary": summary, "tool_log": summary["tool_log"]}
         summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1322,7 +1359,16 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
             page_no = int(obj.get("page", 0) or 0)
             record_map[page_no] = obj
 
+    lang_lookup = {int(entry.get("page", 0) or 0): entry.get("lang") or "unknown" for entry in summary.get("lang_per_page", []) or []}
+    locale_lookup = {int(entry.get("page", 0) or 0): entry.get("locale") or "unknown" for entry in summary.get("locale_per_page", []) or []}
+    table_counts = {int(page): int(count) for page, count in (summary.get("table_counts") or {}).items()}
+    tool_events = summary.get("tool_log", []) or []
+    table_fail_pages = {int(event.get("page") or 0) for event in tool_events if event.get("step") == "table_extract" and str(event.get("status")).lower() in {"failed", "fallback"}}
     per_page = []
+    flagged = []
+    any_thr = float(thresholds.get("any_min_conf", 70.0))
+    ocr_thr = float(thresholds.get("ocr_min_conf", 80.0))
+    low_text_thr = 10
     for page in range(1, pages + 1):
         record = record_map.get(page, {})
         decision = (decisions[page - 1] if page - 1 < len(decisions) else record.get("source", "native")) or "native"
@@ -1333,6 +1379,17 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
         cells = int(tables_cells.get(page, 0))
         chars = int(record.get("chars") or len(str(record.get("text", ""))))
         ocr_conf_avg = record.get("ocr_conf_avg")
+        lang = lang_lookup.get(page, "unknown")
+        locale = locale_lookup.get(page, "unknown")
+        tables_found = table_counts.get(page, 0)
+        flags = []
+        if conf < any_thr or ("ocr" in source.lower() and conf < ocr_thr):
+            flags.append("low_conf_page")
+        if words < low_text_thr and "ocr" in source.lower():
+            flags.append("low_text_page")
+        if page in table_fail_pages:
+            flags.append("table_extract_error")
+        has_table = cells > 0 or tables_found > 0
         per_page.append(
             {
                 "page": page,
@@ -1341,25 +1398,20 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
                 "ocr_words": words,
                 "chars": chars,
                 "ocr_conf_avg": ocr_conf_avg,
-                "has_table": cells > 0,
+                "has_table": has_table,
+                "tables_found": tables_found,
                 "table_cells": cells,
                 "decision": decision,
+                "lang": lang,
+                "locale": locale,
+                "flags": flags,
                 "time_ms": time_ms,
             }
         )
-
+        if "low_conf_page" in flags:
+            flagged.append(page)
     payload["per_page_stats"] = per_page
-
-    flagged = []
-    any_thr = float(thresholds.get("any_min_conf", 70.0))
-    ocr_thr = float(thresholds.get("ocr_min_conf", 80.0))
-    for record in per_page:
-        source = str(record.get("source", "")).lower()
-        conf = float(record.get("conf") or 0.0)
-        if conf < any_thr or ("ocr" in source and conf < ocr_thr):
-            flagged.append(record["page"])
-
-    payload["flags"] = {"manual_review": bool(warnings) or bool(flagged), "pages": flagged}
+    payload["flags"] = {"manual_review": bool(warnings) or bool(flagged), "pages": sorted(set(flagged))}
     summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     csv_path = Path(outdir) / "per_page_stats.csv"
@@ -1367,7 +1419,7 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
         with open(csv_path, "w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(
                 handle,
-                fieldnames=["page", "source", "conf", "ocr_words", "has_table", "table_cells", "decision", "time_ms"],
+                fieldnames=["page", "source", "conf", "ocr_words", "chars", "has_table", "tables_found", "table_cells", "flags", "decision", "lang", "locale", "time_ms"],
             )
             writer.writeheader()
             writer.writerows(per_page)
