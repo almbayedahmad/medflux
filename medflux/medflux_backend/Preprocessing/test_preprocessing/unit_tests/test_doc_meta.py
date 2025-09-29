@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from medflux_backend.Preprocessing.pipeline import detect_and_read
-from medflux_backend.Preprocessing.output_structure.readers_outputs import builder
+from medflux_backend.Preprocessing.output_structure.readers_outputs import doc_meta as doc_meta_module
 
 
 def _write_summary_payload(path: Path, summary: dict) -> None:
@@ -33,24 +33,25 @@ def test_doc_meta_written(tmp_path, payload):
     doc_meta_path = outdir / sample.stem / "doc_meta.json"
     assert doc_meta_path.exists()
 
-    doc_meta = json.loads(doc_meta_path.read_text(encoding="utf-8"))
-    assert doc_meta["file_name"] == sample.name
-    assert doc_meta["file_type"] in {"txt", "pdf_text", "docx", "pdf_scan", "pdf_scan_hybrid", "image"}
-    assert doc_meta["detected_encodings"] in {None, "utf-8"}
-    assert doc_meta["timings_ms"]["total_ms"] >= 0
-    assert doc_meta["per_page_stats"]
-    assert isinstance(doc_meta["text_blocks"], list)
-    assert isinstance(doc_meta["tables_raw"], list)
-    assert isinstance(doc_meta["artifacts"], list)
-    assert doc_meta["detected_languages"]["by_page"]
-    assert doc_meta["locale_hints"]["by_page"]
-    assert "qa" in doc_meta
-    assert isinstance(doc_meta["qa"]["warnings"], list)
-    assert isinstance(doc_meta["processing_log"], list)
-    assert isinstance(doc_meta["logs"], list)
-    assert Path(doc_meta["text_blocks_path"]).exists()
-    assert Path(doc_meta["tables_raw_path"]).exists()
-    assert Path(doc_meta["visual_artifacts_path"]).exists()
+    doc_meta_json = json.loads(doc_meta_path.read_text(encoding="utf-8"))
+    assert doc_meta_json["file_name"] == sample.name
+    assert doc_meta_json["file_type"] in {"txt", "pdf_text", "docx", "pdf_scan", "pdf_scan_hybrid", "image"}
+    assert doc_meta_json["detected_encodings"] in {None, "utf-8"}
+    assert doc_meta_json["timings_ms"]["total_ms"] >= 0
+    assert doc_meta_json["coordinate_unit"] == "points"
+    assert doc_meta_json["per_page_stats"]
+    assert isinstance(doc_meta_json["text_blocks"], list)
+    assert isinstance(doc_meta_json["tables_raw"], list)
+    assert isinstance(doc_meta_json["artifacts"], list)
+    assert doc_meta_json["detected_languages"]["by_page"]
+    assert doc_meta_json["locale_hints"]["by_page"]
+    assert "qa" in doc_meta_json
+    assert isinstance(doc_meta_json["qa"]["warnings"], list)
+    assert isinstance(doc_meta_json["processing_log"], list)
+    assert isinstance(doc_meta_json["logs"], list)
+    assert Path(doc_meta_json["text_blocks_path"]).exists()
+    assert Path(doc_meta_json["tables_raw_path"]).exists()
+    assert Path(doc_meta_json["visual_artifacts_path"]).exists()
 
 
 def _baseline_summary(pages: int) -> dict:
@@ -102,20 +103,21 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     _write_summary_payload(readers_dir / "readers_summary.json", summary)
 
     detect_meta = {"file_type": "pdf_text", "lang": "deu+eng"}
-    doc_meta = builder.build_doc_meta(
+    doc_meta_payload = doc_meta_module.build_doc_meta(
         input_path=tmp_path / "sample.pdf",
         detect_meta=detect_meta,
         encoding_meta=_baseline_encoding_meta(),
         readers_result={"outdir": str(readers_dir), "summary": summary, "tool_log": []},
         timings=_baseline_timings(),
     )
+    assert doc_meta_payload["coordinate_unit"] == "points"
 
-    assert doc_meta["detected_languages"]["overall"] == ["de", "en"]
-    assert all(entry["languages"] == ["de", "en"] for entry in doc_meta["detected_languages"]["by_page"] or [])
-    assert doc_meta["qa"]["needs_review"] is False
-    assert doc_meta["processing_log"] == []
-    assert doc_meta["artifacts"] == []
-    assert doc_meta["per_page_stats"] == []
+    assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
+    assert all(entry["languages"] == ["de", "en"] for entry in doc_meta_payload["detected_languages"]["by_page"] or [])
+    assert doc_meta_payload["qa"]["needs_review"] is False
+    assert doc_meta_payload["processing_log"] == []
+    assert doc_meta_payload["artifacts"] == []
+    assert doc_meta_payload["per_page_stats"] == []
 
 
 def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
@@ -126,15 +128,16 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
     _write_summary_payload(readers_dir / "readers_summary.json", summary)
 
     detect_meta = {"file_type": "pdf_text", "lang": "deu+eng"}
-    doc_meta = builder.build_doc_meta(
+    doc_meta_payload = doc_meta_module.build_doc_meta(
         input_path=tmp_path / "sample.pdf",
         detect_meta=detect_meta,
         encoding_meta=_baseline_encoding_meta(),
         readers_result={"outdir": str(readers_dir), "summary": summary, "tool_log": []},
         timings=_baseline_timings(),
     )
+    assert doc_meta_payload["coordinate_unit"] == "points"
 
-    assert doc_meta["detected_languages"]["overall"] == ["de", "en"]
-    assert doc_meta["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
-    assert doc_meta["qa"]["needs_review"] is False
-    assert doc_meta["warnings"] == []
+    assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
+    assert doc_meta_payload["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
+    assert doc_meta_payload["qa"]["needs_review"] is False
+    assert doc_meta_payload["warnings"] == []

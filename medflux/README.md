@@ -122,10 +122,10 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 Use these hints, stats, and logs to drive later merge/normalisation phases (for example, switching decimal handling when `locale_hints.overall` is `de`, or rerunning OCR when `qa.needs_review` is true).
 
 
-### Metadata builder
+### Metadata doc meta module
 
 The consolidated metadata schema lives under `medflux_backend/Preprocessing/output_structure/readers_outputs/`.
-The `builder.py` entry point assembles `doc_meta.json` by loading reader summaries, timers, text blocks, tables, QA flags, and log events.
+The `doc_meta.py` entry point assembles `doc_meta.json` by loading reader summaries, timers, text blocks, tables, QA flags, and log events.
 Adjustments to the JSON contract should happen in `components.py`, with coverage in `test_doc_meta.py`.
 
 ## Running tests

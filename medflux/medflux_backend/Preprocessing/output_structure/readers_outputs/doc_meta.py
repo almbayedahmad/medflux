@@ -16,7 +16,7 @@ from .components import (
     prepare_timings,
     summarise_logs,
 )
-from .types import DocMetaPayload
+from .types import DocMeta
 
 
 def _load_summary_payload(readers_dir: Path) -> Dict[str, Any]:
@@ -39,7 +39,7 @@ def build_doc_meta(
     inline_blocks: bool = True,
     inline_tables: bool = True,
     inline_artifacts: bool = True,
-) -> DocMetaPayload:
+) -> DocMeta:
     readers_dir = Path(readers_result.get("outdir") or readers_result.get("readers_outdir") or input_path.parent / "readers")
     summary_payload = _load_summary_payload(readers_dir)
     summary = summary_payload.get("summary", {}) or {}
@@ -65,7 +65,7 @@ def build_doc_meta(
     ocr_conf_values = [stat.get("ocr_conf_avg") for stat in per_page_stats if isinstance(stat, dict) and stat.get("ocr_conf_avg") is not None]
     avg_ocr_conf = round(sum(float(value) for value in ocr_conf_values) / len(ocr_conf_values), 2) if ocr_conf_values else 0.0
 
-    doc_meta: DocMetaPayload = {
+    doc_meta: DocMeta = {
         "file_name": input_path.name,
         "file_type": detect_meta.get("file_type") or "unknown",
         "pages_count": int(summary.get("page_count") or detect_meta.get("pages_count") or readers_result.get("pages_count") or 0),
@@ -73,6 +73,7 @@ def build_doc_meta(
         "detected_languages": detected_langs,
         "has_ocr": has_ocr,
         "avg_ocr_conf": avg_ocr_conf,
+        "coordinate_unit": "points",
         "timings_ms": timing_payload,
         "per_page_stats": per_page_stats,
         "text_blocks": text_blocks,

@@ -99,7 +99,7 @@ class LocaleHints(TypedDict, total=False):
     dates_locale: NotRequired[str]
 
 
-class DocMetaPayload(TypedDict, total=False):
+class DocMeta(TypedDict, total=False):
     file_name: str
     file_type: str
     pages_count: int
@@ -107,6 +107,7 @@ class DocMetaPayload(TypedDict, total=False):
     detected_languages: DetectedLanguages
     has_ocr: bool
     avg_ocr_conf: float
+    coordinate_unit: str
     timings_ms: TimingBreakdown
     per_page_stats: List[PerPageStat]
     text_blocks: List[TextBlock]

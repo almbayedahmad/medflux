@@ -13,7 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
 from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
 from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
-from medflux_backend.Preprocessing.output_structure.readers_outputs.builder import build_doc_meta
+from medflux_backend.Preprocessing.output_structure.readers_outputs.doc_meta import build_doc_meta
 
 
 
