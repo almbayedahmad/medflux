@@ -49,10 +49,23 @@ def test_doc_meta_written(tmp_path, payload):
     assert isinstance(doc_meta_json["content_hash"], str)
     assert isinstance(doc_meta_json["has_text_layer"], bool)
     assert doc_meta_json["per_page_stats"]
+    first_page = doc_meta_json["per_page_stats"][0]
+    assert first_page["source"] in {"text", "ocr", "mixed"}
+    if first_page["source"] == "ocr":
+        assert "ocr_conf" in first_page
+    page_size = first_page.get("page_size")
+    if page_size:
+        assert "width" in page_size and "height" in page_size
+    if "rotation_deg" in first_page:
+        assert isinstance(first_page["rotation_deg"], (int, float))
+    assert isinstance(first_page.get("is_multi_column"), bool)
     assert isinstance(doc_meta_json["text_blocks"], list)
     if doc_meta_json["text_blocks"]:
         first_block = doc_meta_json["text_blocks"][0]
         assert isinstance(first_block.get("text_lines"), list)
+        assert "font_size" in first_block or first_block.get("font_size") is None
+        assert "paragraph_style" in first_block
+        assert "list_level" in first_block
         assert "charmap_ref" in first_block
     assert isinstance(doc_meta_json["tables_raw"], list)
     assert isinstance(doc_meta_json["artifacts"], list)
@@ -62,6 +75,12 @@ def test_doc_meta_written(tmp_path, payload):
     assert isinstance(doc_meta_json["qa"]["warnings"], list)
     assert isinstance(doc_meta_json["processing_log"], list)
     assert isinstance(doc_meta_json["logs"], list)
+    assert doc_meta_json["ocr_engine"] in {"tesseract", "none"}
+    assert isinstance(doc_meta_json["ocr_engine_version"], (str, type(None)))
+    assert isinstance(doc_meta_json["ocr_langs"], str)
+    assert "dpi_" in doc_meta_json["preprocess_applied"][0] if doc_meta_json["preprocess_applied"] else True
+    assert isinstance(doc_meta_json["content_hash"], str) and doc_meta_json["content_hash"]
+    assert isinstance(doc_meta_json["has_text_layer"], bool)
     assert Path(doc_meta_json["text_blocks_path"]).exists()
     assert Path(doc_meta_json["tables_raw_path"]).exists()
     assert Path(doc_meta_json["visual_artifacts_path"]).exists()

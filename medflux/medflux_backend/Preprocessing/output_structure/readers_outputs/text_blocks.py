@@ -61,10 +61,10 @@ def _as_bool(value: Any) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     if isinstance(value, str):
-        value_lower = value.strip().lower()
-        if value_lower in {"true", "1", "yes"}:
+        lowered = value.strip().lower()
+        if lowered in {"true", "1", "yes"}:
             return True
-        if value_lower in {"false", "0", "no"}:
+        if lowered in {"false", "0", "no"}:
             return False
     return False
 
@@ -78,6 +78,14 @@ def _safe_lang(item: JsonDict) -> str:
 
 def _safe_char_map_ref(readers_dir: Path, block_id: str) -> str:
     return f"{readers_dir / 'text_blocks.jsonl'}#{block_id}"
+
+
+def _infer_paragraph_style(is_heading: bool, is_list: bool) -> str:
+    if is_heading:
+        return "heading"
+    if is_list:
+        return "list"
+    return "body"
 
 
 def build_text_blocks(readers_dir: Path) -> List[TextBlock]:
@@ -115,23 +123,32 @@ def build_text_blocks(readers_dir: Path) -> List[TextBlock]:
 
             if item.get("reading_order_index") is not None:
                 block["reading_order_index"] = _as_int(item.get("reading_order_index"))
-            if item.get("is_heading_like") is not None:
-                block["is_heading_like"] = _as_bool(item.get("is_heading_like"))
-            if item.get("is_list_like") is not None:
-                block["is_list_like"] = _as_bool(item.get("is_list_like"))
+
+            is_heading = item.get("is_heading_like")
+            is_heading_bool = _as_bool(is_heading) if is_heading is not None else False
+            is_list = item.get("is_list_like")
+            is_list_bool = _as_bool(is_list) if is_list is not None else False
+
+            if is_heading is not None:
+                block["is_heading_like"] = is_heading_bool
+            if is_list is not None:
+                block["is_list_like"] = is_list_bool
 
             block["lang"] = _safe_lang(item)
 
             if item.get("ocr_conf_avg") is not None:
                 block["ocr_conf_avg"] = _as_float(item.get("ocr_conf_avg"))
             if item.get("font_size_avg") is not None:
-                block["font_size_avg"] = _as_float(item.get("font_size_avg"))
+                block["font_size"] = _as_float(item.get("font_size_avg"))
             if item.get("is_bold") is not None:
                 block["is_bold"] = _as_bool(item.get("is_bold"))
             if item.get("is_upper") is not None:
                 block["is_upper"] = _as_bool(item.get("is_upper"))
             if item.get("char_count") is not None:
                 block["char_count"] = _as_int(item.get("char_count"))
+
+            block["paragraph_style"] = _infer_paragraph_style(is_heading_bool, is_list_bool)
+            block["list_level"] = 1 if is_list_bool else 0
 
             blocks.append(block)
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, NotRequired, TypedDict
+from typing import Dict, List, NotRequired, TypedDict
 
 
 class TimingBreakdown(TypedDict, total=False):
@@ -33,7 +33,11 @@ class PerPageStat(TypedDict, total=False):
     lang: str
     locale: str
     flags: List[str]
+    ocr_conf: NotRequired[float]
     ocr_conf_avg: NotRequired[float]
+    rotation_deg: NotRequired[float]
+    is_multi_column: NotRequired[bool]
+    page_size: NotRequired[Dict[str, float]]
 
 
 class TextBlock(TypedDict, total=False):
@@ -47,11 +51,13 @@ class TextBlock(TypedDict, total=False):
     is_list_like: NotRequired[bool]
     lang: NotRequired[str]
     ocr_conf_avg: NotRequired[float]
-    font_size_avg: NotRequired[float]
+    font_size: NotRequired[float]
     is_bold: NotRequired[bool]
     is_upper: NotRequired[bool]
     char_count: NotRequired[int]
     charmap_ref: str
+    paragraph_style: NotRequired[str]
+    list_level: NotRequired[int]
 
 
 class RawTableCell(TypedDict, total=False):

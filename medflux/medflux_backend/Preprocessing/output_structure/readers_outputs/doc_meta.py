@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import json
+try:
+    import fitz  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    fitz = None
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set
 
@@ -107,14 +111,92 @@ def _compute_content_hash(path: Path, chunk_size: int = 65536) -> Optional[str]:
 
 def _infer_has_text_layer(per_page_stats: Iterable[Dict[str, Any]]) -> bool:
     for entry in per_page_stats or []:
-        source = str(entry.get("source") or entry.get("decision") or "").lower()
-        if 'native' in source:
+        source = str(entry.get("source") or "").lower()
+        decision = str(entry.get("decision") or "").lower()
+        if source in {"text", "mixed"} or 'native' in decision:
             return True
     return False
 
 
 
-import hashlib
+def _extract_pdf_page_geometry(input_path: Path) -> Dict[int, Dict[str, float]]:
+    if fitz is None:
+        return {}
+    try:
+        doc = fitz.open(str(input_path))
+    except Exception:  # pragma: no cover - optional dependency
+        return {}
+    geometries: Dict[int, Dict[str, float]] = {}
+    try:
+        for index, page in enumerate(doc, start=1):
+            rect = getattr(page, 'rect', None)
+            if rect is None:
+                continue
+            geometries[index] = {
+                'width': float(rect.width),
+                'height': float(rect.height),
+                'rotation': float(getattr(page, 'rotation', 0) or 0),
+            }
+    finally:
+        try:
+            doc.close()
+        except Exception:
+            pass
+    return geometries
+
+
+
+def _group_blocks_by_page(blocks: Iterable[Dict[str, Any]]) -> Dict[int, List[Dict[str, Any]]]:
+    grouped: Dict[int, List[Dict[str, Any]]] = {}
+    for block in blocks or []:
+        page = int(block.get('page') or 0)
+        grouped.setdefault(page, []).append(block)
+    return grouped
+
+
+
+def _detect_multi_column(
+    grouped: Dict[int, List[Dict[str, Any]]],
+    page_geometry: Dict[int, Dict[str, float]],
+) -> Set[int]:
+    multi: Set[int] = set()
+    for page, blocks in grouped.items():
+        centers: List[float] = []
+        for block in blocks:
+            bbox = block.get('bbox') or []
+            if isinstance(bbox, list) and len(bbox) >= 4:
+                try:
+                    x0 = float(bbox[0])
+                    x1 = float(bbox[2])
+                except Exception:
+                    continue
+                centers.append((x0 + x1) / 2.0)
+        if len(centers) < 6:
+            continue
+        width = page_geometry.get(page, {}).get('width')
+        if width and width > 0:
+            norm = [max(0.0, min(center / width, 1.0)) for center in centers]
+        else:
+            min_c = min(centers)
+            max_c = max(centers)
+            span = max(max_c - min_c, 1.0)
+            norm = [(center - min_c) / span for center in centers]
+        left = [value for value in norm if value < 0.45]
+        right = [value for value in norm if value > 0.55]
+        if not left or not right:
+            continue
+        left_ratio = len(left) / len(norm)
+        right_ratio = len(right) / len(norm)
+        if left_ratio < 0.25 or right_ratio < 0.25:
+            continue
+        left_mean = sum(left) / len(left)
+        right_mean = sum(right) / len(right)
+        if abs(left_mean - right_mean) >= 0.15:
+            multi.add(page)
+    return multi
+
+
+
 
 
 def _load_summary_payload(readers_dir: Path) -> Dict[str, Any]:
@@ -155,14 +237,24 @@ def build_doc_meta(
         else:
             timing_payload["table_detect_light"] = 0.0
 
-    per_page_stats = build_per_page_stats(summary_payload)
+    file_type = str(detect_meta.get("file_type") or "").lower()
+    page_geometry = _extract_pdf_page_geometry(input_path) if file_type.startswith("pdf") else {}
+
+    text_blocks = build_text_blocks(readers_dir) if inline_blocks else []
+    blocks_by_page: Dict[int, List[Dict[str, Any]]] = _group_blocks_by_page(text_blocks)
     detected_langs = build_detected_languages(summary_payload, fallback=[detect_meta.get("lang") or ""])
     locale_hints = build_locale_hints(summary_payload)
+    multi_column_pages = _detect_multi_column(blocks_by_page, page_geometry)
+    per_page_stats = build_per_page_stats(
+        summary_payload,
+        page_geometry=page_geometry,
+        lang_fallback=detected_langs.get("overall"),
+        multi_column_pages=multi_column_pages,
+    )
 
     warnings = list(summary.get("warnings") or [])
     qa_section = build_qa(summary_payload, warnings)
 
-    text_blocks = build_text_blocks(readers_dir) if inline_blocks else []
     tables_raw = load_tables_raw(readers_dir) if inline_tables else []
     artifacts = load_artifacts(readers_dir) if inline_artifacts else []
 
@@ -179,8 +271,8 @@ def build_doc_meta(
     has_text_layer = _infer_has_text_layer(per_page_stats)
     log_strings = summarise_logs(tool_log)
 
-    has_ocr = any("ocr" in (stat["source"].lower() if stat.get("source") else "") for stat in per_page_stats)
-    ocr_conf_values = [stat.get("ocr_conf_avg") for stat in per_page_stats if isinstance(stat, dict) and stat.get("ocr_conf_avg") is not None]
+    has_ocr = any((stat.get("source") or "").lower() in {"ocr", "mixed"} for stat in per_page_stats)
+    ocr_conf_values = [stat.get("ocr_conf") for stat in per_page_stats if isinstance(stat, dict) and stat.get("ocr_conf") is not None]
     avg_ocr_conf = round(sum(float(value) for value in ocr_conf_values) / len(ocr_conf_values), 2) if ocr_conf_values else 0.0
 
     ocr_engine_final = ocr_engine if ocr_engine is not None else ("tesseract" if has_ocr else "none")

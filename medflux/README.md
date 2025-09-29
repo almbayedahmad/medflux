@@ -126,7 +126,9 @@ Use these hints, stats, and logs to drive later merge/normalisation phases (for 
 
 The consolidated metadata schema lives under `medflux_backend/Preprocessing/output_structure/readers_outputs/`.
 The `doc_meta.py` entry point assembles `doc_meta.json` by loading reader summaries, timers, text blocks, tables, QA flags, and log events.
-- Doc metadata now records OCR runtime details (ocr_engine, ocr_engine_version, ocr_langs), preprocessing steps (preprocess_applied), a stable content_hash, detected box_origin, pdf_locked status, and the derived has_text_layer flag alongside per-stage timings (including 	able_detect_light).
+- Doc metadata now records OCR runtime details (`ocr_engine`, `ocr_engine_version`, `ocr_langs`), preprocessing steps (`preprocess_applied`), a stable `content_hash`, detected `bbox_origin` / `pdf_locked` / `has_text_layer`, and the refined per-page timings (including `table_detect_light`).
+- Per-page stats are normalised (`source` as `text|ocr|mixed`, language fallbacks, rotation, `page_size`, multi-column flag, `ocr_conf`).
+- Text blocks carry structured presentation hints (`font_size`, `paragraph_style`, `list_level`) alongside existing OCR confidence and language tags.
 Adjustments to the JSON contract should happen in `components.py` (shared helpers), `per_page_stats.py` (per-page details), and `text_blocks.py` (block-level details), with coverage in `test_doc_meta.py`.
 
 ## Running tests
