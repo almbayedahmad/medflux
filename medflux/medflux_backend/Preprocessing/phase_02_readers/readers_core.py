@@ -689,6 +689,7 @@ class UnifiedReaders:
             if self.opts.verbose:
                 debug_dir = self.readers_dir / "ocr_debug"
             start = time.perf_counter()
+            pre_config = "deskew,clahe" if self.opts.use_pre else None
             results = ocr_runner.ocr_pages(
                 str(pdf_path),
                 page_numbers_1based=pages,
@@ -696,7 +697,7 @@ class UnifiedReaders:
                 dpi=self.opts.dpi,
                 psm=self.opts.psm,
                 oem=self.opts.oem,
-                pre="deskew,clahe" if self.opts.use_pre else None,
+                pre=pre_config,
                 save_tsv=self.opts.verbose,
                 outdir=debug_dir,
                 dpi_mode=self.opts.dpi_mode,
@@ -712,7 +713,10 @@ class UnifiedReaders:
             if page_no > 0:
                 lookup[page_no] = item
         status = "ok" if lookup else "empty"
-        self._log_tool_event("ocr_runner", status, details={"pages": pages, "covered": sorted(lookup.keys()), "lang": self.opts.lang})
+        details = {"pages": pages, "covered": sorted(lookup.keys()), "lang": self.opts.lang}
+        if pre_config:
+            details["pre"] = pre_config
+        self._log_tool_event("ocr_runner", status, details=details)
         return lookup
 
     def _apply_ocr_result(self, fallback_text: str, ocr_data: Optional[Dict[str, object]]) -> Tuple[str, float, int, float]:

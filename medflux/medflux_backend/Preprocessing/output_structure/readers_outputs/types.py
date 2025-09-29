@@ -11,6 +11,7 @@ class TimingBreakdown(TypedDict, total=False):
     text_extract: float
     ocr: float
     table_detect: float
+    table_detect_light: float
     table_extract: float
     lang_detect: float
     cleaning: float
@@ -39,13 +40,18 @@ class TextBlock(TypedDict, total=False):
     id: str
     page: int
     text_raw: str
-    text_lines: str
+    text_lines: List[str]
     bbox: List[float]
     reading_order_index: NotRequired[int]
     is_heading_like: NotRequired[bool]
     is_list_like: NotRequired[bool]
     lang: NotRequired[str]
     ocr_conf_avg: NotRequired[float]
+    font_size_avg: NotRequired[float]
+    is_bold: NotRequired[bool]
+    is_upper: NotRequired[bool]
+    char_count: NotRequired[int]
+    charmap_ref: str
 
 
 class RawTableCell(TypedDict, total=False):
@@ -108,6 +114,14 @@ class DocMeta(TypedDict, total=False):
     has_ocr: bool
     avg_ocr_conf: float
     coordinate_unit: str
+    bbox_origin: str
+    pdf_locked: bool
+    ocr_engine: str | None
+    ocr_engine_version: str | None
+    ocr_langs: str
+    preprocess_applied: List[str]
+    content_hash: str
+    has_text_layer: bool
     timings_ms: TimingBreakdown
     per_page_stats: List[PerPageStat]
     text_blocks: List[TextBlock]
@@ -121,3 +135,4 @@ class DocMeta(TypedDict, total=False):
     visual_artifacts_path: str
     text_blocks_path: str
     tables_raw_path: str
+

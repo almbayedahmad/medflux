@@ -10,7 +10,6 @@ from .types import (
     LocaleHints,
     QASection,
     RawTable,
-    TextBlock,
     TimingBreakdown,
 )
 
@@ -21,6 +20,7 @@ _TIMING_KEYS = {
     "text_extract",
     "ocr",
     "table_detect",
+    "table_detect_light",
     "table_extract",
     "lang_detect",
     "cleaning",
@@ -156,32 +156,6 @@ def build_locale_hints(summary_payload: Dict[str, Any]) -> LocaleHints:
         "numbers_locale": overall or "unknown",
         "dates_locale": overall or "unknown",
     }
-
-
-def load_text_blocks(readers_dir: Path) -> List[TextBlock]:
-    items = _load_jsonl(readers_dir / "text_blocks.jsonl")
-    blocks: List[TextBlock] = []
-    for index, item in enumerate(items):
-        bbox = item.get("bbox") or []
-        block: TextBlock = {
-            "id": str(item.get("id") or f"b{index:04d}"),
-            "page": int(item.get("page") or 0),
-            "text_raw": str(item.get("text_raw") or item.get("text") or ""),
-            "text_lines": str(item.get("text_lines") or item.get("text_raw") or ""),
-            "bbox": [float(x) for x in bbox] if isinstance(bbox, list) else [],
-        }
-        if item.get("is_heading_like") is not None:
-            block["is_heading_like"] = bool(item.get("is_heading_like"))
-        if item.get("is_list_like") is not None:
-            block["is_list_like"] = bool(item.get("is_list_like"))
-        if item.get("lang"):
-            block["lang"] = str(item.get("lang"))
-        if item.get("ocr_conf_avg") is not None:
-            block["ocr_conf_avg"] = float(item.get("ocr_conf_avg") or 0.0)
-        if item.get("reading_order_index") is not None:
-            block["reading_order_index"] = int(item.get("reading_order_index") or index)
-        blocks.append(block)
-    return blocks
 
 
 def load_tables_raw(readers_dir: Path) -> List[RawTable]:

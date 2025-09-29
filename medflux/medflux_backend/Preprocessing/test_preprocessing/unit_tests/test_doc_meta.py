@@ -39,8 +39,21 @@ def test_doc_meta_written(tmp_path, payload):
     assert doc_meta_json["detected_encodings"] in {None, "utf-8"}
     assert doc_meta_json["timings_ms"]["total_ms"] >= 0
     assert doc_meta_json["coordinate_unit"] == "points"
+    assert doc_meta_json["bbox_origin"] == "top-left"
+    assert doc_meta_json["pdf_locked"] is False
+    assert "table_detect_light" in doc_meta_json["timings_ms"]
+    assert doc_meta_json["ocr_engine"] in {"tesseract", "none"}
+    assert isinstance(doc_meta_json["ocr_engine_version"], (str, type(None)))
+    assert doc_meta_json["ocr_langs"] or doc_meta_json["ocr_engine"] == "none"
+    assert isinstance(doc_meta_json["preprocess_applied"], list)
+    assert isinstance(doc_meta_json["content_hash"], str)
+    assert isinstance(doc_meta_json["has_text_layer"], bool)
     assert doc_meta_json["per_page_stats"]
     assert isinstance(doc_meta_json["text_blocks"], list)
+    if doc_meta_json["text_blocks"]:
+        first_block = doc_meta_json["text_blocks"][0]
+        assert isinstance(first_block.get("text_lines"), list)
+        assert "charmap_ref" in first_block
     assert isinstance(doc_meta_json["tables_raw"], list)
     assert isinstance(doc_meta_json["artifacts"], list)
     assert doc_meta_json["detected_languages"]["by_page"]
@@ -111,7 +124,15 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
         timings=_baseline_timings(),
     )
     assert doc_meta_payload["coordinate_unit"] == "points"
-
+    assert doc_meta_payload["bbox_origin"] == "top-left"
+    assert doc_meta_payload["pdf_locked"] is False
+    assert "table_detect_light" in doc_meta_payload["timings_ms"]
+    assert doc_meta_payload["ocr_engine"] == "none"
+    assert doc_meta_payload["ocr_engine_version"] is None
+    assert isinstance(doc_meta_payload["ocr_langs"], str)
+    assert isinstance(doc_meta_payload["preprocess_applied"], list)
+    assert isinstance(doc_meta_payload["content_hash"], str)
+    assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
     assert all(entry["languages"] == ["de", "en"] for entry in doc_meta_payload["detected_languages"]["by_page"] or [])
     assert doc_meta_payload["qa"]["needs_review"] is False
@@ -136,7 +157,15 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
         timings=_baseline_timings(),
     )
     assert doc_meta_payload["coordinate_unit"] == "points"
-
+    assert doc_meta_payload["bbox_origin"] == "top-left"
+    assert doc_meta_payload["pdf_locked"] is False
+    assert "table_detect_light" in doc_meta_payload["timings_ms"]
+    assert doc_meta_payload["ocr_engine"] == "none"
+    assert doc_meta_payload["ocr_engine_version"] is None
+    assert isinstance(doc_meta_payload["ocr_langs"], str)
+    assert isinstance(doc_meta_payload["preprocess_applied"], list)
+    assert isinstance(doc_meta_payload["content_hash"], str)
+    assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
     assert doc_meta_payload["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
     assert doc_meta_payload["qa"]["needs_review"] is False
