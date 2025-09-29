@@ -126,7 +126,7 @@ Use these hints, stats, and logs to drive later merge/normalisation phases (for 
 
 The consolidated metadata schema lives under `medflux_backend/Preprocessing/output_structure/readers_outputs/`.
 The `doc_meta.py` entry point assembles `doc_meta.json` by loading reader summaries, timers, text blocks, tables, QA flags, and log events.
-Adjustments to the JSON contract should happen in `components.py`, with coverage in `test_doc_meta.py`.
+Adjustments to the JSON contract should happen in `components.py` (shared helpers) and `per_page_stats.py` (per-page details), with coverage in `test_doc_meta.py`.
 
 ## Running tests
 

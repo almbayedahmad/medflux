@@ -8,7 +8,6 @@ from .types import (
     Artifact,
     DetectedLanguages,
     LocaleHints,
-    PerPageStat,
     QASection,
     RawTable,
     TextBlock,
@@ -157,35 +156,6 @@ def build_locale_hints(summary_payload: Dict[str, Any]) -> LocaleHints:
         "numbers_locale": overall or "unknown",
         "dates_locale": overall or "unknown",
     }
-
-
-def collect_per_page_stats(summary_payload: Dict[str, Any]) -> List[PerPageStat]:
-    per_page_raw = summary_payload.get("per_page_stats")
-    if per_page_raw is None:
-        per_page_raw = (summary_payload.get("summary", {}) or {}).get("per_page_stats")
-    stats: List[PerPageStat] = []
-    for entry in per_page_raw or []:
-        page = int(entry.get("page") or 0)
-        source = str(entry.get("source") or "")
-        stat: PerPageStat = {
-            "page": page,
-            "source": source,
-            "conf": float(entry.get("conf") or 0.0),
-            "ocr_words": int(entry.get("ocr_words") or 0),
-            "chars": int(entry.get("chars") or 0),
-            "has_table": bool(entry.get("has_table")),
-            "tables_found": int(entry.get("tables_found") or 0),
-            "table_cells": int(entry.get("table_cells") or 0),
-            "decision": str(entry.get("decision") or source or "native"),
-            "time_ms": float(entry.get("time_ms") or 0.0),
-            "lang": str(entry.get("lang") or "unknown"),
-            "locale": str(entry.get("locale") or "unknown"),
-            "flags": list(entry.get("flags") or []),
-        }
-        if entry.get("ocr_conf_avg") is not None:
-            stat["ocr_conf_avg"] = float(entry.get("ocr_conf_avg") or 0.0)
-        stats.append(stat)
-    return stats
 
 
 def load_text_blocks(readers_dir: Path) -> List[TextBlock]:

@@ -8,7 +8,6 @@ from .components import (
     build_detected_languages,
     build_locale_hints,
     build_qa,
-    collect_per_page_stats,
     load_artifacts,
     load_tables_raw,
     load_text_blocks,
@@ -16,7 +15,9 @@ from .components import (
     prepare_timings,
     summarise_logs,
 )
+from .per_page_stats import build_per_page_stats
 from .types import DocMeta
+
 
 
 def _load_summary_payload(readers_dir: Path) -> Dict[str, Any]:
@@ -47,7 +48,7 @@ def build_doc_meta(
     summary_timings = summary.get("timings_ms") or {}
     timing_payload = prepare_timings(timings, summary_timings)
 
-    per_page_stats = collect_per_page_stats(summary_payload)
+    per_page_stats = build_per_page_stats(summary_payload)
     detected_langs = build_detected_languages(summary_payload, fallback=[detect_meta.get("lang") or ""])
     locale_hints = build_locale_hints(summary_payload)
 
