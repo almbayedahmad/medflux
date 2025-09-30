@@ -8,6 +8,11 @@ from medflux_backend.Preprocessing.pipeline import detect_and_read
 from medflux_backend.Preprocessing.output_structure.readers_outputs import doc_meta as doc_meta_module
 
 
+_ALLOWED_FILE_TYPES = {"pdf_text", "pdf_scan", "pdf_scan_hybrid", "docx", "image"}
+_ALLOWED_LANGS = {"de", "en", "de+en"}
+_ALLOWED_COORD_UNITS = {"pdf_points", "docx_emus", "image_pixels", "unknown"}
+
+
 def _write_summary_payload(path: Path, summary: dict) -> None:
     payload = {
         "summary": summary,
@@ -35,52 +40,59 @@ def test_doc_meta_written(tmp_path, payload):
 
     doc_meta_json = json.loads(doc_meta_path.read_text(encoding="utf-8"))
     assert doc_meta_json["file_name"] == sample.name
-    assert doc_meta_json["file_type"] in {"txt", "pdf_text", "docx", "pdf_scan", "pdf_scan_hybrid", "image"}
+    assert doc_meta_json["file_type"] in _ALLOWED_FILE_TYPES
     assert doc_meta_json["detected_encodings"] in {None, "utf-8"}
     assert doc_meta_json["timings_ms"]["total_ms"] >= 0
-    assert doc_meta_json["coordinate_unit"] == "points"
+    assert doc_meta_json["coordinate_unit"] in _ALLOWED_COORD_UNITS
     assert doc_meta_json["bbox_origin"] == "top-left"
     assert doc_meta_json["pdf_locked"] is False
     assert "table_detect_light" in doc_meta_json["timings_ms"]
+    for key in ("readers", "ocr", "lang_detect"):
+        assert key in doc_meta_json["timings_ms"]
     assert doc_meta_json["ocr_engine"] in {"tesseract", "none"}
-    assert isinstance(doc_meta_json["ocr_engine_version"], (str, type(None)))
-    assert doc_meta_json["ocr_langs"] or doc_meta_json["ocr_engine"] == "none"
+    assert isinstance(doc_meta_json["ocr_engine_version"], str)
+    assert isinstance(doc_meta_json["ocr_langs"], str)
     assert isinstance(doc_meta_json["preprocess_applied"], list)
+    assert all(isinstance(step, str) for step in doc_meta_json["preprocess_applied"])
     assert isinstance(doc_meta_json["content_hash"], str)
+    assert doc_meta_json["content_hash"]
     assert isinstance(doc_meta_json["has_text_layer"], bool)
+
     assert doc_meta_json["per_page_stats"]
     first_page = doc_meta_json["per_page_stats"][0]
     assert first_page["source"] in {"text", "ocr", "mixed"}
-    if first_page["source"] == "ocr":
-        assert "ocr_conf" in first_page
-    page_size = first_page.get("page_size")
-    if page_size:
-        assert "width" in page_size and "height" in page_size
-    if "rotation_deg" in first_page:
-        assert isinstance(first_page["rotation_deg"], (int, float))
-    assert isinstance(first_page.get("is_multi_column"), bool)
+    assert first_page["lang"] in _ALLOWED_LANGS
+    assert isinstance(first_page["lang_share"], dict)
+    assert isinstance(first_page["flags"], list)
+    assert isinstance(first_page["rotation_deg"], int)
+    assert isinstance(first_page["skew_deg"], float)
+    assert isinstance(first_page["page_size"], dict)
+    assert {"width", "height"}.issubset(first_page["page_size"].keys())
+    assert isinstance(first_page["is_multi_column"], bool)
+    assert isinstance(first_page["columns_count"], int)
+    assert isinstance(first_page["has_header_footer"], bool)
+    assert isinstance(first_page["has_images"], bool)
+
     assert isinstance(doc_meta_json["text_blocks"], list)
     if doc_meta_json["text_blocks"]:
         first_block = doc_meta_json["text_blocks"][0]
-        assert isinstance(first_block.get("text_lines"), list)
-        assert "font_size" in first_block or first_block.get("font_size") is None
-        assert "paragraph_style" in first_block
-        assert "list_level" in first_block
-        assert "charmap_ref" in first_block
+        assert isinstance(first_block["text_lines"], list)
+        assert isinstance(first_block["ocr_conf_avg"], float)
+        assert isinstance(first_block["font_size"], float)
+        assert isinstance(first_block["is_bold"], bool)
+        assert isinstance(first_block["is_upper"], bool)
+        assert isinstance(first_block["paragraph_style"], str)
+        assert isinstance(first_block["list_level"], int)
+        assert isinstance(first_block["charmap_ref"], str)
+
     assert isinstance(doc_meta_json["tables_raw"], list)
     assert isinstance(doc_meta_json["artifacts"], list)
-    assert doc_meta_json["detected_languages"]["by_page"]
-    assert doc_meta_json["locale_hints"]["by_page"]
-    assert "qa" in doc_meta_json
-    assert isinstance(doc_meta_json["qa"]["warnings"], list)
+    assert all(isinstance(lang, str) for lang in doc_meta_json["detected_languages"]["by_page"])
+    assert doc_meta_json["detected_languages"]["doc"] in _ALLOWED_LANGS
+    assert isinstance(doc_meta_json["locale_hints"]["by_page"], list)
+    assert "qa" in doc_meta_json and isinstance(doc_meta_json["qa"]["warnings"], list)
     assert isinstance(doc_meta_json["processing_log"], list)
     assert isinstance(doc_meta_json["logs"], list)
-    assert doc_meta_json["ocr_engine"] in {"tesseract", "none"}
-    assert isinstance(doc_meta_json["ocr_engine_version"], (str, type(None)))
-    assert isinstance(doc_meta_json["ocr_langs"], str)
-    assert "dpi_" in doc_meta_json["preprocess_applied"][0] if doc_meta_json["preprocess_applied"] else True
-    assert isinstance(doc_meta_json["content_hash"], str) and doc_meta_json["content_hash"]
-    assert isinstance(doc_meta_json["has_text_layer"], bool)
     assert Path(doc_meta_json["text_blocks_path"]).exists()
     assert Path(doc_meta_json["tables_raw_path"]).exists()
     assert Path(doc_meta_json["visual_artifacts_path"]).exists()
@@ -142,18 +154,18 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
         readers_result={"outdir": str(readers_dir), "summary": summary, "tool_log": []},
         timings=_baseline_timings(),
     )
-    assert doc_meta_payload["coordinate_unit"] == "points"
+    assert doc_meta_payload["coordinate_unit"] == "pdf_points"
     assert doc_meta_payload["bbox_origin"] == "top-left"
     assert doc_meta_payload["pdf_locked"] is False
     assert "table_detect_light" in doc_meta_payload["timings_ms"]
     assert doc_meta_payload["ocr_engine"] == "none"
-    assert doc_meta_payload["ocr_engine_version"] is None
+    assert doc_meta_payload["ocr_engine_version"] == "none"
     assert isinstance(doc_meta_payload["ocr_langs"], str)
     assert isinstance(doc_meta_payload["preprocess_applied"], list)
     assert isinstance(doc_meta_payload["content_hash"], str)
     assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
-    assert all(entry["languages"] == ["de", "en"] for entry in doc_meta_payload["detected_languages"]["by_page"] or [])
+    assert doc_meta_payload["detected_languages"]["by_page"] == ["de+en", "de+en"]
     assert doc_meta_payload["qa"]["needs_review"] is False
     assert doc_meta_payload["processing_log"] == []
     assert doc_meta_payload["artifacts"] == []
@@ -175,17 +187,17 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
         readers_result={"outdir": str(readers_dir), "summary": summary, "tool_log": []},
         timings=_baseline_timings(),
     )
-    assert doc_meta_payload["coordinate_unit"] == "points"
+    assert doc_meta_payload["coordinate_unit"] == "pdf_points"
     assert doc_meta_payload["bbox_origin"] == "top-left"
     assert doc_meta_payload["pdf_locked"] is False
     assert "table_detect_light" in doc_meta_payload["timings_ms"]
     assert doc_meta_payload["ocr_engine"] == "none"
-    assert doc_meta_payload["ocr_engine_version"] is None
+    assert doc_meta_payload["ocr_engine_version"] == "none"
     assert isinstance(doc_meta_payload["ocr_langs"], str)
     assert isinstance(doc_meta_payload["preprocess_applied"], list)
     assert isinstance(doc_meta_payload["content_hash"], str)
     assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
-    assert doc_meta_payload["detected_languages"]["by_page"][0]["languages"] == ["de", "en"]
+    assert doc_meta_payload["detected_languages"]["by_page"] == ["de+en"]
     assert doc_meta_payload["qa"]["needs_review"] is False
     assert doc_meta_payload["warnings"] == []

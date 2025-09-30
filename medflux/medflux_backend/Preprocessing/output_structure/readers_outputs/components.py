@@ -37,7 +37,11 @@ _LANG_ALIAS = {
     "eng": "en",
     "english": "en",
     "en": "en",
+    "mixed": "mixed",
 }
+
+_ALLOWED_LANGS = ("de", "en")
+_DEFAULT_LANG = "de"
 
 
 def _normalize_lang_token(token: str) -> str:
@@ -45,6 +49,48 @@ def _normalize_lang_token(token: str) -> str:
     if not cleaned:
         return ""
     return _LANG_ALIAS.get(cleaned, cleaned)
+
+
+def _flatten_lang_values(value: Any) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        flattened: List[str] = []
+        for item in value:
+            flattened.extend(_flatten_lang_values(item))
+        return flattened
+    text = str(value)
+    if not text:
+        return []
+    return [part for part in text.replace(",", "+").split("+") if part]
+
+
+def _collect_lang_tokens(raw_values: Iterable[Any] | None) -> List[str]:
+    tokens: List[str] = []
+    for raw in raw_values or []:
+        for part in _flatten_lang_values(raw):
+            normalized = _normalize_lang_token(part)
+            if normalized in _ALLOWED_LANGS:
+                if normalized not in tokens:
+                    tokens.append(normalized)
+            elif normalized in {"mixed"}:
+                for alias in _ALLOWED_LANGS:
+                    if alias not in tokens:
+                        tokens.append(alias)
+    return tokens
+
+
+def _collapse_lang_tokens(tokens: Iterable[str]) -> str:
+    seen = {token for token in tokens if token in _ALLOWED_LANGS}
+    has_de = "de" in seen
+    has_en = "en" in seen
+    if has_de and has_en:
+        return "de+en"
+    if has_de:
+        return "de"
+    if has_en:
+        return "en"
+    return _DEFAULT_LANG
 
 
 def _safe_float(value: Any) -> float | None:
@@ -76,14 +122,17 @@ def _load_jsonl(path: Path) -> List[Dict[str, Any]]:
 
 def prepare_timings(cli_timings: Dict[str, Any], summary_timings: Dict[str, Any]) -> TimingBreakdown:
     payload: TimingBreakdown = {}
+
     total = _safe_float(summary_timings.get("total_ms")) or _safe_float(cli_timings.get("total_ms"))
     if total is not None:
         payload["total_ms"] = round(total, 2)
+
     for key in _TIMING_KEYS:
         value = _safe_float(cli_timings.get(key))
-        if value is not None and value > 0:
+        if value is not None and value >= 0:
             payload[key] = round(value, 2)
-    for key, value in summary_timings.items():
+
+    for key, value in (summary_timings or {}).items():
         if key == "total_ms":
             continue
         if key not in _TIMING_KEYS:
@@ -91,6 +140,30 @@ def prepare_timings(cli_timings: Dict[str, Any], summary_timings: Dict[str, Any]
         val = _safe_float(value)
         if val is not None and val >= 0:
             payload[key] = round(val, 2)
+
+    pagewise_entries: List[Dict[str, Any]] = []
+    raw_pagewise = summary_timings.get("pagewise") or cli_timings.get("pagewise")
+    if isinstance(raw_pagewise, list):
+        for entry in raw_pagewise:
+            if not isinstance(entry, dict):
+                continue
+            page = entry.get("page")
+            time_value = _safe_float(entry.get("time_ms"))
+            if page is None or time_value is None:
+                continue
+            try:
+                page_number = int(page)
+            except Exception:
+                continue
+            pagewise_entries.append({"page": page_number, "time_ms": round(time_value, 2)})
+    if pagewise_entries:
+        payload["pagewise"] = pagewise_entries
+    else:
+        payload["pagewise"] = []
+
+    for key in ("readers", "ocr", "lang_detect", "table_detect_light"):
+        payload.setdefault(key, 0.0)
+
     return payload
 
 
@@ -106,36 +179,61 @@ def normalize_encoding(encoding_meta: Dict[str, Any]) -> str | None:
 def build_detected_languages(summary_payload: Dict[str, Any], fallback: Iterable[str] | None = None) -> DetectedLanguages:
     summary = summary_payload.get("summary", {}) or {}
     lang_per_page = summary.get("lang_per_page") or []
-    per_page_languages: List[Dict[str, Any]] = []
-    overall: List[str] = []
+
+    fallback_tokens = _collect_lang_tokens(fallback) or [_DEFAULT_LANG]
+
+    page_langs: Dict[int, str] = {}
     for entry in lang_per_page:
-        page = int(entry.get("page") or 0)
-        lang = str(entry.get("lang") or "unknown")
-        tokens = [tok for tok in lang.replace(",", "+").split("+") if tok]
-        normalized_tokens = [_normalize_lang_token(tok) for tok in tokens]
-        normalized_tokens = [tok for tok in normalized_tokens if tok and tok != "unknown"]
-        if not normalized_tokens:
-            fallback_tokens: List[str] = []
-            if fallback:
-                for item in fallback:
-                    tokens = [tok for tok in str(item or "").replace(",", "+").split("+") if tok]
-                    for tok in tokens:
-                        norm = _normalize_lang_token(tok)
-                        if norm:
-                            fallback_tokens.append(norm)
-            normalized_tokens = fallback_tokens or ["unknown"]
-        per_page_languages.append({"page": page, "languages": normalized_tokens})
-        overall.extend([tok for tok in normalized_tokens if tok not in {"unknown"}])
-    if not overall and fallback:
-        for item in fallback:
-            tokens = [tok for tok in str(item or "").replace(",", "+").split("+") if tok]
-            for tok in tokens:
-                norm = _normalize_lang_token(tok)
-                if norm:
-                    overall.append(norm)
-    normalized = sorted({lang for lang in overall if lang}) or ["und"]
-    doc_lang = "+".join(normalized)
-    return {"overall": normalized, "by_page": per_page_languages, "doc": doc_lang}
+        if not isinstance(entry, dict):
+            continue
+        page_raw = entry.get("page")
+        try:
+            page_number = int(page_raw)
+        except Exception:
+            continue
+        if page_number <= 0:
+            continue
+        tokens = _collect_lang_tokens([entry.get("lang"), entry.get("languages")])
+        if not tokens:
+            tokens = fallback_tokens
+        page_langs[page_number] = _collapse_lang_tokens(tokens)
+
+    try:
+        page_count = int(summary.get("page_count") or 0)
+    except Exception:
+        page_count = 0
+
+    default_page_lang = _collapse_lang_tokens(fallback_tokens)
+    if page_count > 0:
+        by_page = [page_langs.get(page, default_page_lang) for page in range(1, page_count + 1)]
+    else:
+        ordered_pages = sorted(page_langs)
+        by_page = [page_langs[page] for page in ordered_pages]
+
+    overall_tokens = _collect_lang_tokens(by_page)
+    if not overall_tokens:
+        overall_tokens = fallback_tokens
+
+    overall: List[str] = []
+    for candidate in _ALLOWED_LANGS:
+        if candidate in overall_tokens and candidate not in overall:
+            overall.append(candidate)
+    if not overall:
+        overall = [_DEFAULT_LANG]
+
+    doc_lang = _collapse_lang_tokens(overall_tokens)
+    conf_doc = _safe_float(summary.get("avg_conf"))
+    if conf_doc is None:
+        conf_doc = _safe_float(summary.get("lang_conf"))
+    conf_doc_value = round(conf_doc, 2) if conf_doc is not None else 0.0
+
+    payload: DetectedLanguages = {
+        "overall": overall,
+        "by_page": by_page,
+        "doc": doc_lang,
+        "conf_doc": conf_doc_value,
+    }
+    return payload
 
 
 def build_locale_hints(summary_payload: Dict[str, Any]) -> LocaleHints:

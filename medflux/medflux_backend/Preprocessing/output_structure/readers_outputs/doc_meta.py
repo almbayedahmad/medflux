@@ -118,6 +118,39 @@ def _infer_has_text_layer(per_page_stats: Iterable[Dict[str, Any]]) -> bool:
     return False
 
 
+def _infer_coordinate_unit(file_type: str) -> str:
+    lowered = (file_type or "").lower()
+    if lowered.startswith("pdf"):
+        return "pdf_points"
+    if lowered in {"image", "png", "jpg", "jpeg", "tiff", "tif"}:
+        return "image_pixels"
+    if lowered == "docx":
+        return "docx_emus"
+    return "unknown"
+
+
+
+_ALLOWED_FILE_TYPES = {"pdf_text", "pdf_scan", "pdf_scan_hybrid", "docx", "image"}
+
+
+def _normalise_file_type(raw: str) -> str:
+    lowered = (raw or "").lower()
+    if lowered in _ALLOWED_FILE_TYPES:
+        return lowered
+    if lowered.startswith("pdf"):
+        if "hybrid" in lowered or "mixed" in lowered:
+            return "pdf_scan_hybrid"
+        if any(token in lowered for token in ("scan", "image", "ocr")):
+            return "pdf_scan"
+        return "pdf_text"
+    if lowered in {"doc", "docm", "docx"}:
+        return "docx"
+    if lowered in {"txt", "text"}:
+        return "docx"
+    if lowered in {"png", "jpg", "jpeg", "tiff", "tif", "bmp"}:
+        return "image"
+    return "pdf_text"
+
 
 def _extract_pdf_page_geometry(input_path: Path) -> Dict[int, Dict[str, float]]:
     if fitz is None:
@@ -224,6 +257,14 @@ def build_doc_meta(
     summary_payload = _load_summary_payload(readers_dir)
     summary = summary_payload.get("summary", {}) or {}
 
+    reader_version = str(
+        readers_result.get("reader_version")
+        or summary.get("reader_version")
+        or summary_payload.get("reader_version")
+        or readers_result.get("version")
+        or "unknown"
+    )
+
     summary_timings = summary.get("timings_ms") or {}
     timing_payload = prepare_timings(timings, summary_timings)
 
@@ -237,10 +278,12 @@ def build_doc_meta(
         else:
             timing_payload["table_detect_light"] = 0.0
 
-    file_type = str(detect_meta.get("file_type") or "").lower()
-    page_geometry = _extract_pdf_page_geometry(input_path) if file_type.startswith("pdf") else {}
+    raw_file_type = str(detect_meta.get("file_type") or "")
+    file_type_lower = raw_file_type.lower()
+    coordinate_unit = _infer_coordinate_unit(raw_file_type)
+    page_geometry = _extract_pdf_page_geometry(input_path) if file_type_lower.startswith("pdf") else {}
 
-    text_blocks = build_text_blocks(readers_dir) if inline_blocks else []
+    text_blocks = build_text_blocks(readers_dir, page_geometry=page_geometry) if inline_blocks else []
     blocks_by_page: Dict[int, List[Dict[str, Any]]] = _group_blocks_by_page(text_blocks)
     detected_langs = build_detected_languages(summary_payload, fallback=[detect_meta.get("lang") or ""])
     locale_hints = build_locale_hints(summary_payload)
@@ -250,7 +293,32 @@ def build_doc_meta(
         page_geometry=page_geometry,
         lang_fallback=detected_langs.get("overall"),
         multi_column_pages=multi_column_pages,
+        blocks_by_page=blocks_by_page,
     )
+
+    pagewise_timings: List[Dict[str, float]] = []
+    for stat in per_page_stats:
+        if not isinstance(stat, dict):
+            continue
+        page_value = stat.get("page")
+        if page_value is None:
+            continue
+        try:
+            page_number = int(page_value)
+        except Exception:
+            continue
+        time_value = stat.get("time_ms")
+        if time_value is None:
+            continue
+        try:
+            time_ms = round(float(time_value), 2)
+        except Exception:
+            time_ms = 0.0
+        pagewise_timings.append({"page": page_number, "time_ms": time_ms})
+    if pagewise_timings:
+        timing_payload["pagewise"] = pagewise_timings
+    else:
+        timing_payload.setdefault("pagewise", [])
 
     warnings = list(summary.get("warnings") or [])
     qa_section = build_qa(summary_payload, warnings)
@@ -264,10 +332,10 @@ def build_doc_meta(
     preprocess_steps = _collect_preprocess_steps(tool_log)
     dpi_value = detect_meta.get("dpi") if isinstance(detect_meta, dict) else None
     if isinstance(dpi_value, int) and dpi_value > 0:
-        dpi_token = f"dpi_{dpi_value}"
-        if dpi_token not in preprocess_steps:
-            preprocess_steps.append(dpi_token)
-    content_hash = _compute_content_hash(input_path) or ""
+        preprocess_steps.append(f"dpi_{dpi_value}")
+    preprocess_steps = list(dict.fromkeys(step for step in preprocess_steps if step))
+    content_hash_value = _compute_content_hash(input_path)
+    content_hash = f"sha256:{content_hash_value}" if content_hash_value else ""
     has_text_layer = _infer_has_text_layer(per_page_stats)
     log_strings = summarise_logs(tool_log)
 
@@ -276,30 +344,57 @@ def build_doc_meta(
     avg_ocr_conf = round(sum(float(value) for value in ocr_conf_values) / len(ocr_conf_values), 2) if ocr_conf_values else 0.0
 
     ocr_engine_final = ocr_engine if ocr_engine is not None else ("tesseract" if has_ocr else "none")
-    if ocr_engine_version is None:
-        ocr_engine_version = "unknown" if ocr_engine_final != "none" else None
-    preprocess_steps = preprocess_steps or []
-    ocr_langs = ocr_langs or ""
-    content_hash = content_hash or ""
+    if ocr_engine_final == "none":
+        ocr_engine_version = "none"
+    elif not ocr_engine_version:
+        ocr_engine_version = "unknown"
+    else:
+        ocr_engine_version = str(ocr_engine_version)
+
+    preprocess_applied = list(preprocess_steps)
+    ocr_langs = str(ocr_langs) if ocr_langs else ""
+
     detect_details = detect_meta.get("details") if isinstance(detect_meta, dict) else {}
     if not isinstance(detect_details, dict):
         detect_details = {}
     pdf_locked = bool(summary.get("pdf_locked") or detect_details.get("pdf_locked") or detect_details.get("locked") or detect_details.get("encrypted"))
+
+    pages_count = int(summary.get("page_count") or detect_meta.get("pages_count") or readers_result.get("pages_count") or 0)
+    normalised_file_type = _normalise_file_type(raw_file_type)
+
+    by_page_langs = detected_langs.get("by_page")
+    if not isinstance(by_page_langs, list):
+        by_page_langs = []
+    doc_lang_default = detected_langs.get("doc") or (detected_langs.get("overall") or ["de"])[0]
+    if pages_count > 0:
+        if not by_page_langs:
+            by_page_langs = [doc_lang_default] * pages_count
+        elif len(by_page_langs) < pages_count:
+            last_lang = by_page_langs[-1] if by_page_langs else doc_lang_default
+            by_page_langs.extend([last_lang] * (pages_count - len(by_page_langs)))
+        elif len(by_page_langs) > pages_count:
+            by_page_langs = by_page_langs[:pages_count]
+        detected_langs["by_page"] = by_page_langs
+
+    for key in ("readers", "ocr", "lang_detect", "table_detect_light"):
+        timing_payload.setdefault(key, 0.0)
+
     doc_meta: DocMeta = {
         "file_name": input_path.name,
-        "file_type": detect_meta.get("file_type") or "unknown",
-        "pages_count": int(summary.get("page_count") or detect_meta.get("pages_count") or readers_result.get("pages_count") or 0),
+        "file_type": normalised_file_type,
+        "pages_count": pages_count,
         "detected_encodings": normalize_encoding(encoding_meta),
         "detected_languages": detected_langs,
         "has_ocr": has_ocr,
         "avg_ocr_conf": avg_ocr_conf,
-        "coordinate_unit": "points",
+        "coordinate_unit": coordinate_unit,
         "bbox_origin": "top-left",
         "pdf_locked": pdf_locked,
         "ocr_engine": ocr_engine_final,
         "ocr_engine_version": ocr_engine_version,
         "ocr_langs": ocr_langs,
-        "preprocess_applied": preprocess_steps,
+        "reader_version": reader_version,
+        "preprocess_applied": preprocess_applied,
         "content_hash": content_hash,
         "has_text_layer": has_text_layer,
         "timings_ms": timing_payload,
@@ -317,3 +412,13 @@ def build_doc_meta(
         "tables_raw_path": str(readers_dir / "tables_raw.jsonl"),
     }
     return doc_meta
+
+
+
+
+
+
+
+
+
+

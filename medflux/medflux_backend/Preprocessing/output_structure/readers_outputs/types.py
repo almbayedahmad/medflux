@@ -3,6 +3,11 @@ from __future__ import annotations
 from typing import Dict, List, NotRequired, TypedDict
 
 
+class PageTiming(TypedDict):
+    page: int
+    time_ms: float
+
+
 class TimingBreakdown(TypedDict, total=False):
     total_ms: float
     detect: float
@@ -17,27 +22,35 @@ class TimingBreakdown(TypedDict, total=False):
     cleaning: float
     merge: float
     summarize: float
+    pagewise: List[PageTiming]
 
 
 class PerPageStat(TypedDict, total=False):
     page: int
     source: str
-    conf: float
-    ocr_words: int
     chars: int
-    has_table: bool
+    lang: str
+    lang_share: Dict[str, float]
+    ocr_conf: float
+    ocr_words: int
     tables_found: int
     table_cells: int
-    decision: str
-    time_ms: float
-    lang: str
-    locale: str
     flags: List[str]
-    ocr_conf: NotRequired[float]
-    ocr_conf_avg: NotRequired[float]
-    rotation_deg: NotRequired[float]
-    is_multi_column: NotRequired[bool]
-    page_size: NotRequired[Dict[str, float]]
+    rotation_deg: int
+    skew_deg: float
+    is_multi_column: bool
+    columns_count: int
+    page_size: Dict[str, float]
+    noise_score: float
+    text_density: float
+    has_header_footer: bool
+    has_images: bool
+    images_count: int
+    graphics_objects_count: int
+    time_ms: float
+    locale: str
+    decision: str
+    has_table: bool
 
 
 class TextBlock(TypedDict, total=False):
@@ -46,18 +59,26 @@ class TextBlock(TypedDict, total=False):
     text_raw: str
     text_lines: List[str]
     bbox: List[float]
-    reading_order_index: NotRequired[int]
-    is_heading_like: NotRequired[bool]
-    is_list_like: NotRequired[bool]
-    lang: NotRequired[str]
-    ocr_conf_avg: NotRequired[float]
-    font_size: NotRequired[float]
-    is_bold: NotRequired[bool]
-    is_upper: NotRequired[bool]
-    char_count: NotRequired[int]
-    charmap_ref: str
-    paragraph_style: NotRequired[str]
-    list_level: NotRequired[int]
+    token_count: int
+    char_count: int
+    reading_order_index: int
+    lang: str
+    lang_conf: float
+    ocr_conf_avg: float
+    is_heading_like: bool
+    is_list_like: bool
+    font_size: float
+    is_bold: bool
+    is_upper: bool
+    paragraph_style: str
+    list_level: int
+    line_height: float
+    baseline_y: float
+    column_index: int
+    indent_level: int
+    numbering_marker: str
+    block_type: str
+    charmap_ref: NotRequired[str]
 
 
 class RawTableCell(TypedDict, total=False):
@@ -100,8 +121,9 @@ class QASection(TypedDict, total=False):
 
 class DetectedLanguages(TypedDict, total=False):
     overall: List[str]
-    by_page: List[dict]
-    doc: NotRequired[str]
+    by_page: List[str]
+    doc: str
+    conf_doc: float
 
 
 class LocaleHints(TypedDict, total=False):
@@ -122,9 +144,10 @@ class DocMeta(TypedDict, total=False):
     coordinate_unit: str
     bbox_origin: str
     pdf_locked: bool
-    ocr_engine: str | None
-    ocr_engine_version: str | None
+    ocr_engine: str
+    ocr_engine_version: str
     ocr_langs: str
+    reader_version: str
     preprocess_applied: List[str]
     content_hash: str
     has_text_layer: bool
@@ -141,4 +164,3 @@ class DocMeta(TypedDict, total=False):
     visual_artifacts_path: str
     text_blocks_path: str
     tables_raw_path: str
-
