@@ -89,6 +89,12 @@ class WordEntry(TypedDict, total=False):
     ocr_conf: float
 
 
+class ZoneEntry(TypedDict, total=False):
+    page: int
+    bbox: List[float]
+    type: str
+
+
 class RawTableCell(TypedDict, total=False):
     row: int
     col: int
@@ -163,6 +169,7 @@ class DocMeta(TypedDict, total=False):
     per_page_stats: List[PerPageStat]
     text_blocks: List[TextBlock]
     words: List[WordEntry]
+    zones: List[ZoneEntry]
     tables_raw: List[RawTable]
     artifacts: List[Artifact]
     locale_hints: LocaleHints
@@ -173,6 +180,10 @@ class DocMeta(TypedDict, total=False):
     visual_artifacts_path: str
     text_blocks_path: str
     tables_raw_path: str
+
+
+
+
 
 
 

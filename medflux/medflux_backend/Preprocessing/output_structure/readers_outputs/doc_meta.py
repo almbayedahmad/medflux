@@ -236,6 +236,87 @@ def _detect_multi_column(
 
 _WORD_SPLIT_PATTERN = re.compile(r"\S+")
 
+ZONE_TYPES = {"header", "footer", "body", "margin", "toc", "footnote"}
+
+
+def _infer_zone_type(
+    block: Dict[str, Any],
+    page_width: Optional[float],
+    page_height: Optional[float],
+) -> str:
+    block_type = str(block.get("block_type") or "").lower()
+    text = str(block.get("text_raw") or "")
+    font_size = block.get("font_size")
+    baseline = block.get("baseline_y")
+    bbox = block.get("bbox") or []
+    if block_type == "header":
+        return "header"
+    if block_type == "footer":
+        return "footer"
+    if isinstance(bbox, list) and len(bbox) >= 4 and page_width and page_height:
+        try:
+            x0 = float(bbox[0])
+            x1 = float(bbox[2])
+            y0 = float(bbox[1])
+            y1 = float(bbox[3])
+        except Exception:
+            x0 = x1 = y0 = y1 = 0.0
+        top_threshold = page_height * 0.12
+        bottom_threshold = page_height * 0.88
+        if y1 <= top_threshold:
+            return "header"
+        if y0 >= bottom_threshold:
+            if font_size is not None and float(font_size) <= 9.0:
+                return "footnote"
+            return "footer"
+        margin_threshold = page_width * 0.15
+        if x0 <= margin_threshold or (page_width - x1) <= margin_threshold:
+            return "margin"
+        if text:
+            stripped = text.strip()
+            if stripped.lower().startswith("inhalt"):
+                return "toc"
+            if ".." in stripped and stripped.rstrip().split()[-1].isdigit():
+                return "toc"
+    if baseline is not None and page_height:
+        try:
+            baseline_float = float(baseline)
+        except Exception:
+            baseline_float = None
+        if baseline_float is not None and baseline_float >= page_height * 0.9:
+            return "footnote"
+    return "body"
+
+
+def _build_zones(
+    blocks: Iterable[Dict[str, Any]],
+    page_geometry: Dict[int, Dict[str, float]],
+) -> List[Dict[str, Any]]:
+    zones: List[Dict[str, Any]] = []
+    for block in blocks or []:
+        if not isinstance(block, dict):
+            continue
+        bbox = block.get("bbox")
+        if not isinstance(bbox, list) or len(bbox) < 4:
+            continue
+        try:
+            bbox_floats = [float(value) for value in bbox]
+        except Exception:
+            continue
+        page_value = block.get("page")
+        try:
+            page = int(page_value)
+        except Exception:
+            page = 0
+        geometry = page_geometry.get(page, {})
+        page_width = geometry.get("width")
+        page_height = geometry.get("height")
+        zone_type = _infer_zone_type(block, page_width, page_height)
+        if zone_type not in ZONE_TYPES:
+            zone_type = "body"
+        zones.append({"page": page, "bbox": bbox_floats, "type": zone_type})
+    return zones
+
 
 def _build_words_cache(blocks: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     words: List[Dict[str, Any]] = []
@@ -334,6 +415,7 @@ def build_doc_meta(
 
     text_blocks = build_text_blocks(readers_dir, page_geometry=page_geometry) if inline_blocks else []
     words_cache = _build_words_cache(text_blocks) if inline_blocks else []
+    zones = _build_zones(text_blocks, page_geometry) if inline_blocks else []
     blocks_by_page: Dict[int, List[Dict[str, Any]]] = _group_blocks_by_page(text_blocks)
     detected_langs = build_detected_languages(summary_payload, fallback=[detect_meta.get("lang") or ""])
     locale_hints = build_locale_hints(summary_payload)
@@ -451,6 +533,7 @@ def build_doc_meta(
         "per_page_stats": per_page_stats,
         "text_blocks": text_blocks,
         "words": words_cache,
+        "zones": zones,
         "tables_raw": tables_raw,
         "artifacts": artifacts,
         "locale_hints": locale_hints,
@@ -463,6 +546,7 @@ def build_doc_meta(
         "tables_raw_path": str(readers_dir / "tables_raw.jsonl"),
     }
     return doc_meta
+
 
 
 
