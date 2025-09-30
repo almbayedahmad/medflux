@@ -107,6 +107,13 @@ def test_doc_meta_written(tmp_path, payload):
     assert Path(doc_meta_json["text_blocks_path"]).exists()
     assert Path(doc_meta_json["tables_raw_path"]).exists()
     assert Path(doc_meta_json["visual_artifacts_path"]).exists()
+    table_candidates_path = Path(outdir / sample.stem / "readers" / "table_candidates.jsonl")
+    assert table_candidates_path.exists()
+    lines = [line for line in table_candidates_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if lines:
+        import json as _json
+        candidate_payload = _json.loads(lines[0])
+        assert set(["page", "bbox", "confidence", "cues", "overlaps_text", "method", "gridlines_h", "gridlines_v", "rotation_deg"]).issubset(candidate_payload.keys())
 
 
 def _baseline_summary(pages: int) -> dict:

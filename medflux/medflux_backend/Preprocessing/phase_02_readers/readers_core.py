@@ -55,6 +55,8 @@ try:
 except Exception:  # pragma: no cover
     extract_tables_from_image = None
 
+from .light_table_detection import LightTableDetector
+
 DOCX_EXTS = {".docx"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".gif", ".webp"}
 TEXT_EXTS = {".txt", ".log", ".md", ".csv", ".tsv", ".json", ".yaml", ".yml", ".ini", ".cfg", ".conf"}
@@ -150,6 +152,7 @@ class UnifiedReaders:
         self._timings: defaultdict[str, float] = defaultdict(float)
         self._table_counts: defaultdict[int, int] = defaultdict(int)
         self._t0 = time.time()
+        self._light_tables = LightTableDetector(self.readers_dir)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -171,6 +174,7 @@ class UnifiedReaders:
         self._table_counts.clear()
         self._block_counter = 0
         self._t0 = time.time()
+        self._light_tables.reset()
 
     def _log_warning(self, code: str) -> None:
         if code not in self._warnings:
@@ -189,6 +193,51 @@ class UnifiedReaders:
         if details:
             entry["details"] = details
         self._tool_events.append(entry)
+
+    def _blocks_for_page(self, page_no: int) -> List[Dict[str, Any]]:
+        results: List[Dict[str, Any]] = []
+        for block in self._blocks:
+            try:
+                page_value = int(block.get("page") or 0)
+            except Exception:
+                continue
+            if page_value == page_no:
+                results.append(block)
+        return results
+
+    def _record_table_candidate(
+        self,
+        page,
+        page_no: int,
+        decision: str,
+        status: str,
+        extraction_tool: str,
+        bbox: Optional[List[float]],
+        metrics: Optional[Dict[str, Any]],
+        geometry: Optional[Dict[str, Any]],
+    ) -> None:
+        try:
+            rect = getattr(page, "rect") if page is not None else None
+            page_bbox = [float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1)] if rect else [0.0, 0.0, 0.0, 0.0]
+        except Exception:
+            page_bbox = [0.0, 0.0, 0.0, 0.0]
+        try:
+            rotation = float(getattr(page, "rotation", 0) or 0.0) if page is not None else 0.0
+        except Exception:
+            rotation = 0.0
+        text_blocks = self._blocks_for_page(page_no)
+        self._light_tables.add_candidate(
+            page=page_no,
+            page_bbox=page_bbox,
+            table_bbox=bbox,
+            status=status,
+            extraction_tool=extraction_tool,
+            decision=decision or "",
+            metrics=metrics,
+            geometry=geometry,
+            text_blocks=text_blocks,
+            rotation=rotation,
+        )
 
     def _extract_style_features(self, text: str, font_sizes: List[float], spans_meta: List[Dict[str, Any]]) -> Dict[str, Any]:
         text = text or ""
@@ -769,6 +818,7 @@ class UnifiedReaders:
         except Exception as exc:
             self._log_warning(f"table_render_error:p{page_no}:{exc}")
             tool = "ocr" if "ocr" in (decision or "").lower() else "camelot"
+            self._record_table_candidate(page, page_no, decision, "failed", tool, None, None, None)
             self._append_table_raw(page_no, tool, "failed")
             return
         try:
@@ -784,6 +834,7 @@ class UnifiedReaders:
         except Exception as exc:
             self._log_warning(f"table_np_error:p{page_no}:{exc}")
             tool = "ocr" if "ocr" in (decision or "").lower() else "camelot"
+            self._record_table_candidate(page, page_no, decision, "failed", tool, None, None, None)
             self._append_table_raw(page_no, tool, "failed")
             return
         export_dir = None
@@ -837,6 +888,15 @@ class UnifiedReaders:
             if ocr_data and ocr_data.get("text"):
                 table_text = ocr_data.get("text")
                 status = "fallback"
+            metrics_clean = {
+                "rows": int(metrics.get("rows", 0) or 0),
+                "cols": int(metrics.get("cols", 0) or 0),
+                "cell_count": int(metrics.get("cell_count", 0) or 0),
+                "avg_cell_height": float(metrics.get("avg_cell_height", 0.0) or 0.0),
+                "avg_cell_width": float(metrics.get("avg_cell_width", 0.0) or 0.0),
+                "avg_cell_area": float(metrics.get("avg_cell_area", 0.0) or 0.0),
+            }
+            self._record_table_candidate(page, page_no, decision, status, extraction_tool, table_bbox, metrics_clean, geometry)
             self._append_table_raw(page_no, extraction_tool, status, bbox=table_bbox, table_text=table_text)
             return
         cell_count = int(metrics.get("cell_count", 0) or 0)
@@ -856,6 +916,7 @@ class UnifiedReaders:
                 self._log_warning(
                     f"table_candidate_filtered:p{page_no}:cells{cell_count}:area{avg_cell_area:.0f}"
                 )
+                self._record_table_candidate(page, page_no, decision, "failed", extraction_tool, table_bbox, metrics_clean, geometry)
                 self._append_table_raw(page_no, extraction_tool, "failed", bbox=table_bbox)
                 return
             rows = [["" for _ in row] for row in rows]
@@ -863,6 +924,7 @@ class UnifiedReaders:
             min_words = max(int(getattr(self.opts, "tables_min_words", 0)), 0)
             total_words = sum(len(str(cell).split()) for row in rows for cell in row)
             if min_words and total_words < min_words:
+                self._record_table_candidate(page, page_no, decision, "failed", extraction_tool, table_bbox, metrics_clean, geometry)
                 self._append_table_raw(page_no, extraction_tool, "failed", bbox=table_bbox)
                 return
         cells_payload: List[Dict[str, Any]] = []
@@ -879,7 +941,9 @@ class UnifiedReaders:
                         "col_span": 1,
                     }
                 )
-        self._append_table_raw(page_no, extraction_tool, "ok", bbox=table_bbox, cells=cells_payload)
+        status_value = "detect" if detect_only else "ok"
+        self._record_table_candidate(page, page_no, decision, status_value, extraction_tool, table_bbox, metrics_clean, geometry)
+        self._append_table_raw(page_no, extraction_tool, status_value if status_value != "detect" else "ok", bbox=table_bbox, cells=cells_payload)
         table_record = TableRecord(file=str(pdf_path), page=page_no, rows=rows, decision=decision, metrics=metrics_clean)
         self._tables.append(table_record)
         self._table_flags.add(page_no)
@@ -1239,6 +1303,7 @@ class UnifiedReaders:
         with open(tables_raw_path, "w", encoding="utf-8") as handle:
             for entry in self._tables_raw:
                 handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        self._light_tables.flush()
         tables_path = self.readers_dir / "tables.jsonl"
         if self._tables:
             with open(tables_path, "w", encoding="utf-8") as handle:
@@ -1430,6 +1495,8 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
     except Exception:
         pass
 # === end auto-added enrichment ===
+
+
 
 
 
