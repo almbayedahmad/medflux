@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 try:
     import fitz  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
@@ -232,6 +233,54 @@ def _detect_multi_column(
 
 
 
+
+_WORD_SPLIT_PATTERN = re.compile(r"\S+")
+
+
+def _build_words_cache(blocks: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    words: List[Dict[str, Any]] = []
+    for block in blocks or []:
+        if not isinstance(block, dict):
+            continue
+        block_id = str(block.get("id") or "")
+        page_value = block.get("page")
+        try:
+            page = int(page_value)
+        except Exception:
+            page = 0
+        bbox_raw = block.get("bbox")
+        bbox: List[float] = []
+        if isinstance(bbox_raw, list):
+            for value in bbox_raw:
+                try:
+                    bbox.append(float(value))
+                except Exception:
+                    continue
+        text = str(block.get("text_raw") or "")
+        if not text.strip():
+            continue
+        ocr_conf_raw = block.get("ocr_conf_avg")
+        try:
+            ocr_conf = float(ocr_conf_raw)
+        except Exception:
+            ocr_conf = 0.0
+        if ocr_conf < 0:
+            ocr_conf = 0.0
+        for token in _WORD_SPLIT_PATTERN.findall(text):
+            cleaned = token.strip().strip("\ufeff")
+            if not cleaned:
+                continue
+            words.append(
+                {
+                    "block_id": block_id,
+                    "page": page,
+                    "text": cleaned,
+                    "bbox": list(bbox),
+                    "ocr_conf": round(ocr_conf, 2),
+                }
+            )
+    return words
+
 def _load_summary_payload(readers_dir: Path) -> Dict[str, Any]:
     summary_path = readers_dir / "readers_summary.json"
     if not summary_path.exists():
@@ -284,6 +333,7 @@ def build_doc_meta(
     page_geometry = _extract_pdf_page_geometry(input_path) if file_type_lower.startswith("pdf") else {}
 
     text_blocks = build_text_blocks(readers_dir, page_geometry=page_geometry) if inline_blocks else []
+    words_cache = _build_words_cache(text_blocks) if inline_blocks else []
     blocks_by_page: Dict[int, List[Dict[str, Any]]] = _group_blocks_by_page(text_blocks)
     detected_langs = build_detected_languages(summary_payload, fallback=[detect_meta.get("lang") or ""])
     locale_hints = build_locale_hints(summary_payload)
@@ -400,6 +450,7 @@ def build_doc_meta(
         "timings_ms": timing_payload,
         "per_page_stats": per_page_stats,
         "text_blocks": text_blocks,
+        "words": words_cache,
         "tables_raw": tables_raw,
         "artifacts": artifacts,
         "locale_hints": locale_hints,
@@ -412,6 +463,11 @@ def build_doc_meta(
         "tables_raw_path": str(readers_dir / "tables_raw.jsonl"),
     }
     return doc_meta
+
+
+
+
+
 
 
 

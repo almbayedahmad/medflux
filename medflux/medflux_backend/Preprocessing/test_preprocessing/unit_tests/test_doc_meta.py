@@ -87,6 +87,12 @@ def test_doc_meta_written(tmp_path, payload):
 
     assert isinstance(doc_meta_json["tables_raw"], list)
     assert isinstance(doc_meta_json["artifacts"], list)
+    assert isinstance(doc_meta_json["words"], list)
+    if doc_meta_json["words"]:
+        first_word = doc_meta_json["words"][0]
+        assert set(["block_id", "page", "text", "bbox", "ocr_conf"]).issubset(first_word.keys())
+        assert isinstance(first_word["bbox"], list)
+        assert isinstance(first_word["ocr_conf"], float)
     assert all(isinstance(lang, str) for lang in doc_meta_json["detected_languages"]["by_page"])
     assert doc_meta_json["detected_languages"]["doc"] in _ALLOWED_LANGS
     assert isinstance(doc_meta_json["locale_hints"]["by_page"], list)
@@ -169,6 +175,7 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     assert doc_meta_payload["qa"]["needs_review"] is False
     assert doc_meta_payload["processing_log"] == []
     assert doc_meta_payload["artifacts"] == []
+    assert doc_meta_payload["words"] == []
     assert doc_meta_payload["per_page_stats"] == []
 
 
@@ -201,3 +208,4 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
     assert doc_meta_payload["detected_languages"]["by_page"] == ["de+en"]
     assert doc_meta_payload["qa"]["needs_review"] is False
     assert doc_meta_payload["warnings"] == []
+    assert doc_meta_payload["words"] == []

@@ -81,6 +81,14 @@ class TextBlock(TypedDict, total=False):
     charmap_ref: NotRequired[str]
 
 
+class WordEntry(TypedDict, total=False):
+    block_id: str
+    page: int
+    text: str
+    bbox: List[float]
+    ocr_conf: float
+
+
 class RawTableCell(TypedDict, total=False):
     row: int
     col: int
@@ -154,6 +162,7 @@ class DocMeta(TypedDict, total=False):
     timings_ms: TimingBreakdown
     per_page_stats: List[PerPageStat]
     text_blocks: List[TextBlock]
+    words: List[WordEntry]
     tables_raw: List[RawTable]
     artifacts: List[Artifact]
     locale_hints: LocaleHints
@@ -164,3 +173,7 @@ class DocMeta(TypedDict, total=False):
     visual_artifacts_path: str
     text_blocks_path: str
     tables_raw_path: str
+
+
+
+
