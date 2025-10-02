@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from medflux_backend.Preprocessing.pipeline import detect_and_read
-from medflux_backend.Preprocessing.output_structure.readers_outputs import doc_meta as doc_meta_module
+import readers_outputs.doc_meta as doc_meta_module
 
 
 _ALLOWED_FILE_TYPES = {"pdf_text", "pdf_scan", "pdf_scan_hybrid", "docx", "image"}
@@ -44,7 +44,7 @@ def test_doc_meta_written(tmp_path, payload):
     assert doc_meta_json["detected_encodings"] in {None, "utf-8"}
     assert doc_meta_json["timings_ms"]["total_ms"] >= 0
     assert doc_meta_json["coordinate_unit"] in _ALLOWED_COORD_UNITS
-    assert doc_meta_json["bbox_origin"] == "top-left"
+    assert doc_meta_json["bbox_origin"] == "bottom-left"
     assert doc_meta_json["pdf_locked"] is False
     assert "table_detect_light" in doc_meta_json["timings_ms"]
     for key in ("readers", "ocr", "lang_detect"):
@@ -83,9 +83,8 @@ def test_doc_meta_written(tmp_path, payload):
         assert isinstance(first_block["is_upper"], bool)
         assert isinstance(first_block["paragraph_style"], str)
         assert isinstance(first_block["list_level"], int)
-        assert isinstance(first_block["charmap_ref"], str)
-
-    assert isinstance(doc_meta_json["tables_raw"], list)
+        
+    assert "tables_raw" not in doc_meta_json
     assert isinstance(doc_meta_json["artifacts"], list)
     assert isinstance(doc_meta_json["words"], list)
     if doc_meta_json["words"]:
@@ -101,11 +100,9 @@ def test_doc_meta_written(tmp_path, payload):
     assert all(isinstance(lang, str) for lang in doc_meta_json["detected_languages"]["by_page"])
     assert doc_meta_json["detected_languages"]["doc"] in _ALLOWED_LANGS
     assert isinstance(doc_meta_json["locale_hints"]["by_page"], list)
-    assert "qa" in doc_meta_json and isinstance(doc_meta_json["qa"]["warnings"], list)
     assert isinstance(doc_meta_json["processing_log"], list)
     assert isinstance(doc_meta_json["logs"], list)
     assert Path(doc_meta_json["text_blocks_path"]).exists()
-    assert Path(doc_meta_json["tables_raw_path"]).exists()
     assert Path(doc_meta_json["visual_artifacts_path"]).exists()
     table_candidates_path = Path(outdir / sample.stem / "readers" / "table_candidates.jsonl")
     assert table_candidates_path.exists()
@@ -122,7 +119,6 @@ def _baseline_summary(pages: int) -> dict:
         "page_decisions": ["native"] * pages,
         "avg_conf": 90.0,
         "text_blocks_count": 0,
-        "tables_raw_count": 0,
         "table_pages": [],
         "lang_per_page": [],
         "locale_per_page": [],
@@ -173,7 +169,7 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
         timings=_baseline_timings(),
     )
     assert doc_meta_payload["coordinate_unit"] == "pdf_points"
-    assert doc_meta_payload["bbox_origin"] == "top-left"
+    assert doc_meta_payload["bbox_origin"] == "bottom-left"
     assert doc_meta_payload["pdf_locked"] is False
     assert "table_detect_light" in doc_meta_payload["timings_ms"]
     assert doc_meta_payload["ocr_engine"] == "none"
@@ -184,7 +180,6 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
     assert doc_meta_payload["detected_languages"]["by_page"] == ["de+en", "de+en"]
-    assert doc_meta_payload["qa"]["needs_review"] is False
     assert doc_meta_payload["processing_log"] == []
     assert doc_meta_payload["artifacts"] == []
     assert doc_meta_payload["words"] == []
@@ -208,7 +203,7 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
         timings=_baseline_timings(),
     )
     assert doc_meta_payload["coordinate_unit"] == "pdf_points"
-    assert doc_meta_payload["bbox_origin"] == "top-left"
+    assert doc_meta_payload["bbox_origin"] == "bottom-left"
     assert doc_meta_payload["pdf_locked"] is False
     assert "table_detect_light" in doc_meta_payload["timings_ms"]
     assert doc_meta_payload["ocr_engine"] == "none"
@@ -219,7 +214,6 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
     assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
     assert doc_meta_payload["detected_languages"]["by_page"] == ["de+en"]
-    assert doc_meta_payload["qa"]["needs_review"] is False
     assert doc_meta_payload["warnings"] == []
     assert doc_meta_payload["words"] == []
     assert doc_meta_payload.get("zones", []) == []

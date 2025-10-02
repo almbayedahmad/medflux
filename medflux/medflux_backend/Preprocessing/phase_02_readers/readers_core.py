@@ -8,6 +8,14 @@ import re
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Tuple, Set
 
+from utils.config import CFG
+
+
+OCR_LOW_CONF = float(CFG["thresholds"]["ocr_low_conf"])
+OCR_LOW_TEXT_MIN_WORDS = int(CFG["thresholds"]["ocr_low_text_min_words"])
+SUSPICIOUS_TEXT_CHARS_MIN = int(CFG["thresholds"]["suspicious_text_chars_min"])
+TABLES_FEATURE_MODE = str(CFG["features"].get("tables_mode", "detect")).lower()
+
 DE_TRIGGER_CHARS = {'ä', 'ö', 'ü', 'ß'}
 DE_KEYWORDS = {
     'und', 'der', 'die', 'das', 'ein', 'eine', 'ist', 'nicht', 'mit', 'für', 'aus', 'dem', 'den', 'des', 'bei', 'oder', 'wir', 'sie', 'dass', 'zum', 'zur', 'über',
@@ -74,7 +82,7 @@ class ReaderOptions:
     use_pre: bool = False
     export_xlsx: bool = False
     verbose: bool = False
-    tables_mode: str = "light"
+    tables_mode: str = CFG["features"]["tables_mode"]
     save_table_crops: bool = False
     tables_min_words: int = 12
     table_detect_min_area: float = 9000.0
@@ -153,6 +161,15 @@ class UnifiedReaders:
         self._table_counts: defaultdict[int, int] = defaultdict(int)
         self._t0 = time.time()
         self._light_tables = LightTableDetector(self.readers_dir)
+
+        base_tables_mode = TABLES_FEATURE_MODE
+        effective_tables_mode = str(self.opts.tables_mode or base_tables_mode).lower()
+        if effective_tables_mode == "light":
+            effective_tables_mode = "detect"
+        elif effective_tables_mode == "full":
+            effective_tables_mode = "extract"
+        self._tables_mode = effective_tables_mode
+        self._allow_tables_raw = self._tables_mode in {"extract"}
 
     # ------------------------------------------------------------------
     # Helpers
@@ -640,6 +657,9 @@ class UnifiedReaders:
         cells: Optional[List[Dict[str, Any]]] = None,
         table_text: Optional[str] = None,
     ) -> None:
+        if not self._allow_tables_raw:
+            return
+
         record: Dict[str, Any] = {
             "id": f"{page_no}-table-{len(self._tables_raw)}",
             "page": page_no,
@@ -717,7 +737,7 @@ class UnifiedReaders:
     def _should_use_native_mixed(self, conf: float, block_count: int, words: int, coverage: float) -> bool:
         if conf == 0.0 or words == 0:
             return False
-        if block_count >= max(1, self.opts.blocks_threshold) and conf >= 70.0:
+        if block_count >= max(1, self.opts.blocks_threshold) and conf >= OCR_LOW_CONF:
             if coverage < 0.6:
                 return True
         if conf >= 85.0 and words > 40:
@@ -800,14 +820,14 @@ class UnifiedReaders:
         decision: str,
         ocr_data: Optional[Dict[str, object]],
     ) -> None:
-        mode_value = (self.opts.tables_mode or "off").lower()
+        mode_value = self._tables_mode or "off"
         if extract_tables_from_image is None or np is None or fitz is None:
             if mode_value != "off":
                 self._log_warning("tables_unavailable")
             return
         if mode_value == "off":
             return
-        detect_only = mode_value in {"detect", "detect-only", "check", "flag"}
+        detect_only = mode_value in {"detect", "detect-only", "check", "flag", "light"}
         if detect_only:
             dpi_hint = max(int(getattr(self.opts, "dpi", 220)) or 220, 220)
         else:
@@ -1224,7 +1244,6 @@ class UnifiedReaders:
         )
         summary_dict = asdict(summary)
         summary_dict["text_blocks_count"] = len(self._blocks)
-        summary_dict["tables_raw_count"] = len(self._tables_raw)
         summary_dict["table_pages"] = sorted(self._table_flags)
         summary_dict["table_stats"] = [
             {"page": int(page), **metrics}
@@ -1300,9 +1319,16 @@ class UnifiedReaders:
                 for block in self._blocks:
                     handle.write(json.dumps(block, ensure_ascii=False) + "\n")
         tables_raw_path = self.readers_dir / "tables_raw.jsonl"
-        with open(tables_raw_path, "w", encoding="utf-8") as handle:
-            for entry in self._tables_raw:
-                handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        if self._allow_tables_raw and self._tables_raw:
+            with open(tables_raw_path, "w", encoding="utf-8") as handle:
+                for entry in self._tables_raw:
+                    handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        else:
+            if tables_raw_path.exists():
+                try:
+                    tables_raw_path.unlink()
+                except Exception:
+                    pass
         self._light_tables.flush()
         tables_path = self.readers_dir / "tables.jsonl"
         if self._tables:
@@ -1337,7 +1363,6 @@ class UnifiedReaders:
             "table_pages": sorted(self._table_flags),
             "table_stats": table_stats,
             "text_blocks_count": len(self._blocks),
-            "tables_raw_count": len(self._tables_raw),
             "visual_artifacts_count": len(self._visual_artifacts),
             "lang_per_page": [
                 {"page": page, "lang": self._page_language_hints.get(page, "unknown")}
@@ -1391,10 +1416,11 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
     warnings = summary.get("warnings", []) or []
 
     thresholds = dict(payload.get("thresholds", {}) or {})
-    thresholds.setdefault("any_min_conf", 70.0)
+    thresholds.setdefault("any_min_conf", OCR_LOW_CONF)
     thresholds.setdefault("ocr_min_conf", 80.0)
-    thresholds.setdefault("low_conf", 70.0)
+    thresholds.setdefault("low_conf", OCR_LOW_CONF)
     thresholds.setdefault("boost_conf", 80.0)
+    thresholds.setdefault("review_low_conf_ratio", CFG["thresholds"]["low_conf_pages_ratio_review"])
     thresholds.setdefault("overlay_area_thr", float(getattr(opts, "overlay_area_thr", 0.35)))
     thresholds.setdefault("overlay_min_images", int(getattr(opts, "overlay_min_images", 1)))
     payload["thresholds"] = thresholds
@@ -1435,9 +1461,9 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
     table_fail_pages = {int(event.get("page") or 0) for event in tool_events if event.get("step") == "table_extract" and str(event.get("status")).lower() in {"failed", "fallback"}}
     per_page = []
     flagged = []
-    any_thr = float(thresholds.get("any_min_conf", 70.0))
+    any_thr = float(thresholds.get("any_min_conf", OCR_LOW_CONF))
     ocr_thr = float(thresholds.get("ocr_min_conf", 80.0))
-    low_text_thr = 10
+    low_text_thr = OCR_LOW_TEXT_MIN_WORDS
     for page in range(1, pages + 1):
         record = record_map.get(page, {})
         decision = (decisions[page - 1] if page - 1 < len(decisions) else record.get("source", "native")) or "native"
@@ -1455,6 +1481,8 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
         if conf < any_thr or ("ocr" in source.lower() and conf < ocr_thr):
             flags.append("low_conf_page")
         if words < low_text_thr and "ocr" in source.lower():
+            flags.append("low_text_page")
+        if chars < SUSPICIOUS_TEXT_CHARS_MIN and "ocr" in source.lower() and "low_text_page" not in flags:
             flags.append("low_text_page")
         if page in table_fail_pages:
             flags.append("table_extract_error")
@@ -1480,7 +1508,13 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
         if "low_conf_page" in flags:
             flagged.append(page)
     payload["per_page_stats"] = per_page
-    payload["flags"] = {"manual_review": bool(warnings) or bool(flagged), "pages": sorted(set(flagged))}
+    low_conf_ratio_thr = float(thresholds.get("review_low_conf_ratio", CFG["thresholds"]["low_conf_pages_ratio_review"]))
+    manual_review = bool(warnings)
+    if pages > 0 and len(flagged) / float(pages) >= low_conf_ratio_thr:
+        manual_review = True
+    elif bool(flagged) and low_conf_ratio_thr <= 0:
+        manual_review = True
+    payload["flags"] = {"manual_review": manual_review, "pages": sorted(set(flagged))}
     summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     csv_path = Path(outdir) / "per_page_stats.csv"

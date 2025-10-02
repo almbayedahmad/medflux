@@ -153,3 +153,23 @@ origin  https://github.com/almbayedahmad/medflux.git (push)
 `
 
 Use the standard Git workflow (git status, git commit, git push) from the repository root.
+## Latest Progress (2025-09-30)
+- Started feature branch `feat/readers-hardening` and created shared scaffolding directories (`configs/`, `utils/`, `schemas/`, `readers_outputs/`).
+- Relocated the doc metadata core (`components`, `doc_meta`, `per_page_stats`, `text_blocks`, `types`) into the top-level `readers_outputs` package to provide a single import surface.
+- Added initial utility modules (`utils/lang_utils.py`, `utils/num_utils.py`, `utils/geom_utils.py`) as the home for shared language/number/bbox helpers.
+- Centralised reader thresholds/features in `configs/readers.yaml` with the shared `CFG` loader and removed ad-hoc constants in the pipeline.
+- Simplified reader outputs to emit table candidates only, disabled heavy extraction by default, and trimmed doc metadata to the lean readers schema.
+- Normalised all bounding boxes to the bottom-left origin, pruned block-level word fallbacks, and introduced per-page QA flags based on configured thresholds.
+- Added `schemas/readers_output_schema.py` to document the required readers payload contract for downstream consumers.
+
+## Next Steps
+1. Wire the new readers schema into downstream validation and document sample payloads alongside the schema stub.
+2. Provide a configuration toggle + documentation for re-enabling heavy table extraction when required by hospitals.
+3. Expand test coverage for per-page QA flags and coordinate conversions (e.g., golden doc_meta fixtures).
+
+
+1. Replace duplicated helper functions in the readers metadata modules with imports from `utils/` and finish centralising the logic.
+2. Introduce the YAML-backed readers config (`configs/readers.yaml`) and loader, wiring thresholds/feature flags via `CFG[...]`.
+3. Re-run `python -m pytest medflux_backend/Preprocessing/test_preprocessing/unit_tests -q` and smoke the CLI to confirm the refactor.
+4. Capture updated screenshots/log outputs once the new config and utils are active.
+

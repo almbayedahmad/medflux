@@ -4,6 +4,12 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from utils.config import CFG
+
+TABLE_CANDIDATE_MIN_CONF = float(CFG["thresholds"]["table_candidate_min_conf"])
+IMAGE_MORPH_ENABLED = bool(CFG["features"].get("image_morph_detection", True))
+TEXT_ALIGNMENT_ENABLED = bool(CFG["features"].get("text_alignment_detection", True))
+
 
 class LightTableDetector:
     """Collects lightweight table candidates and emits a JSONL artifact."""
@@ -12,6 +18,8 @@ class LightTableDetector:
         self.readers_dir = Path(readers_dir)
         self._path = self.readers_dir / "table_candidates.jsonl"
         self._candidates: List[Dict[str, Any]] = []
+        self._enable_morph = IMAGE_MORPH_ENABLED
+        self._enable_text_alignment = TEXT_ALIGNMENT_ENABLED
 
     def reset(self) -> None:
         self._candidates = []
@@ -30,11 +38,11 @@ class LightTableDetector:
         status = (status or "failed").lower()
         base = 0.2
         if status == "ok":
-            base = 0.85
+            base = max(0.85, TABLE_CANDIDATE_MIN_CONF)
         elif status == "fallback":
-            base = 0.6
+            base = max(0.6, TABLE_CANDIDATE_MIN_CONF)
         elif status in {"detect", "candidate"}:
-            base = 0.5
+            base = max(0.5, TABLE_CANDIDATE_MIN_CONF)
         elif status == "failed":
             base = 0.2
         elif status == "inadmissible":
@@ -105,7 +113,13 @@ class LightTableDetector:
         gridlines_v = len(geometry.get("col_lines", [])) if geometry else 0
 
         method = "morph" if (gridlines_h or gridlines_v) else "text-alignment"
-        if extraction_tool.lower() == "ocr":
+        if method == "morph" and not self._enable_morph:
+            method = "text-alignment"
+        if method == "text-alignment" and not self._enable_text_alignment:
+            method = "morph" if self._enable_morph else "text-alignment"
+        if not self._enable_morph and not self._enable_text_alignment:
+            method = extraction_tool.lower() or "unknown"
+        if extraction_tool.lower() == "ocr" and self._enable_text_alignment:
             method = "text-alignment"
 
         cues = self._compute_cues(rows, cols, gridlines_h, gridlines_v)

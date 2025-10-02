@@ -3,90 +3,58 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Set
 
+from utils.config import CFG
+from utils.lang_utils import collapse_doc_lang, normalise_lang, tokenise_langs
+from utils.num_utils import as_float, as_int
+
 from .types import PerPageStat
 
 JsonDict = Dict[str, Any]
 
-LANG_ALIAS = {
-    "deu": "de",
-    "ger": "de",
-    "german": "de",
-    "de": "de",
-    "eng": "en",
-    "english": "en",
-    "en": "en",
-    "mixed": "mixed",
-}
-
 _ALLOWED_LANGS = ("de", "en")
 _DEFAULT_LANG = "de"
 
-
-def _tokenise_langs(raw: Any) -> List[str]:
-    if raw is None:
-        return []
-    text = str(raw)
-    if not text:
-        return []
-    return [token.strip() for token in text.replace(",", "+").split("+") if token]
+OCR_LOW_CONF = float(CFG["thresholds"]["ocr_low_conf"])
+OCR_LOW_TEXT_MIN_WORDS = int(CFG["thresholds"]["ocr_low_text_min_words"])
+SUSPICIOUS_TEXT_CHARS_MIN = int(CFG["thresholds"]["suspicious_text_chars_min"])
 
 
-def _collect_lang_tokens(raw_values: Iterable[Any] | None) -> List[str]:
+def _lang_tokens(raw_values: Iterable[Any] | None) -> List[str]:
     tokens: List[str] = []
-    for raw in raw_values or []:
-        for token in _tokenise_langs(raw):
-            mapped = LANG_ALIAS.get(token.lower(), token.lower())
+    if raw_values is None:
+        return tokens
+    if isinstance(raw_values, str):
+        iter_values: Iterable[Any] = [raw_values]
+    else:
+        iter_values = raw_values
+    for raw in iter_values or []:
+        if raw is None:
+            continue
+        for part in str(raw).replace(",", "+").split("+"):
+            token = part.strip()
+            if not token:
+                continue
+            mapped = normalise_lang(token)
             if mapped in _ALLOWED_LANGS:
                 if mapped not in tokens:
                     tokens.append(mapped)
-            elif mapped == "mixed":
+            elif mapped == "mixed" or token.lower() == "mixed":
                 for alias in _ALLOWED_LANGS:
                     if alias not in tokens:
                         tokens.append(alias)
     return tokens
 
 
+
 def _normalise_lang(raw: Any, fallback: Iterable[str] | None = None) -> str:
-    tokens = _collect_lang_tokens([raw])
-    if not tokens:
-        tokens = _collect_lang_tokens(fallback)
+    tokens = _lang_tokens([raw])
+    if not tokens and fallback:
+        tokens = _lang_tokens(fallback)
     if not tokens:
         return _DEFAULT_LANG
-    has_de = "de" in tokens
-    has_en = "en" in tokens
-    if has_de and has_en:
-        return "de+en"
-    if has_de:
-        return "de"
-    if has_en:
-        return "en"
-    return _DEFAULT_LANG
-
-
-def _as_int(value: Any) -> int:
-    try:
-        if isinstance(value, bool):
-            return int(value)
-        if isinstance(value, (int, float)):
-            return int(value)
-        if isinstance(value, str) and value.strip():
-            return int(float(value))
-    except Exception:
-        return 0
-    return 0
-
-
-def _as_float(value: Any) -> float:
-    try:
-        if isinstance(value, bool):
-            return float(int(value))
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str) and value.strip():
-            return float(value)
-    except Exception:
-        return 0.0
-    return 0.0
+    share = {lang: (1.0 if lang in tokens else 0.0) for lang in _ALLOWED_LANGS}
+    collapsed = collapse_doc_lang(share)
+    return collapsed or _DEFAULT_LANG
 
 
 def _normalise_flags(flags: Iterable[Any]) -> List[str]:
@@ -138,12 +106,15 @@ def _compute_lang_share(
     total_chars = 0.0
 
     for block in blocks or []:
-        char_count = _as_int(block.get("char_count") or len(str(block.get("text_raw") or "")))
+        char_count = as_int(block.get("char_count") or len(str(block.get("text_raw") or "")))
         if char_count <= 0:
             continue
-        tokens = _collect_lang_tokens([block.get("lang"), block.get("lang_hint")])
+        tokens = _lang_tokens([block.get("lang"), block.get("lang_hint")])
         if not tokens:
-            tokens = list(fallback_tokens)
+            tokens = _lang_tokens(fallback_tokens)
+        if not tokens:
+            detected_counts = tokenise_langs(str(block.get("text_raw") or ""))
+            tokens = [lang for lang in _ALLOWED_LANGS if detected_counts.get(lang, 0) > 0]
         if not tokens:
             continue
         weight = char_count / max(len(tokens), 1)
@@ -165,8 +136,8 @@ def _compute_lang_share(
 def _detect_header_footer(blocks: Iterable[JsonDict], page_height: Optional[float]) -> bool:
     if not blocks or not page_height or page_height <= 0:
         return False
-    top_threshold = float(page_height) * 0.12
-    bottom_threshold = float(page_height) - top_threshold
+    height = float(page_height)
+    margin = height * 0.12
     has_header = False
     has_footer = False
     for block in blocks:
@@ -178,9 +149,9 @@ def _detect_header_footer(blocks: Iterable[JsonDict], page_height: Optional[floa
             y1 = float(bbox[3])
         except Exception:
             continue
-        if y0 <= top_threshold:
+        if y1 >= height - margin:
             has_header = True
-        if y1 >= bottom_threshold:
+        if y0 <= margin:
             has_footer = True
         if has_header and has_footer:
             return True
@@ -211,29 +182,46 @@ def build_per_page_stats(
     geometry = page_geometry or {}
     multi_column_pages = multi_column_pages or set()
     blocks_lookup = blocks_by_page or {}
-    fallback_tokens = _collect_lang_tokens(lang_fallback)
+    fallback_tokens = _lang_tokens(lang_fallback)
 
     stats: List[PerPageStat] = []
     for entry in per_page_raw or []:
         if not isinstance(entry, dict):
             continue
-        page_number = _as_int(entry.get("page")) or 0
+        page_number = as_int(entry.get("page")) or 0
         source_normalised = _normalise_source(str(entry.get("source") or entry.get("decision") or "text"))
         lang_value = _normalise_lang(entry.get("lang"), fallback=lang_fallback)
         locale_value = _normalise_lang(entry.get("locale"), fallback=lang_fallback)
         flags_list = _normalise_flags(entry.get("flags") or [])
 
-        chars = _as_int(entry.get("chars"))
-        ocr_words = _as_int(entry.get("ocr_words"))
-        tables_found = _as_int(entry.get("tables_found"))
-        table_cells = _as_int(entry.get("table_cells"))
+        chars = as_int(entry.get("chars"))
+        ocr_words = as_int(entry.get("ocr_words"))
+        tables_found = as_int(entry.get("tables_found"))
+        table_cells = as_int(entry.get("table_cells"))
         has_table = bool(entry.get("has_table")) or tables_found > 0
-        time_ms = round(_as_float(entry.get("time_ms")), 2)
+        time_ms = round(as_float(entry.get("time_ms")), 2)
 
         ocr_conf_value = entry.get("ocr_conf")
         if ocr_conf_value is None:
             ocr_conf_value = entry.get("ocr_conf_avg")
-        ocr_conf = round(_as_float(ocr_conf_value), 2) if ocr_conf_value is not None else 0.0
+        ocr_conf = None
+        if ocr_conf_value is not None:
+            try:
+                ocr_conf = round(float(ocr_conf_value), 2)
+            except Exception:
+                ocr_conf = round(as_float(ocr_conf_value), 2)
+
+        flags_generated: List[str] = []
+        if ocr_conf is not None and ocr_conf < OCR_LOW_CONF:
+            flags_generated.append("low_conf_page")
+        if (ocr_conf is not None and ocr_conf >= OCR_LOW_CONF and ocr_words is not None and ocr_words < OCR_LOW_TEXT_MIN_WORDS):
+            flags_generated.append("low_text_page")
+        if source_normalised == "text" and chars is not None and chars < SUSPICIOUS_TEXT_CHARS_MIN:
+            flags_generated.append("suspicious_text_page")
+        combined_flags = []
+        for flag in flags_list + flags_generated:
+            if flag and flag not in combined_flags:
+                combined_flags.append(flag)
 
         page_info = geometry.get(page_number) or {}
         width = page_info.get("width")
@@ -244,8 +232,8 @@ def build_per_page_stats(
         is_multi_column = page_number in multi_column_pages
         columns_count = 2 if is_multi_column else 1
 
-        skew_deg = round(_as_float(entry.get("skew_deg")), 2)
-        noise_score = round(_as_float(entry.get("noise_score")), 3)
+        skew_deg = round(as_float(entry.get("skew_deg")), 2)
+        noise_score = round(as_float(entry.get("noise_score")), 3)
         if noise_score < 0.0:
             noise_score = 0.0
         if noise_score > 1.0:
@@ -264,8 +252,8 @@ def build_per_page_stats(
 
         has_header_footer = _detect_header_footer(blocks, height)
 
-        images_count = _as_int(page_info.get("images_count"))
-        graphics_count = _as_int(page_info.get("graphics_objects_count"))
+        images_count = as_int(page_info.get("images_count"))
+        graphics_count = as_int(page_info.get("graphics_objects_count"))
         has_images = images_count > 0
 
         stat: PerPageStat = {
@@ -274,11 +262,11 @@ def build_per_page_stats(
             "chars": chars,
             "lang": lang_value,
             "lang_share": lang_share,
-            "ocr_conf": ocr_conf,
+            "ocr_conf": ocr_conf if ocr_conf is not None else 0.0,
             "ocr_words": ocr_words,
             "tables_found": tables_found,
             "table_cells": table_cells,
-            "flags": flags_list,
+            "flags": combined_flags,
             "rotation_deg": rotation_value,
             "skew_deg": skew_deg,
             "is_multi_column": is_multi_column,

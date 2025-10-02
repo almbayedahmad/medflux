@@ -2,25 +2,68 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
+
+from utils.config import CFG
+from utils.geom_utils import to_bottom_left, validate_bbox
+from utils.lang_utils import collapse_doc_lang, normalise_lang, tokenise_langs
+from utils.num_utils import as_float, as_int
 
 from .types import TextBlock
 
 JsonDict = Dict[str, Any]
 
-_LANG_ALIAS = {
-    "deu": "de",
-    "ger": "de",
-    "german": "de",
-    "de": "de",
-    "eng": "en",
-    "english": "en",
-    "en": "en",
-    "mixed": "mixed",
-}
-
 _ALLOWED_LANGS = ("de", "en")
 _DEFAULT_LANG = "de"
+
+MULTI_COLUMN_LEFT_THR = float(CFG["thresholds"]["multi_column_left_thr"])
+MULTI_COLUMN_RIGHT_THR = float(CFG["thresholds"]["multi_column_right_thr"])
+
+
+def _split_lang_candidates(*values: Any) -> List[str]:
+    tokens: List[str] = []
+    stack = list(values)
+    while stack:
+        raw = stack.pop()
+        if raw is None:
+            continue
+        if isinstance(raw, (list, tuple, set)):
+            stack.extend(raw)
+            continue
+        if isinstance(raw, dict):
+            stack.extend(raw.values())
+            continue
+        text_value = str(raw)
+        if not text_value:
+            continue
+        for part in text_value.replace(",", "+").split("+"):
+            token = part.strip()
+            if not token:
+                continue
+            mapped = normalise_lang(token)
+            if mapped in _ALLOWED_LANGS:
+                if mapped not in tokens:
+                    tokens.append(mapped)
+            elif mapped in {"mixed", "de+en"}:
+                for alias in _ALLOWED_LANGS:
+                    if alias not in tokens:
+                        tokens.append(alias)
+    return tokens
+
+
+
+def _resolve_lang(raw: Any, fallback: Any = None, text: str | None = None) -> str:
+    tokens = _split_lang_candidates(raw)
+    if not tokens:
+        tokens = _split_lang_candidates(fallback)
+    if not tokens and text:
+        detected = tokenise_langs(text)
+        tokens = [lang for lang in _ALLOWED_LANGS if detected.get(lang, 0) > 0]
+    if not tokens:
+        return _DEFAULT_LANG
+    share = {lang: (1.0 if lang in tokens else 0.0) for lang in _ALLOWED_LANGS}
+    collapsed = collapse_doc_lang(share)
+    return collapsed or _DEFAULT_LANG
 
 
 def _ensure_float_list(values: Any) -> List[float]:
@@ -47,32 +90,6 @@ def _normalise_text_lines(value: Any, fallback: str) -> List[str]:
     return []
 
 
-def _as_int(value: Any) -> int:
-    try:
-        if isinstance(value, bool):
-            return int(value)
-        if isinstance(value, (int, float)):
-            return int(value)
-        if isinstance(value, str) and value.strip():
-            return int(float(value))
-    except Exception:
-        return 0
-    return 0
-
-
-def _as_float(value: Any) -> float:
-    try:
-        if isinstance(value, bool):
-            return float(int(value))
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str) and value.strip():
-            return float(value)
-    except Exception:
-        return 0.0
-    return 0.0
-
-
 def _as_bool(value: Any, default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
@@ -87,37 +104,6 @@ def _as_bool(value: Any, default: bool = False) -> bool:
     return default
 
 
-def _tokenise_lang(raw: Any) -> List[str]:
-    if raw is None:
-        return []
-    text = str(raw)
-    if not text:
-        return []
-    return [token.strip() for token in text.replace(",", "+").split("+") if token]
-
-
-def _normalise_lang(raw: Any, fallback: Any = None) -> str:
-    tokens: List[str] = []
-    tokens.extend(_tokenise_lang(raw))
-    if not tokens:
-        tokens.extend(_tokenise_lang(fallback))
-    normalised: List[str] = []
-    for token in tokens:
-        mapped = _LANG_ALIAS.get(token.lower(), token.lower())
-        if mapped in _ALLOWED_LANGS:
-            if mapped not in normalised:
-                normalised.append(mapped)
-        elif mapped == "mixed":
-            for alias in _ALLOWED_LANGS:
-                if alias not in normalised:
-                    normalised.append(alias)
-    if not normalised:
-        return _DEFAULT_LANG
-    if len(normalised) == 2:
-        return "de+en"
-    return normalised[0]
-
-
 def _lang_confidence(lang: str) -> float:
     if lang == "de+en":
         return 0.7
@@ -125,9 +111,6 @@ def _lang_confidence(lang: str) -> float:
         return 0.95
     return 0.5 if lang else 0.0
 
-
-def _safe_char_map_ref(readers_dir: Path, block_id: str) -> str:
-    return f"{readers_dir / 'text_blocks.jsonl'}#{block_id}"
 
 
 def _infer_paragraph_style(is_heading: bool, is_list: bool) -> str:
@@ -167,10 +150,10 @@ def _derive_block_type(
         y0 = float(bbox[1])
         y1 = float(bbox[3])
         top_thr = page_height * 0.1
-        bottom_thr = page_height * 0.9
-        if y0 <= top_thr:
+        bottom_thr = page_height * 0.1
+        if y1 >= page_height - top_thr:
             return "header"
-        if y1 >= bottom_thr:
+        if y0 <= bottom_thr:
             return "footer"
     if is_heading:
         return "heading"
@@ -202,7 +185,7 @@ def build_text_blocks(
                 continue
 
             block_id = str(item.get("id") or f"b{index:04d}")
-            page = _as_int(item.get("page"))
+            page = as_int(item.get("page"))
             text_raw = str(item.get("text_raw") or item.get("text") or "")
             text_lines_list = _normalise_text_lines(item.get("text_lines"), text_raw)
             bbox = _ensure_float_list(item.get("bbox"))
@@ -211,6 +194,8 @@ def build_text_blocks(
             page_info = geometry_lookup.get(page) or {}
             page_width = page_info.get("width")
             page_height = page_info.get("height")
+            if page_height:
+                bbox = to_bottom_left(bbox, float(page_height))
 
             block: TextBlock = {
                 "id": block_id,
@@ -218,10 +203,9 @@ def build_text_blocks(
                 "text_raw": text_raw,
                 "text_lines": text_lines_list,
                 "bbox": bbox,
-                "charmap_ref": _safe_char_map_ref(readers_dir, block_id),
                 "token_count": _token_count(text_raw),
                 "char_count": len(text_raw),
-                "reading_order_index": _as_int(item.get("reading_order_index")) if item.get("reading_order_index") is not None else index,
+                "reading_order_index": as_int(item.get("reading_order_index")) if item.get("reading_order_index") is not None else index,
             }
 
             is_heading_bool = _as_bool(item.get("is_heading_like"))
@@ -229,24 +213,24 @@ def build_text_blocks(
             block["is_heading_like"] = is_heading_bool
             block["is_list_like"] = is_list_bool
 
-            lang_value = _normalise_lang(item.get("lang"), fallback=item.get("lang_hint"))
+            lang_value = _resolve_lang(item.get("lang"), fallback=item.get("lang_hint"), text=text_raw)
             block["lang"] = lang_value
             block["lang_conf"] = round(_lang_confidence(lang_value), 2)
 
             ocr_conf_avg = item.get("ocr_conf_avg")
-            block["ocr_conf_avg"] = round(_as_float(ocr_conf_avg), 2) if ocr_conf_avg is not None else 0.0
+            block["ocr_conf_avg"] = round(as_float(ocr_conf_avg), 2) if ocr_conf_avg is not None else 0.0
             font_size_value = item.get("font_size_avg") or item.get("font_size")
-            block["font_size"] = round(_as_float(font_size_value), 2) if font_size_value is not None else 0.0
+            block["font_size"] = round(as_float(font_size_value), 2) if font_size_value is not None else 0.0
             block["is_bold"] = _as_bool(item.get("is_bold"))
             block["is_upper"] = _as_bool(item.get("is_upper"))
 
             if item.get("char_count") is not None:
-                block["char_count"] = _as_int(item.get("char_count"))
+                block["char_count"] = as_int(item.get("char_count"))
 
             block["paragraph_style"] = _infer_paragraph_style(is_heading_bool, is_list_bool)
             list_level_value = item.get("list_level")
             if list_level_value is not None:
-                block["list_level"] = _as_int(list_level_value)
+                block["list_level"] = as_int(list_level_value)
             else:
                 block["list_level"] = 1 if is_list_bool else 0
 
@@ -254,17 +238,22 @@ def build_text_blocks(
             baseline_y = 0.0
             column_index = 0
             indent_level = 0
-            if bbox and len(bbox) >= 4:
+            if validate_bbox(bbox):
                 y0 = float(bbox[1])
                 y1 = float(bbox[3])
                 x0 = float(bbox[0])
                 x1 = float(bbox[2])
                 line_height = max(0.0, y1 - y0)
-                baseline_y = y1
+                baseline_y = y0
                 if page_width and page_width > 0:
                     center = (x0 + x1) / 2.0
                     normalized = min(max(center / page_width, 0.0), 1.0)
-                    column_index = 1 if normalized >= 0.55 else 0
+                    if normalized >= MULTI_COLUMN_RIGHT_THR:
+                        column_index = 1
+                    elif normalized <= MULTI_COLUMN_LEFT_THR:
+                        column_index = 0
+                    else:
+                        column_index = 0
                     indent_unit = max(page_width * 0.04, 12.0)
                     indent_level = int(max(0.0, (x0 - 10.0) / indent_unit))
             block["line_height"] = round(line_height, 2)

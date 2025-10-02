@@ -2,6 +2,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 from .readers_core import UnifiedReaders, ReaderOptions
+from utils.config import CFG
+
 
 def parse_args():
     p = argparse.ArgumentParser(prog="run_readers", description="FluxAI Readers - unified runner")
@@ -17,7 +19,7 @@ def parse_args():
     p.add_argument("--pre", action="store_true")
     p.add_argument("--export-xlsx", action="store_true")
     p.add_argument("--verbose", action="store_true")
-    p.add_argument("--tables", choices=["off","light","full"], default="light")
+    p.add_argument("--tables", choices=["off","detect","extract","light","full"], default=CFG["features"]["tables_mode"])
     p.add_argument("--save-table-crops", action="store_true")
     p.add_argument("--tables-min-words", type=int, default=12)
     p.add_argument("--blocks-threshold", type=int, default=3)
@@ -30,10 +32,16 @@ def parse_args():
 
 def main():
     args = parse_args()
+    tables_mode = args.tables
+    if tables_mode == "light":
+        tables_mode = "detect"
+    elif tables_mode == "full":
+        tables_mode = "extract"
+
     opts = ReaderOptions(
         mode=args.mode, lang=args.lang, dpi_mode=args.dpi_mode, oem=args.oem,
         dpi=args.dpi, psm=args.psm, workers=args.workers, use_pre=args.pre,
-        export_xlsx=args.export_xlsx, verbose=args.verbose, tables_mode=args.tables,
+        export_xlsx=args.export_xlsx, verbose=args.verbose, tables_mode=tables_mode,
         save_table_crops=args.save_table_crops, tables_min_words=args.tables_min_words,
         blocks_threshold=args.blocks_threshold,
         native_ocr_overlay=args.native_ocr_overlay,

@@ -78,7 +78,6 @@ class TextBlock(TypedDict, total=False):
     indent_level: int
     numbering_marker: str
     block_type: str
-    charmap_ref: NotRequired[str]
 
 
 class WordEntry(TypedDict, total=False):
@@ -170,16 +169,13 @@ class DocMeta(TypedDict, total=False):
     text_blocks: List[TextBlock]
     words: List[WordEntry]
     zones: List[ZoneEntry]
-    tables_raw: List[RawTable]
     artifacts: List[Artifact]
     locale_hints: LocaleHints
-    qa: QASection
     warnings: List[str]
     logs: List[str]
     processing_log: List[dict]
     visual_artifacts_path: str
     text_blocks_path: str
-    tables_raw_path: str
 
 
 

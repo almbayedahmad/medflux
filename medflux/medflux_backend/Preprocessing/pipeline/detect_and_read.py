@@ -13,7 +13,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
 from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
 from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
-from medflux_backend.Preprocessing.output_structure.readers_outputs.doc_meta import build_doc_meta
+from readers_outputs.doc_meta import build_doc_meta
+from utils.config import CFG
 
 
 
@@ -164,7 +165,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pre", action="store_true")
     parser.add_argument("--export-xlsx", action="store_true")
     parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--tables-default", default="detect")
+    parser.add_argument("--tables-default", default=CFG["features"]["tables_mode"])
     parser.add_argument("--save-table-crops", action="store_true")
     parser.add_argument("--tables-min-words", type=int, default=12)
     parser.add_argument("--table-detect-min-area", type=float, default=9000.0)
