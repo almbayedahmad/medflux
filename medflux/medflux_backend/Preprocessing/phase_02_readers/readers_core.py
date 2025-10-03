@@ -9,6 +9,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Tuple, Set
 
 from utils.config import CFG
+from utils.logger import log_event
 
 
 OCR_LOW_CONF = float(CFG["thresholds"]["ocr_low_conf"])
@@ -69,6 +70,8 @@ DOCX_EXTS = {".docx"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".gif", ".webp"}
 TEXT_EXTS = {".txt", ".log", ".md", ".csv", ".tsv", ".json", ".yaml", ".yml", ".ini", ".cfg", ".conf"}
 
+DOCX_PAGE_WIDTH_EMU = 8.27 * 914400
+DOCX_PAGE_HEIGHT_EMU = 11.69 * 914400
 
 @dataclass
 class ReaderOptions:
@@ -150,6 +153,8 @@ class UnifiedReaders:
         self._tables: List[TableRecord] = []
         self._tables_raw: List[Dict[str, Any]] = []
         self._blocks: List[Dict[str, Any]] = []
+        self._zones: List[Dict[str, Any]] = []
+        self._page_geometry: Dict[int, Dict[str, float]] = {}
         self._table_flags: Set[int] = set()
         self._table_candidates: Dict[int, Dict[str, float]] = {}
         self._page_language_hints: Dict[int, str] = {}
@@ -158,6 +163,7 @@ class UnifiedReaders:
         self._visual_artifacts: List[Dict[str, Any]] = []
         self._block_counter: int = 0
         self._timings: defaultdict[str, float] = defaultdict(float)
+        self._structured_log_path = self.readers_dir / "structured_logs.jsonl"
         self._table_counts: defaultdict[int, int] = defaultdict(int)
         self._t0 = time.time()
         self._light_tables = LightTableDetector(self.readers_dir)
@@ -169,7 +175,7 @@ class UnifiedReaders:
         elif effective_tables_mode == "full":
             effective_tables_mode = "extract"
         self._tables_mode = effective_tables_mode
-        self._allow_tables_raw = self._tables_mode in {"extract"}
+        self._allow_tables_raw = False
 
     # ------------------------------------------------------------------
     # Helpers
@@ -181,6 +187,8 @@ class UnifiedReaders:
         self._tables.clear()
         self._tables_raw.clear()
         self._blocks.clear()
+        self._zones.clear()
+        self._page_geometry.clear()
         self._table_flags.clear()
         self._table_candidates.clear()
         self._page_language_hints.clear()
@@ -192,10 +200,16 @@ class UnifiedReaders:
         self._block_counter = 0
         self._t0 = time.time()
         self._light_tables.reset()
+        if self._structured_log_path.exists():
+            try:
+                self._structured_log_path.unlink()
+            except Exception:
+                pass
 
     def _log_warning(self, code: str) -> None:
         if code not in self._warnings:
             self._warnings.append(code)
+        log_event(self._structured_log_path, stage='warning', code=code)
 
     def _log_tool_event(
         self,
@@ -210,6 +224,14 @@ class UnifiedReaders:
         if details:
             entry["details"] = details
         self._tool_events.append(entry)
+        meta: Dict[str, Any] = {}
+        if page is not None:
+            meta["page"] = int(page)
+        if details:
+            filtered = {k: v for k, v in details.items() if k not in {"text", "content"}}
+            if filtered:
+                meta["details"] = filtered
+        log_event(self._structured_log_path, stage=step, code=status, meta=meta or None)
 
     def _blocks_for_page(self, page_no: int) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
@@ -221,6 +243,54 @@ class UnifiedReaders:
             if page_value == page_no:
                 results.append(block)
         return results
+
+    def _update_zones(self, page, page_no: int) -> None:
+        try:
+            rect = getattr(page, "rect")
+            x0 = float(rect.x0)
+            y0 = float(rect.y0)
+            x1 = float(rect.x1)
+            y1 = float(rect.y1)
+        except Exception:
+            return
+        page_height = max(y1 - y0, 0.0)
+        if page_height <= 0:
+            return
+        header_band = y0 + page_height * 0.12
+        footer_band = y1 - page_height * 0.12
+        header_boxes: List[Tuple[float, float, float, float]] = []
+        footer_boxes: List[Tuple[float, float, float, float]] = []
+        for block in self._blocks_for_page(page_no):
+            bbox = block.get("bbox")
+            if not isinstance(bbox, list) or len(bbox) < 4:
+                continue
+            try:
+                bx0, by0, bx1, by1 = (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+            except Exception:
+                continue
+            if by1 <= header_band:
+                header_boxes.append((bx0, by0, bx1, by1))
+            if by0 >= footer_band:
+                footer_boxes.append((bx0, by0, bx1, by1))
+        self._zones = [zone for zone in self._zones if int(zone.get("page", 0)) != page_no]
+        def _merge(boxes: List[Tuple[float, float, float, float]]) -> List[float]:
+            return [
+                min(b[0] for b in boxes),
+                min(b[1] for b in boxes),
+                max(b[2] for b in boxes),
+                max(b[3] for b in boxes),
+            ]
+        if header_boxes:
+            self._zones.append({"page": page_no, "bbox": _merge(header_boxes), "type": "header"})
+        if footer_boxes:
+            self._zones.append({"page": page_no, "bbox": _merge(footer_boxes), "type": "footer"})
+        header_bottom = max((box[3] for box in header_boxes), default=y0)
+        footer_top = min((box[1] for box in footer_boxes), default=y1)
+        body_top = header_bottom if header_boxes else y0
+        body_bottom = footer_top if footer_boxes else y1
+        if body_bottom <= body_top:
+            body_top, body_bottom = y0, y1
+        self._zones.append({"page": page_no, "bbox": [x0, body_top, x1, body_bottom], "type": "body"})
 
     def _record_table_candidate(
         self,
@@ -648,6 +718,7 @@ class UnifiedReaders:
             float(page.rect.y0 + y1_pix / zoom),
         ]
 
+
     def _append_table_raw(
         self,
         page_no: int,
@@ -657,24 +728,11 @@ class UnifiedReaders:
         cells: Optional[List[Dict[str, Any]]] = None,
         table_text: Optional[str] = None,
     ) -> None:
-        if not self._allow_tables_raw:
-            return
-
-        record: Dict[str, Any] = {
-            "id": f"{page_no}-table-{len(self._tables_raw)}",
-            "page": page_no,
-            "bbox": bbox,
-            "extraction_tool": extraction_tool,
-            "status": status,
-        }
-        if cells is not None:
-            record["cells"] = cells
-        if table_text:
-            record["table_text"] = table_text
-        self._tables_raw.append(record)
         if status == "ok":
             self._table_counts[page_no] += 1
         self._log_tool_event("table_extract", status, page=page_no, details={"tool": extraction_tool})
+
+
 
 
     @staticmethod
@@ -978,6 +1036,13 @@ class UnifiedReaders:
         try:
             image = Image.open(path).convert("RGB")
             self._log_tool_event("image_open", "ok", details={"file": str(path)})
+            width, height = image.size
+            self._page_geometry[1] = {
+                "width": float(width),
+                "height": float(height),
+                "rotation": 0.0,
+                "images_count": 1,
+            }
         except Exception as exc:
             self._log_warning(f"read_image_error:{exc}")
             self._log_tool_event("image_open", "error", details={"file": str(path), "error": str(exc)})
@@ -1024,6 +1089,12 @@ class UnifiedReaders:
         words = len(text.split()) if text else 0
         conf = 90.0 if text else 0.0
         self._log_tool_event("docx_reader", "ok", details={"file": str(path), "words": words})
+        self._page_geometry[1] = {
+            "width": float(DOCX_PAGE_WIDTH_EMU),
+            "height": float(DOCX_PAGE_HEIGHT_EMU),
+            "rotation": 0.0,
+            "images_count": 0,
+        }
         self._records.append(
             PageRecord(
                 file=str(path),
@@ -1117,6 +1188,21 @@ class UnifiedReaders:
             native_data["coverage"] = coverage
             native_data["image_count"] = image_count
             native_map[page_no] = native_data
+            rect = getattr(page, "rect", None)
+            if rect is not None:
+                self._page_geometry[page_no] = {
+                    "width": float(getattr(rect, "width", 0.0)),
+                    "height": float(getattr(rect, "height", 0.0)),
+                    "rotation": float(getattr(page, "rotation", 0) or 0.0),
+                    "images_count": int(image_count),
+                }
+            else:
+                self._page_geometry.setdefault(page_no, {
+                    "width": 0.0,
+                    "height": 0.0,
+                    "rotation": float(getattr(page, "rotation", 0) or 0.0),
+                    "images_count": int(image_count),
+                })
             if mode == "ocr":
                 ocr_needed.append(page_no)
                 continue
@@ -1207,6 +1293,7 @@ class UnifiedReaders:
             self._page_decisions.append(decision)
             if final_text.strip():
                 self._maybe_collect_tables(page, path, page_no, decision, ocr_data)
+            self._update_zones(page, page_no)
         doc.close()
 
     # ------------------------------------------------------------------
@@ -1318,17 +1405,22 @@ class UnifiedReaders:
             with open(blocks_path, "w", encoding="utf-8") as handle:
                 for block in self._blocks:
                     handle.write(json.dumps(block, ensure_ascii=False) + "\n")
+        zones_path = self.readers_dir / "zones.jsonl"
+        if self._zones:
+            with open(zones_path, "w", encoding="utf-8") as handle:
+                for zone in self._zones:
+                    handle.write(json.dumps(zone, ensure_ascii=False) + "\n")
+        elif zones_path.exists():
+            try:
+                zones_path.unlink()
+            except Exception:
+                pass
         tables_raw_path = self.readers_dir / "tables_raw.jsonl"
-        if self._allow_tables_raw and self._tables_raw:
-            with open(tables_raw_path, "w", encoding="utf-8") as handle:
-                for entry in self._tables_raw:
-                    handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-        else:
-            if tables_raw_path.exists():
-                try:
-                    tables_raw_path.unlink()
-                except Exception:
-                    pass
+        if tables_raw_path.exists():
+            try:
+                tables_raw_path.unlink()
+            except Exception:
+                pass
         self._light_tables.flush()
         tables_path = self.readers_dir / "tables.jsonl"
         if self._tables:
@@ -1381,6 +1473,8 @@ class UnifiedReaders:
             summary["timings_ms"] = timings_payload
         if self._table_counts:
             summary["table_counts"] = {int(page): count for page, count in sorted(self._table_counts.items())}
+        if self._page_geometry:
+            summary["page_geometry"] = {int(page): {key: (float(value) if isinstance(value, (int, float)) else value) for key, value in data.items()} for page, data in sorted(self._page_geometry.items())}
         summary_path = self.readers_dir / "readers_summary.json"
         payload = {"summary": summary, "tool_log": summary["tool_log"]}
         summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1514,7 +1608,8 @@ def _enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
         manual_review = True
     elif bool(flagged) and low_conf_ratio_thr <= 0:
         manual_review = True
-    payload["flags"] = {"manual_review": manual_review, "pages": sorted(set(flagged))}
+    payload.pop("flags", None)
+    payload.pop("qa", None)
     summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     csv_path = Path(outdir) / "per_page_stats.csv"

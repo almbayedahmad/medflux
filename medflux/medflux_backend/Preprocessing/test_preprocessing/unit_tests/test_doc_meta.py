@@ -6,19 +6,17 @@ import pytest
 
 from medflux_backend.Preprocessing.pipeline import detect_and_read
 import readers_outputs.doc_meta as doc_meta_module
+from schemas.readers_output_schema import SCHEMA_VERSION
 
 
 _ALLOWED_FILE_TYPES = {"pdf_text", "pdf_scan", "pdf_scan_hybrid", "docx", "image"}
 _ALLOWED_LANGS = {"de", "en", "de+en"}
 _ALLOWED_COORD_UNITS = {"pdf_points", "docx_emus", "image_pixels", "unknown"}
+_PIPELINE_ID = "preprocessing.run_readers"
 
 
 def _write_summary_payload(path: Path, summary: dict) -> None:
-    payload = {
-        "summary": summary,
-        "qa": summary.get("qa", {}),
-        "flags": summary.get("flags", {}),
-    }
+    payload = {"summary": summary}
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
@@ -38,7 +36,19 @@ def test_doc_meta_written(tmp_path, payload):
     doc_meta_path = outdir / sample.stem / "doc_meta.json"
     assert doc_meta_path.exists()
 
-    doc_meta_json = json.loads(doc_meta_path.read_text(encoding="utf-8"))
+    payload_json = json.loads(doc_meta_path.read_text(encoding="utf-8"))
+    assert payload_json["schema_version"] == SCHEMA_VERSION
+    assert isinstance(payload_json["run_id"], str)
+    assert payload_json["pipeline_id"] == _PIPELINE_ID
+
+    doc_meta_json = payload_json["doc_meta"]
+    per_page_stats = payload_json["per_page_stats"]
+    text_blocks = payload_json["text_blocks"]
+    warnings = payload_json["warnings"]
+    logs = payload_json["logs"]
+    logs_structured = payload_json.get("logs_structured", [])
+    zones_top = payload_json.get("zones", [])
+
     assert doc_meta_json["file_name"] == sample.name
     assert doc_meta_json["file_type"] in _ALLOWED_FILE_TYPES
     assert doc_meta_json["detected_encodings"] in {None, "utf-8"}
@@ -58,8 +68,8 @@ def test_doc_meta_written(tmp_path, payload):
     assert doc_meta_json["content_hash"]
     assert isinstance(doc_meta_json["has_text_layer"], bool)
 
-    assert doc_meta_json["per_page_stats"]
-    first_page = doc_meta_json["per_page_stats"][0]
+    assert per_page_stats
+    first_page = per_page_stats[0]
     assert first_page["source"] in {"text", "ocr", "mixed"}
     assert first_page["lang"] in _ALLOWED_LANGS
     assert isinstance(first_page["lang_share"], dict)
@@ -73,9 +83,9 @@ def test_doc_meta_written(tmp_path, payload):
     assert isinstance(first_page["has_header_footer"], bool)
     assert isinstance(first_page["has_images"], bool)
 
-    assert isinstance(doc_meta_json["text_blocks"], list)
-    if doc_meta_json["text_blocks"]:
-        first_block = doc_meta_json["text_blocks"][0]
+    assert isinstance(text_blocks, list)
+    if text_blocks:
+        first_block = text_blocks[0]
         assert isinstance(first_block["text_lines"], list)
         assert isinstance(first_block["ocr_conf_avg"], float)
         assert isinstance(first_block["font_size"], float)
@@ -83,34 +93,46 @@ def test_doc_meta_written(tmp_path, payload):
         assert isinstance(first_block["is_upper"], bool)
         assert isinstance(first_block["paragraph_style"], str)
         assert isinstance(first_block["list_level"], int)
-        
-    assert "tables_raw" not in doc_meta_json
+
+    assert "per_page_stats" not in doc_meta_json
+    assert "text_blocks" not in doc_meta_json
+
     assert isinstance(doc_meta_json["artifacts"], list)
     assert isinstance(doc_meta_json["words"], list)
     if doc_meta_json["words"]:
         first_word = doc_meta_json["words"][0]
-        assert set(["block_id", "page", "text", "bbox", "ocr_conf"]).issubset(first_word.keys())
+        assert {"block_id", "page", "text", "bbox", "ocr_conf"}.issubset(first_word.keys())
         assert isinstance(first_word["bbox"], list)
         assert isinstance(first_word["ocr_conf"], float)
-    assert isinstance(doc_meta_json["zones"], list)
-    if doc_meta_json["zones"]:
-        first_zone = doc_meta_json["zones"][0]
-        assert set(["page", "bbox", "type"]).issubset(first_zone.keys())
+
+    assert isinstance(logs_structured, list)
+    if logs_structured:
+        first_structured = logs_structured[0]
+        assert {"ts", "stage", "code"}.issubset(first_structured.keys())
+
+    assert isinstance(zones_top, list)
+    if zones_top:
+        first_zone = zones_top[0]
+        assert {"page", "bbox", "type"}.issubset(first_zone.keys())
         assert isinstance(first_zone["bbox"], list)
-    assert all(isinstance(lang, str) for lang in doc_meta_json["detected_languages"]["by_page"])
-    assert doc_meta_json["detected_languages"]["doc"] in _ALLOWED_LANGS
+
+    detected = doc_meta_json["detected_languages"]
+    assert all(isinstance(lang, str) for lang in detected["by_page"])
+    assert detected["doc"] in _ALLOWED_LANGS
     assert isinstance(doc_meta_json["locale_hints"]["by_page"], list)
     assert isinstance(doc_meta_json["processing_log"], list)
-    assert isinstance(doc_meta_json["logs"], list)
+    assert isinstance(logs, list)
+    assert isinstance(warnings, list)
     assert Path(doc_meta_json["text_blocks_path"]).exists()
     assert Path(doc_meta_json["visual_artifacts_path"]).exists()
+
     table_candidates_path = Path(outdir / sample.stem / "readers" / "table_candidates.jsonl")
     assert table_candidates_path.exists()
-    lines = [line for line in table_candidates_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    if lines:
-        import json as _json
-        candidate_payload = _json.loads(lines[0])
-        assert set(["page", "bbox", "confidence", "cues", "overlaps_text", "method", "gridlines_h", "gridlines_v", "rotation_deg"]).issubset(candidate_payload.keys())
+    candidates = payload_json.get("table_candidates", [])
+    if candidates:
+        first_candidate = candidates[0]
+        expected_keys = {"page", "bbox", "confidence", "cues", "overlaps_text", "method", "gridlines_h", "gridlines_v", "rotation_deg"}
+        assert expected_keys.issubset(first_candidate.keys())
 
 
 def _baseline_summary(pages: int) -> dict:
@@ -127,8 +149,6 @@ def _baseline_summary(pages: int) -> dict:
         "tool_log": [],
         "per_page_stats": [],
         "visual_artifacts_count": 0,
-        "qa": {"needs_review": False, "low_conf_pages": [], "low_text_pages": [], "tables_fail": False, "reasons": []},
-        "flags": {"manual_review": False, "pages": []},
     }
 
 
@@ -161,13 +181,16 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     _write_summary_payload(readers_dir / "readers_summary.json", summary)
 
     detect_meta = {"file_type": "pdf_text", "lang": "deu+eng"}
-    doc_meta_payload = doc_meta_module.build_doc_meta(
+    payload = doc_meta_module.build_doc_meta(
         input_path=tmp_path / "sample.pdf",
         detect_meta=detect_meta,
         encoding_meta=_baseline_encoding_meta(),
         readers_result={"outdir": str(readers_dir), "summary": summary, "tool_log": []},
         timings=_baseline_timings(),
+        run_id="unit-test",
+        pipeline_id="test.pipeline",
     )
+    doc_meta_payload = payload["doc_meta"]
     assert doc_meta_payload["coordinate_unit"] == "pdf_points"
     assert doc_meta_payload["bbox_origin"] == "bottom-left"
     assert doc_meta_payload["pdf_locked"] is False
@@ -183,8 +206,8 @@ def test_doc_meta_falls_back_to_decision_language(tmp_path):
     assert doc_meta_payload["processing_log"] == []
     assert doc_meta_payload["artifacts"] == []
     assert doc_meta_payload["words"] == []
-    assert doc_meta_payload.get("zones", []) == []
-    assert doc_meta_payload["per_page_stats"] == []
+    assert payload.get("zones", []) == []
+    assert payload["per_page_stats"] == []
 
 
 def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
@@ -195,13 +218,16 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
     _write_summary_payload(readers_dir / "readers_summary.json", summary)
 
     detect_meta = {"file_type": "pdf_text", "lang": "deu+eng"}
-    doc_meta_payload = doc_meta_module.build_doc_meta(
+    payload = doc_meta_module.build_doc_meta(
         input_path=tmp_path / "sample.pdf",
         detect_meta=detect_meta,
         encoding_meta=_baseline_encoding_meta(),
         readers_result={"outdir": str(readers_dir), "summary": summary, "tool_log": []},
         timings=_baseline_timings(),
+        run_id="unit-test",
+        pipeline_id="test.pipeline",
     )
+    doc_meta_payload = payload["doc_meta"]
     assert doc_meta_payload["coordinate_unit"] == "pdf_points"
     assert doc_meta_payload["bbox_origin"] == "bottom-left"
     assert doc_meta_payload["pdf_locked"] is False
@@ -214,6 +240,6 @@ def test_doc_meta_replaces_unknown_page_hints_with_fallback(tmp_path):
     assert doc_meta_payload["has_text_layer"] is False
     assert doc_meta_payload["detected_languages"]["overall"] == ["de", "en"]
     assert doc_meta_payload["detected_languages"]["by_page"] == ["de+en"]
-    assert doc_meta_payload["warnings"] == []
+    assert payload["warnings"] == []
     assert doc_meta_payload["words"] == []
-    assert doc_meta_payload.get("zones", []) == []
+    assert payload.get("zones", []) == []

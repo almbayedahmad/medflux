@@ -9,6 +9,8 @@ from utils.geom_utils import to_bottom_left
 from utils.lang_utils import normalise_lang
 from utils.num_utils import as_float, as_int
 
+from schemas.readers_output_schema import SCHEMA_VERSION
+
 from .components import (
     build_detected_languages,
     build_locale_hints,
@@ -19,7 +21,7 @@ from .components import (
 )
 from .per_page_stats import build_per_page_stats
 from .text_blocks import build_text_blocks
-from .types import Artifact, DocMeta, TextBlock, WordEntry, ZoneEntry
+from .types import Artifact, DocMeta, ReadersOutput, TextBlock, WordEntry, ZoneEntry
 
 READER_VERSION = "unified-readers-v1"
 _DEFAULT_OCR_LANGS = "deu+eng"
@@ -69,6 +71,10 @@ def _fallback_lang_tokens(*values: Any) -> List[str]:
         for part in text_value.replace(",", "+").split("+"):
             token = normalise_lang(part.strip())
             if not token:
+                continue
+            if token == "unknown":
+                continue
+            if token not in {"de", "en", "mixed", "de+en"}:
                 continue
             if token in {"mixed", "de+en"}:
                 for alias in ("de", "en"):
@@ -174,6 +180,78 @@ def _load_zones(readers_dir: Path) -> List[ZoneEntry]:
         }
         zones.append(zone)
     return zones
+
+def _fallback_per_page_stats(
+    summary: Dict[str, Any],
+    page_geometry: Dict[int, Dict[str, float]],
+    fallback_langs: List[str],
+) -> List[Dict[str, Any]]:
+    fallback_lang = fallback_langs[0] if fallback_langs else "de"
+    decisions = [str(decision or "text") for decision in summary.get("page_decisions") or []]
+    pages = as_int(summary.get("page_count")) or len(decisions) or 1
+    fallback_stats: List[Dict[str, Any]] = []
+    for index in range(1, pages + 1):
+        decision = decisions[index - 1] if index - 1 < len(decisions) else "text"
+        decision_lower = decision.lower()
+        if "ocr" in decision_lower and "native" in decision_lower:
+            source = "mixed"
+        elif "ocr" in decision_lower:
+            source = "ocr"
+        else:
+            source = "text"
+        geometry = page_geometry.get(index) or {}
+        page_size = {
+            "width": float(geometry.get("width") or 0.0),
+            "height": float(geometry.get("height") or 0.0),
+        }
+        fallback_stats.append({
+            "page": index,
+            "source": source,
+            "chars": 0,
+            "lang": fallback_lang,
+            "lang_share": {fallback_lang: 1.0},
+            "ocr_conf": 0.0,
+            "ocr_words": 0,
+            "tables_found": 0,
+            "table_cells": 0,
+            "flags": [],
+            "rotation_deg": int(float(geometry.get("rotation") or 0.0)),
+            "skew_deg": 0.0,
+            "is_multi_column": False,
+            "columns_count": 1,
+            "page_size": page_size,
+            "noise_score": 0.0,
+            "text_density": 0.0,
+            "has_header_footer": False,
+            "has_images": bool(geometry.get("images_count")),
+            "images_count": int(geometry.get("images_count") or 0),
+            "graphics_objects_count": int(geometry.get("graphics_objects_count") or 0),
+            "time_ms": 0.0,
+            "locale": fallback_lang,
+            "decision": decision,
+            "has_table": False,
+        })
+    return fallback_stats
+
+
+
+
+def _load_table_candidates(readers_dir: Path, page_geometry: Dict[int, Dict[str, float]]) -> List[Dict[str, Any]]:
+    path = readers_dir / "table_candidates.jsonl"
+    entries = _load_jsonl(path)
+    candidates: List[Dict[str, Any]] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        candidate = dict(item)
+        page = as_int(candidate.get("page"))
+        geometry = page_geometry.get(page) if page_geometry else None
+        height = float(geometry.get("height")) if geometry and geometry.get("height") is not None else None
+        bbox = candidate.get("bbox")
+        if height and isinstance(bbox, list) and len(bbox) == 4:
+            candidate["bbox"] = to_bottom_left(bbox, height)
+        candidates.append(candidate)
+    return candidates
 
 
 def _extract_page_geometry(summary: Dict[str, Any]) -> Dict[int, Dict[str, float]]:
@@ -289,8 +367,11 @@ def build_doc_meta(
     encoding_meta: Dict[str, Any],
     readers_result: Dict[str, Any],
     timings: Dict[str, Any],
-) -> DocMeta:
+    run_id: str,
+    pipeline_id: str = "preprocessing.readers",
+) -> ReadersOutput:
     readers_dir = Path(str(readers_result.get("outdir") or (input_path.parent / "readers")))
+    has_processed_pages = (readers_dir / "unified_text.jsonl").exists()
     summary_result = dict(readers_result.get("summary") or {})
     tool_log: List[Dict[str, Any]] = _normalise_tool_log(readers_result.get("tool_log") or [])
 
@@ -335,14 +416,6 @@ def build_doc_meta(
     blocks_by_page = _group_blocks_by_page(text_blocks)
     multi_column_pages = set(_extract_multi_column_pages(summary_result))
 
-    per_page_stats = build_per_page_stats(
-        summary_payload,
-        page_geometry=page_geometry or None,
-        lang_fallback=fallback_langs,
-        multi_column_pages=multi_column_pages,
-        blocks_by_page=blocks_by_page,
-    )
-
     artifacts = load_artifacts(readers_dir)
     words = _load_words(readers_dir, page_geometry, blocks_by_page)
     zones = _load_zones(readers_dir)
@@ -363,6 +436,25 @@ def build_doc_meta(
         if height and isinstance(bbox, list) and len(bbox) == 4:
             zone["bbox"] = to_bottom_left(bbox, float(height))
 
+    zones_by_page: Dict[int, List[str]] = {}
+    for zone in zones:
+        page_idx = as_int(zone.get("page"))
+        zone_type = str(zone.get("type") or "").lower()
+        if page_idx > 0 and zone_type:
+            zones_by_page.setdefault(page_idx, []).append(zone_type)
+    per_page_stats = build_per_page_stats(
+        summary_payload,
+        page_geometry=page_geometry or None,
+        lang_fallback=fallback_langs,
+        multi_column_pages=multi_column_pages,
+        blocks_by_page=blocks_by_page,
+        zones_by_page=zones_by_page,
+    )
+    if not per_page_stats and has_processed_pages:
+        per_page_stats = _fallback_per_page_stats(summary_result, page_geometry or {}, fallback_langs)
+
+    table_candidates = _load_table_candidates(readers_dir, page_geometry or {})
+
     timings_payload = prepare_timings(timings or {}, summary_result.get("timings_ms") or {})
 
     page_decisions = [str(entry) for entry in summary_result.get("page_decisions") or []]
@@ -371,6 +463,7 @@ def build_doc_meta(
 
     processing_log = _normalise_tool_log(tool_log)
     logs = summarise_logs(processing_log)
+    structured_logs = _load_jsonl(readers_dir / "structured_logs.jsonl")
     mapped_file_type = _map_file_type(detect_meta.get("file_type"))
     coordinate_unit = "pdf_points"
 
@@ -405,10 +498,7 @@ def build_doc_meta(
         "content_hash": content_hash,
         "has_text_layer": has_text_layer,
         "timings_ms": timings_payload,
-        "per_page_stats": per_page_stats,
-        "text_blocks": text_blocks,
         "words": words,
-        "zones": zones,
         "artifacts": artifacts,
         "locale_hints": locale_hints,
         "warnings": warnings,
@@ -418,4 +508,20 @@ def build_doc_meta(
         "text_blocks_path": str(readers_dir / "text_blocks.jsonl"),
     }
 
-    return doc_meta
+    readers_payload: ReadersOutput = {
+        "schema_version": SCHEMA_VERSION,
+        "run_id": run_id,
+        "pipeline_id": pipeline_id,
+        "doc_meta": doc_meta,
+        "per_page_stats": per_page_stats,
+        "text_blocks": text_blocks,
+        "warnings": warnings,
+        "logs": logs,
+    }
+    if table_candidates:
+        readers_payload["table_candidates"] = table_candidates
+    if zones:
+        readers_payload["zones"] = zones
+    if structured_logs:
+        readers_payload["logs_structured"] = structured_logs
+    return readers_payload

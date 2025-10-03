@@ -174,6 +174,7 @@ def build_per_page_stats(
     lang_fallback: Iterable[str] | None = None,
     multi_column_pages: Set[int] | None = None,
     blocks_by_page: Dict[int, List[Dict[str, Any]]] | None = None,
+    zones_by_page: Dict[int, List[str]] | None = None,
 ) -> List[PerPageStat]:
     per_page_raw = summary_payload.get("per_page_stats")
     if per_page_raw is None:
@@ -182,6 +183,7 @@ def build_per_page_stats(
     geometry = page_geometry or {}
     multi_column_pages = multi_column_pages or set()
     blocks_lookup = blocks_by_page or {}
+    zones_lookup = zones_by_page or {}
     fallback_tokens = _lang_tokens(lang_fallback)
 
     stats: List[PerPageStat] = []
@@ -250,7 +252,11 @@ def build_per_page_stats(
             else:
                 lang_share = {}
 
-        has_header_footer = _detect_header_footer(blocks, height)
+        zone_types = {str(zone).lower() for zone in zones_lookup.get(page_number, []) if zone}
+        if zone_types:
+            has_header_footer = bool({"header", "footer"} & zone_types)
+        else:
+            has_header_footer = _detect_header_footer(blocks, height)
 
         images_count = as_int(page_info.get("images_count"))
         graphics_count = as_int(page_info.get("graphics_objects_count"))

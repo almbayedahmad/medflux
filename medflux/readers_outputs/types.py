@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, NotRequired, TypedDict
+from typing import Any, Dict, List, NotRequired, TypedDict
 
 
 class PageTiming(TypedDict):
@@ -165,10 +165,7 @@ class DocMeta(TypedDict, total=False):
     content_hash: str
     has_text_layer: bool
     timings_ms: TimingBreakdown
-    per_page_stats: List[PerPageStat]
-    text_blocks: List[TextBlock]
     words: List[WordEntry]
-    zones: List[ZoneEntry]
     artifacts: List[Artifact]
     locale_hints: LocaleHints
     warnings: List[str]
@@ -178,9 +175,17 @@ class DocMeta(TypedDict, total=False):
     text_blocks_path: str
 
 
-
-
-
-
-
-
+class ReadersOutput(TypedDict, total=False):
+    schema_version: str
+    run_id: str
+    pipeline_id: str
+    doc_meta: DocMeta
+    per_page_stats: List[PerPageStat]
+    text_blocks: List[TextBlock]
+    warnings: List[str]
+    logs: List[str]
+    table_candidates: List[Dict[str, Any]]
+    zones: List[ZoneEntry]
+    warnings_codes: List[str]
+    logs_structured: List[Dict[str, Any]]
+    error_code: str

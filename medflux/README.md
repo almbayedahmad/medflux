@@ -21,14 +21,14 @@ Standalone OCR-driven preprocessing pipeline (file type detection, encoding norm
 ## Running the pipeline on samples
 
 `powershell
-python -m medflux_backend.Preprocessing.pipeline.detect_and_read 
-    samples\Sample_pdfmixed.pdf 
-    samples\Sample_pdftext.pdf 
-    samples\sample_pdfscanned.pdf 
-    samples\demo_vertrag.docx 
-    samples\Sample.txt 
-    --outdir output\run_20250927_1528
+python run_readers.py --out output\run_20251003_0001 `
+    --input samples\Sample_pdftext.pdf `
+    --input samples\sample_pdfscanned.pdf `
+    --input samples\Sample_pdfmixed.pdf `
+    --input samples\demo_vertrag.docx `
+    --input samples\Sample.txt
 `
+> **Tip**: You can also call the CLI via the module entrypoint: `python -m medflux_backend.Preprocessing.phase_02_readers.run_readers ...`. Flag `--input` may be repeated; positional file arguments still work.
 > **Note**: When invoking the CLI directly with `python -m medflux_backend...` make sure the repository root is on `PYTHONPATH` (e.g. PowerShell: `$env:PYTHONPATH='.'`).
 
 All output artefacts (reports, per-file summaries, raw readers output) end up inside the folder passed to --outdir.
@@ -36,7 +36,7 @@ All output artefacts (reports, per-file summaries, raw readers output) end up in
 The detect phase now surfaces a lightweight table detector. Per-file summaries include a `table_stats` list and `table_pages` flag,
 and you can tune the heuristics via `--table-detect-min-area` and `--table-detect-max-cells` when running the CLI.
 
-Every processed document also emits a `doc_meta.json` alongside the readers output. The metadata captures file type, page count, encoding and language hints, OCR presence, plus per-stage timings so downstream merge/cleaning steps can reuse the signals without reprocessing the original files. Companion files `text_blocks.jsonl` and `tables_raw.jsonl` expose reading-order blocks and raw table structures (bbox, extraction source, cell grid) for downstream merge logic, while `doc_meta.json` adds page-level language and locale hints that later phases can refine.
+Every processed document also emits a `doc_meta.json` alongside the readers output. The metadata captures file type, page count, encoding and language hints, OCR presence, plus per-stage timings so downstream merge/cleaning steps can reuse the signals without reprocessing the original files. Companion files `text_blocks.jsonl`, `zones.jsonl`, and `structured_logs.jsonl` expose reading-order blocks, page zoning metadata, and structured reader events for downstream processing, while `doc_meta.json` adds page-level language and locale hints that later phases can refine.
 
 ### doc_meta.json language payload
 
@@ -109,7 +109,7 @@ Every processed document also emits a `doc_meta.json` alongside the readers outp
 - `visual_artifacts_path` (plus `visual_artifacts_count`) enumerates detected stamps/signatures/logos with page-level bounding boxes for UI overlays.
 - `per_page_stats` now carries `lang`, `locale`, `tables_found`, per-page timings, and the derived `flags` (for example `low_conf_page`, `low_text_page`) alongside the legacy counters.
 - `timings_ms` breaks readers work into fine-grained slices (text extraction, OCR, table detection/extraction, language hint detection) in addition to the total runtime.
-- `text_blocks`, `tables_raw`, and `artifacts` are mirrored inline in `doc_meta.json` while retaining their JSONL export paths for downstream consumers.
+- `text_blocks`, `zones`, `structured_logs`, and `artifacts` are mirrored inline in `doc_meta.json` while retaining their JSONL export paths for downstream consumers.
 
 ### QA thresholds & actions
 
@@ -153,6 +153,20 @@ origin  https://github.com/almbayedahmad/medflux.git (push)
 `
 
 Use the standard Git workflow (git status, git commit, git push) from the repository root.
+
+## Session Notes (2025-10-03)
+- Unified the readers CLI under `run_readers.py`; legacy `detect_and_read` now wraps the new entry point.
+- Readers emit structured logs (`readers/structured_logs.jsonl`) and zoning metadata (`readers/zones.jsonl`); `tables_raw` was retired.
+- `doc_meta.json` now aligns with the `readers.v1` schema (`schema_version`, `run_id`, `pipeline_id`, top-level `zones`, `logs_structured`).
+- Added lightweight per-page geometry for DOCX (A4 EMU estimates) and images, feeding per-page stats and zones.
+- Introduced `utils/logger.py` for JSONL event logging; future reader tooling should use it instead of ad-hoc prints.
+- Added `tests/smoke_readers.sh` to exercise the CLI across PDF, DOCX, and image samples.
+
+### Recommended Checks
+- `PYTHONPATH='.' pytest medflux_backend/Preprocessing/test_preprocessing/unit_tests/test_doc_meta.py -q`
+- Run `tests/smoke_readers.sh` from a POSIX shell (Git Bash/WSL) to validate end-to-end processing.
+
+
 ## Latest Progress (2025-09-30)
 - Started feature branch `feat/readers-hardening` and created shared scaffolding directories (`configs/`, `utils/`, `schemas/`, `readers_outputs/`).
 - Relocated the doc metadata core (`components`, `doc_meta`, `per_page_stats`, `text_blocks`, `types`) into the top-level `readers_outputs` package to provide a single import surface.
