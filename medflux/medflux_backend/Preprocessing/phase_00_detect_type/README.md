@@ -30,3 +30,8 @@ make validate
 
 ## Change Log
 Entries are appended automatically by the documentation updater after each change. Replace the TODO text in each entry with real context when you review the update.
+
+### change-20251003T202717-update
+- What changed: Update stage phase_00_detect_type at 2025-10-03 20:27:17 UTC.
+- Why it was needed: Stage assets were modified and documentation must reflect the change.
+- Result: Stage and main documentation are synchronised with the latest update.

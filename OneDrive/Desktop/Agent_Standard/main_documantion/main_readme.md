@@ -10,3 +10,5 @@ This directory groups the automated tooling used by the project.
 ## Managed Stages
 | Stage | Domain | Last Event |
 | ----- | ------ | ---------- |
+| phase_00_detect_type | medflux_backend | update at 2025-10-03 20:27:17 UTC |
+

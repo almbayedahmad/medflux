@@ -42,7 +42,7 @@ from medflux_backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_
 
 
 def run_detection(file_path: Path) -> dict:
-    res = detect_file_type(file_path)  # May return a dataclass instance
+    res = process_detect_type_file(str(file_path))  # May return a dataclass instance
     try:
         res = asdict(res)
     except Exception:
