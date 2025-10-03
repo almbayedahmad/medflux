@@ -1,0 +1,13 @@
+
+meta:
+  version: 3
+  id: stage_contract
+
+stage_contract:
+  inputs:
+    - { name: "generic_items", type: "array", description: "Generic input collection" }
+  outputs:
+    - { name: "unified_document", type: "json", description: "Unified document payload" }
+    - { name: "stage_stats", type: "json", description: "Aggregated stage metrics" }
+  required_config_keys: ['io.out_doc_path', 'io.out_stats_path']
+  coordinate_origin: 'top_left'

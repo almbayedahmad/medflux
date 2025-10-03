@@ -1,0 +1,17 @@
+meta:
+  version: 3
+  id: tree_structure
+
+tree_structure:
+  phase_dir_pattern: 'phase_XX_<stage>'
+  required_subfolders:
+    - 'config'
+    - 'pipeline_workflow'
+    - 'connecters'  # connectors, not loaders
+    - 'core_processors'
+    - 'schemas'
+    - 'outputs'
+    - 'internal_helpers'
+    - 'tests'
+  optional_subfolders: ['assets', 'docs']
+  common_shared_dir: 'common_shared'

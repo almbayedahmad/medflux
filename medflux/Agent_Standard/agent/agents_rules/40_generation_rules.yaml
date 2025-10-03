@@ -1,0 +1,16 @@
+meta:
+  version: 3
+  id: generation_rules
+
+generation:
+  mode: { default: 'auto', options: ['auto', 'force_on', 'force_off'] }
+  auto_rules:
+    module_inits: 'always'
+    connecters.upstream: 'if features.upstream == true'
+    core_processors.normalize: 'if features.normalization == true'
+    core_processors.deduplicate: 'if features.deduplication == true'
+    internal_helpers.indexing: 'if features.indexing == true or features.ordering == true or features.reading_order == true'
+    internal_helpers.textnorm: 'if features.textnorm == true or features.normalization == true'
+    schemas.types: 'if features.schemas == true'
+    config.schema: 'if features.schemas == true'
+  overrides: { include: [], exclude: [] }

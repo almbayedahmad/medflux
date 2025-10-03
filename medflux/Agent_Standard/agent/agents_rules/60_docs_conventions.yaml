@@ -1,0 +1,16 @@
+
+meta:
+  version: 3
+  id: docs_conventions
+
+docs_conventions:
+  stage_readme_sections: ['Purpose', 'Workflow', 'Outputs', 'How to Run', 'Latest Updates']
+  changelog_versioning: 'semver'
+  change_types: { feat: 'minor', fix: 'patch', breaking: 'major', default: 'patch' }
+  link_policy:
+    from_changelog_to_readme: true
+    readme_anchor_format: '### <change_name> {#<slug>}'
+  hint_language_policy:
+    allowed_language: 'english'
+    violation_response: 'reject and request rewrite'
+    applies_to: ['stage readme hints', 'documentation templates', 'inline helper text']

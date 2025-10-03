@@ -1,0 +1,15 @@
+meta:
+  version: 3
+  id: validation_rules
+
+validation:
+  check_phase_dir_pattern: true
+  check_required_subfolders: true
+  check_file_names_regex: true
+  check_stage_prefix_on_files: true
+  check_forbidden_terms: true
+  regex:
+    phase_dir: "phase_[0-9]{2}_[a-z0-9_]+$"
+    file_allowed: '^[a-z0-9_]+_[a-z0-9_]+\.py$'
+    function_allowed_strict: '^(run|connect|normalize|process|deduplicate|compute|aggregate|cluster|segment|index|anchor|to|from|validate|check|save|emit|summarize|record)_[a-z0-9]+_[a-z0-9]+$'
+    forbidden_terms: '\bload(?:er)?\b'

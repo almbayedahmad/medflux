@@ -1,0 +1,2 @@
+# CHANGELOG - {{ StageName }}
+
