@@ -1,0 +1,29 @@
+type: object
+required: [''stage'', ''io'']
+properties:
+  stage:
+    type: string
+  io:
+    type: object
+    required: [''out_doc_path'', ''out_stats_path'']
+    properties:
+      out_doc_path:
+        type: string
+      out_stats_path:
+        type: string
+  detection:
+    type: object
+    properties:
+      sample_pages:
+        type: integer
+      topk_image_pages:
+        type: integer
+      img_area_thr:
+        type: number
+      text_len_thr:
+        type: integer
+      words_thr:
+        type: integer
+      blocks_thr:
+        type: integer
+

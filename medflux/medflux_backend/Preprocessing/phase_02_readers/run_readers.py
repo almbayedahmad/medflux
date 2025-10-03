@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
+from medflux_backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
 from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
 from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
 from readers_outputs.doc_meta import build_doc_meta
@@ -15,7 +15,7 @@ from utils.config import CFG
 
 
 def _quick_detect(input_path: Path) -> Dict[str, Any]:
-    result = detect_file_type(str(input_path))
+    result = process_detect_type_file(str(input_path))
     recommended = result.recommended or {}
     return {
         "detected_mode": recommended.get("mode"),
@@ -215,3 +215,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+

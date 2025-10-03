@@ -1,0 +1,13 @@
+Detect Type: <summary>
+
+Problem:
+- 
+
+Solution:
+- 
+
+Impact:
+- 
+
+Tests:
+- pytest medflux_backend/Preprocessing/phase_00_detect_type/tests

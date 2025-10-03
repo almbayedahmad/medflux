@@ -1,6 +1,6 @@
 import argparse, json, time
 from pathlib import Path
-from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
+from medflux_backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
 
 def main():
     ap = argparse.ArgumentParser()
@@ -18,12 +18,13 @@ def main():
         ip = Path(ip)
         if not ip.exists():
             continue
-        meta = detect_file_type(ip)
+        result = process_detect_type_file(str(ip))
         fdir = outdir / ip.stem / "detection"
         fdir.mkdir(parents=True, exist_ok=True)
         outf = fdir / "detection_result.json"
-        outf.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-        decisions.append({"file": str(ip), "meta": meta})
+        payload = result.to_unified_dict()
+        outf.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        decisions.append({"file": str(ip), "meta": payload})
 
     (outdir / "session_report.json").write_text(json.dumps(decisions, ensure_ascii=False, indent=2), encoding="utf-8")
     print({"session": ts, "outdir": str(outdir), "count": len(decisions)})

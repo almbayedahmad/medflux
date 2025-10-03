@@ -38,7 +38,7 @@ def _load_unified_text(readers_dir: Path) -> str:
     return ""
 
 # ===================== Detection (robust import) =====================
-from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
+from medflux_backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
 
 
 def run_detection(file_path: Path) -> dict:

@@ -1,16 +1,17 @@
 from __future__ import annotations
-"""File type detection heuristics using the improved PDF analyser."""
+
+"""Detection utilities that implement the file type heuristics."""
+
 import mimetypes
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 try:
-    import fitz  # PyMuPDF
+    import fitz  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     fitz = None
 
-from .file_type_enum import FileType
-from .file_type_result import FileTypeResult
+from ..schemas.detect_type_types import FileType, FileTypeResult
 
 DEFAULT_SAMPLE_PAGES = 5
 DEFAULT_TOPK_IMAGE_PAGES = 2
@@ -19,7 +20,7 @@ DEFAULT_TEXT_LEN_THR = 200
 DEFAULT_WORDS_THR = 15
 DEFAULT_BLOCKS_THR = 3
 
-DEFAULT_RECO: Dict[str, Any] = {
+DEFAULT_RECOMMENDATION: Dict[str, Any] = {
     "mode": "native",
     "dpi": 200,
     "psm": 6,
@@ -27,8 +28,8 @@ DEFAULT_RECO: Dict[str, Any] = {
     "lang": "deu+eng",
 }
 
-DOCX_EXTS = {".docx"}
-TXT_EXTS = {
+DOCX_EXTENSIONS = {".docx"}
+TXT_EXTENSIONS = {
     ".txt",
     ".log",
     ".md",
@@ -41,7 +42,7 @@ TXT_EXTS = {
     ".cfg",
     ".conf",
 }
-IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".gif", ".webp"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".gif", ".webp"}
 
 
 __all__ = [
@@ -51,19 +52,17 @@ __all__ = [
     "DEFAULT_TEXT_LEN_THR",
     "DEFAULT_WORDS_THR",
     "DEFAULT_BLOCKS_THR",
-    "detect_file_type",
-    "detect_many",
-    "detect_file_type_improved",
-    "detect_many_improved",
+    "process_detect_type_file",
+    "process_detect_type_many",
 ]
 
 
-def _guess_mime(path: str) -> str:
+def get_detect_type_mime_guess(path: str) -> str:
     mime, _ = mimetypes.guess_type(path)
     return mime or ""
 
 
-def _page_image_area_ratio(page) -> float:
+def compute_detect_type_page_image_area_ratio(page) -> float:
     try:
         rect = page.rect
         page_area = float(rect.width * rect.height) if rect else 1.0
@@ -84,7 +83,7 @@ def _page_image_area_ratio(page) -> float:
         return 0.0
 
 
-def _analyze_page(
+def compute_detect_type_page_metrics(
     page,
     text_len_thr: int,
     words_thr: int,
@@ -94,8 +93,8 @@ def _analyze_page(
     text = page.get_text("text") or ""
     words = page.get_text("words") or []
     blocks = page.get_text("blocks") or []
-    img_count = len(page.get_images(full=True) or [])
-    img_area = _page_image_area_ratio(page)
+    image_count = len(page.get_images(full=True) or [])
+    image_area = compute_detect_type_page_image_area_ratio(page)
 
     native_score = sum(
         [
@@ -107,8 +106,8 @@ def _analyze_page(
 
     ocr_score = sum(
         [
-            int(img_count >= 1),
-            int(img_area >= img_area_thr),
+            int(image_count >= 1),
+            int(image_area >= img_area_thr),
             int(len(text) < text_len_thr and len(words) < words_thr),
         ]
     )
@@ -124,15 +123,15 @@ def _analyze_page(
         "text_len": len(text),
         "words": len(words),
         "blocks": len(blocks),
-        "image_count": img_count,
-        "image_area_ratio": round(float(img_area), 3),
+        "image_count": image_count,
+        "image_area_ratio": round(float(image_area), 3),
         "native_score": native_score,
         "ocr_score": ocr_score,
-        "page_mode": mode,
+        "recommended_mode": mode,
     }
 
 
-def detect_pdf(
+def process_detect_type_pdf_document(
     path: str,
     sample_pages: int = DEFAULT_SAMPLE_PAGES,
     topk_image_pages: int = DEFAULT_TOPK_IMAGE_PAGES,
@@ -148,6 +147,7 @@ def detect_pdf(
         doc = fitz.open(path)
     except Exception:
         return {"pages": 0, "sampled_pages": 0, "scanned": None, "confidence": 0.0}
+
     total_pages = len(doc) or 0
     if total_pages == 0:
         return {"pages": 0, "sampled_pages": 0, "scanned": None, "confidence": 0.0}
@@ -156,7 +156,7 @@ def detect_pdf(
     for index in range(total_pages):
         try:
             page = doc.load_page(index)
-            ratios.append((index, _page_image_area_ratio(page)))
+            ratios.append((index, compute_detect_type_page_image_area_ratio(page)))
         except Exception:
             ratios.append((index, 0.0))
     ratios_sorted = sorted(ratios, key=lambda item: item[1], reverse=True)
@@ -171,14 +171,14 @@ def detect_pdf(
     ocr_count = 0
     for index in sample_indices:
         page = doc.load_page(index)
-        stats = _analyze_page(page, text_len_thr, words_thr, blocks_thr, img_area_thr)
+        stats = compute_detect_type_page_metrics(page, text_len_thr, words_thr, blocks_thr, img_area_thr)
         per_page.append({"page_no": index + 1, **stats})
-        if stats["page_mode"] == "native":
+        if stats["recommended_mode"] == "native":
             native_count += 1
-        elif stats["page_mode"] == "ocr":
+        elif stats["recommended_mode"] == "ocr":
             ocr_count += 1
 
-    meta: Dict[str, Any] = {
+    meta = {
         "pages": total_pages,
         "sampled_pages": len(sample_indices),
         "sample_indices": [idx + 1 for idx in sample_indices],
@@ -206,7 +206,7 @@ def detect_pdf(
     return meta
 
 
-def detect_file_type(
+def process_detect_type_file(
     path: str,
     sample_pages: int = DEFAULT_SAMPLE_PAGES,
     topk_image_pages: int = DEFAULT_TOPK_IMAGE_PAGES,
@@ -216,10 +216,10 @@ def detect_file_type(
     blocks_thr: int = DEFAULT_BLOCKS_THR,
 ) -> FileTypeResult:
     ext = os.path.splitext(path)[1].lower()
-    mime = _guess_mime(path)
+    mime = get_detect_type_mime_guess(path)
 
     if ext == ".pdf" or (mime and mime.endswith("pdf")):
-        meta = detect_pdf(path, sample_pages, topk_image_pages, img_area_thr, text_len_thr, words_thr, blocks_thr)
+        meta = process_detect_type_pdf_document(path, sample_pages, topk_image_pages, img_area_thr, text_len_thr, words_thr, blocks_thr)
         scanned = meta.get("scanned")
         mixed = meta.get("mixed", False)
         confidence = float(meta.get("confidence", 0.0))
@@ -233,7 +233,7 @@ def detect_file_type(
             ocr_rec = True
         else:
             file_type = FileType.PDF_TEXT
-            recommended = dict(DEFAULT_RECO)
+            recommended = dict(DEFAULT_RECOMMENDATION)
             ocr_rec = False
         details = {
             "pages": meta.get("pages"),
@@ -254,15 +254,15 @@ def detect_file_type(
             recommended=recommended,
         )
 
-    if ext in DOCX_EXTS or (mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"):
+    if ext in DOCX_EXTENSIONS or (mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"):
         recommended = {"mode": "native", "tables_mode": "detect", "lang": "deu+eng"}
         return FileTypeResult(path, ext, mime, FileType.DOCX, False, {"note": "docx"}, confidence=0.95, recommended=recommended)
 
-    if ext in TXT_EXTS or (mime and (mime.startswith("text/") or "json" in mime or "yaml" in mime or "csv" in mime)):
+    if ext in TXT_EXTENSIONS or (mime and (mime.startswith("text/") or "json" in mime or "yaml" in mime or "csv" in mime)):
         recommended = {"mode": "native", "tables_mode": "off", "lang": "deu+eng"}
         return FileTypeResult(path, ext, mime, FileType.TXT, False, {"note": "text"}, confidence=0.95, recommended=recommended)
 
-    if ext in IMAGE_EXTS or (mime and mime.startswith("image/")):
+    if ext in IMAGE_EXTENSIONS or (mime and mime.startswith("image/")):
         recommended = {"mode": "ocr", "dpi": 320, "psm": 6, "tables_mode": "detect", "lang": "deu+eng"}
         return FileTypeResult(path, ext, mime, FileType.IMAGE, True, {"note": "image"}, confidence=0.95, recommended=recommended)
 
@@ -278,17 +278,17 @@ def detect_file_type(
     )
 
 
-def detect_many(paths: List[str], **kwargs) -> List[FileTypeResult]:
+def process_detect_type_many(paths: Sequence[str], **kwargs: Any) -> List[FileTypeResult]:
     results: List[FileTypeResult] = []
     for path in paths:
         try:
-            results.append(detect_file_type(path, **kwargs))
-        except Exception as exc:
+            results.append(process_detect_type_file(path, **kwargs))
+        except Exception as exc:  # pragma: no cover - defensive
             results.append(
                 FileTypeResult(
                     path,
                     os.path.splitext(path)[1].lower(),
-                    _guess_mime(path),
+                    get_detect_type_mime_guess(path),
                     FileType.UNKNOWN,
                     False,
                     {"error": f"detect_failed: {exc}"},
@@ -297,13 +297,3 @@ def detect_many(paths: List[str], **kwargs) -> List[FileTypeResult]:
                 )
             )
     return results
-
-
-def detect_file_type_improved(*args, **kwargs) -> FileTypeResult:
-    """Backward compatible alias for older imports."""
-    return detect_file_type(*args, **kwargs)
-
-
-def detect_many_improved(*args, **kwargs) -> List[FileTypeResult]:
-    """Backward compatible alias for older imports."""
-    return detect_many(*args, **kwargs)

@@ -38,11 +38,11 @@ def _load_unified_text(readers_dir: Path) -> str:
     return ""
 
 # ===================== Detection import (robust) =====================
-from medflux_backend.Preprocessing.phase_00_detect_type.file_type_detector import detect_file_type
+from medflux_backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
 
 
 def run_detection(file_path: Path) -> dict:
-    res = detect_file_type(file_path)  # May return a dataclass instance
+    res = process_detect_type_file(str(file_path))  # May return a dataclass instance
     try:
         res = asdict(res)
     except Exception:
