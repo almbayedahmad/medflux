@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from medflux_backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
-from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
+from medflux_backend.Preprocessing.phase_01_encoding.internal_helpers.encoding_detection_helper import detect_text_encoding
 from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
 from readers_outputs.doc_meta import build_doc_meta
 from utils.config import CFG

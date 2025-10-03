@@ -71,22 +71,51 @@ def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> 
             return {}
     return {}
 
-def run_encoding(readers_dir: Path, outdir: Path) -> dict:
+def run_encoding(readers_dir: Path, outdir: Path, file_path: Path | None = None) -> dict:
+    if file_path is not None:
+        try:
+            from medflux_backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_pipeline import run_encoding_pipeline
+
+            normalized_dir = outdir / 'normalized'
+            payload = run_encoding_pipeline(
+                generic_items=[{'path': str(file_path), 'normalize': True}],
+                config_overrides={
+                    'io': {
+                        'out_doc_path': str(outdir / 'encoding_unified_document.json'),
+                        'out_stats_path': str(outdir / 'encoding_stage_stats.json'),
+                    },
+                    'normalization': {
+                        'enabled': True,
+                        'out_dir': str(normalized_dir),
+                        'errors': 'replace',
+                        'newline_policy': 'lf',
+                    },
+                },
+            )
+            unified = _convert(payload.get('unified_document') or {})
+            (outdir / 'encoding_unified_document.json').write_text(json.dumps(unified, ensure_ascii=False, indent=2), encoding='utf-8')
+            stats = _convert(payload.get('stage_stats') or {})
+            (outdir / 'encoding_stage_stats.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding='utf-8')
+            return unified
+        except Exception:
+            pass
     raw = _load_unified_text(readers_dir)
     if not raw:
-        stats = {"error": "no unified_text (txt/jsonl) found", "orig_len": 0, "enc_len": 0, "bytes_utf8": 0, "lines": 0}
-        (outdir / "encoding_stats.json").write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
+        stats = {'error': 'no unified_text (txt/jsonl) found', 'orig_len': 0, 'enc_len': 0, 'bytes_utf8': 0, 'lines': 0}
+        (outdir / 'encoding_stats.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding='utf-8')
         return stats
     norm = _encode_text(raw)
-    (outdir / "text_utf8_nfc.txt").write_text(norm, encoding="utf-8")
+    (outdir / 'text_utf8_nfc.txt').write_text(norm, encoding='utf-8')
     stats = {
-        "orig_len": len(raw),
-        "enc_len": len(norm),
-        "bytes_utf8": len(norm.encode("utf-8")),
-        "lines": norm.count("\n") + (1 if norm else 0),
+        'orig_len': len(raw),
+        'enc_len': len(norm),
+        'bytes_utf8': len(norm.encode('utf-8')),
+        'lines': norm.count('
+') + (1 if norm else 0),
     }
-    (outdir / "encoding_stats.json").write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
+    (outdir / 'encoding_stats.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding='utf-8')
     return stats
+
 
 # ===================== Main =====================
 def main():
@@ -123,7 +152,7 @@ def main():
 
         # ---------- 3) Encoding ----------
         enc_dir = fdir / "encoding"; enc_dir.mkdir(parents=True, exist_ok=True)
-        enc_stats = run_encoding(rdr_root / "readers", enc_dir)
+        enc_stats = run_encoding(rdr_root / "readers", enc_dir, fpath)
 
         # ---------- Aggregate per-file ----------
         session_report["files"].append({

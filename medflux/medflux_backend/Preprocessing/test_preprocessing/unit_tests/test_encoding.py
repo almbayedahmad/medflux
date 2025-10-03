@@ -1,8 +1,10 @@
 import os
 import codecs
 import io
-from medflux_backend.Preprocessing.phase_01_encoding.encoding_detector import detect_text_encoding
-from medflux_backend.Preprocessing.phase_01_encoding.encoding_normalizer import convert_to_utf8
+from medflux_backend.Preprocessing.phase_01_encoding.internal_helpers.encoding_detection_helper import (
+    convert_to_utf8,
+    detect_text_encoding,
+)
 
 def _read_bytes(p):
     with open(p, "rb") as f:
@@ -10,7 +12,7 @@ def _read_bytes(p):
 
 def test_detect_utf8_no_bom(tmp_path):
     p = tmp_path / "utf8.txt"
-    p.write_text("hello عالم\n", encoding="utf-8")
+    p.write_text("hello Ø¹Ø§Ù„Ù…\n", encoding="utf-8")
     info = detect_text_encoding(str(p))
     assert info.encoding.lower().startswith("utf")
     assert info.bom is False
@@ -20,7 +22,7 @@ def test_detect_utf8_no_bom(tmp_path):
 def test_detect_utf8_with_bom(tmp_path):
     p = tmp_path / "utf8_bom.txt"
     # Manually add a UTF-8 BOM (EF BB BF) before the payload
-    content = "مرحبا\n"
+    content = "Ù…Ø±Ø­Ø¨Ø§\n"
     with open(p, "wb") as f:
         f.write(codecs.BOM_UTF8 + content.encode("utf-8"))
     info = detect_text_encoding(str(p))
@@ -30,7 +32,7 @@ def test_detect_utf8_with_bom(tmp_path):
 
 def test_detect_latin1(tmp_path):
     p = tmp_path / "latin1.txt"
-    data = "café\n".encode("latin-1")
+    data = "cafÃ©\n".encode("latin-1")
     p.write_bytes(data)
     info = detect_text_encoding(str(p))
     # chardet might favour latin-1/Windows-1252; the key is that it is not UTF-8
@@ -39,7 +41,7 @@ def test_detect_latin1(tmp_path):
 
 def test_convert_to_utf8_creates_new_file(tmp_path):
     p = tmp_path / "latin1_log.log"
-    p.write_bytes("olá mundo".encode("latin-1"))
+    p.write_bytes("olÃ¡ mundo".encode("latin-1"))
     res = convert_to_utf8(str(p))
     assert res["ok"] is True
     out = res["normalized_path"]

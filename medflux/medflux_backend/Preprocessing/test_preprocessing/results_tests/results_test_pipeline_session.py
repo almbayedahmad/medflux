@@ -72,42 +72,55 @@ def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> 
     return {}
 
 # ===================== Encoding (robust) =====================
-# Import the normalisation module when available; otherwise use the unified_text fallback
-_run_encoding = None
+# Prefer the stage pipeline when present, otherwise fall back to basic normalisation
 try:
-    from medflux_backend.Preprocessing.phase_01_encoding.encoding_core import run_encoding as _run_encoding
+    from medflux_backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_pipeline import run_encoding_pipeline as _run_encoding_pipeline
 except Exception:
-    try:
-        from medflux_backend.Preprocessing.phase_01_encoding.encoder import encode_file as _run_encoding
-    except Exception:
-        _run_encoding = None
+    _run_encoding_pipeline = None
+
 
 def run_encoding(readers_dir: Path, outdir: Path, file_path: Path) -> dict:
-    # Run the real normalisation module when it is present
-    if _run_encoding is not None:
+    if _run_encoding_pipeline is not None:
         try:
-            enc = _run_encoding(file_path)
-            enc_conv = _convert(enc)
-            (outdir / "encoding_result.json").write_text(json.dumps(enc_conv, ensure_ascii=False, indent=2), encoding="utf-8")
-            return enc_conv
+            normalized_dir = outdir / 'normalized'
+            payload = _run_encoding_pipeline(
+                generic_items=[{'path': str(file_path), 'normalize': True}],
+                config_overrides={
+                    'io': {
+                        'out_doc_path': str(outdir / 'encoding_unified_document.json'),
+                        'out_stats_path': str(outdir / 'encoding_stage_stats.json'),
+                    },
+                    'normalization': {
+                        'enabled': True,
+                        'out_dir': str(normalized_dir),
+                        'errors': 'replace',
+                        'newline_policy': 'lf',
+                    },
+                },
+            )
+            unified = _convert(payload.get('unified_document') or {})
+            (outdir / 'encoding_unified_document.json').write_text(json.dumps(unified, ensure_ascii=False, indent=2), encoding='utf-8')
+            stats = _convert(payload.get('stage_stats') or {})
+            (outdir / 'encoding_stage_stats.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding='utf-8')
+            return unified
         except Exception:
             pass
-    # Fallback: log/normalise using the unified_text output
     raw = _load_unified_text(readers_dir)
     if not raw:
-        stats = {"file": str(file_path), "error": "no unified_text found", "orig_len": 0, "enc_len": 0, "bytes_utf8": 0, "lines": 0}
-        (outdir / "encoding_stats.json").write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
+        stats = {'file': str(file_path), 'error': 'no unified_text found', 'orig_len': 0, 'enc_len': 0, 'bytes_utf8': 0, 'lines': 0}
+        (outdir / 'encoding_stats.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding='utf-8')
         return stats
     norm = _encode_text(raw)
-    (outdir / "text_utf8_nfc.txt").write_text(norm, encoding="utf-8")
+    (outdir / 'text_utf8_nfc.txt').write_text(norm, encoding='utf-8')
     stats = {
-        "file": str(file_path),
-        "orig_len": len(raw),
-        "enc_len": len(norm),
-        "bytes_utf8": len(norm.encode("utf-8")),
-        "lines": norm.count("\n") + (1 if norm else 0),
+        'file': str(file_path),
+        'orig_len': len(raw),
+        'enc_len': len(norm),
+        'bytes_utf8': len(norm.encode('utf-8')),
+        'lines': norm.count('
+') + (1 if norm else 0),
     }
-    (outdir / "encoding_stats.json").write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
+    (outdir / 'encoding_stats.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding='utf-8')
     return stats
 
 # ===================== Main =====================
