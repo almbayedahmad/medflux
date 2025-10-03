@@ -1,0 +1,10 @@
+meta:
+  version: 1
+  id: language_policy
+
+language_policy:
+  allowed_language: 'english'
+  forbid_scripts:
+    - arabic
+  apply_to_extensions: ['.py', '.md', '.yaml', '.yml', '.txt']
+  violation_message: 'Only English hints/text allowed; remove non-English content.'

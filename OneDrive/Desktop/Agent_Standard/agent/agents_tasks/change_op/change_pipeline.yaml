@@ -1,0 +1,19 @@
+# change_pipeline.yaml
+# Defines the automated actions the agent should perform when stage changes occur.
+
+change_pipeline:
+  on_new_stage:
+    - run: python agent/agents_tasks/validation_op/standards_validator.py --stage-root {stage_path}
+    - run: python agent/agents_tasks/change_op/auto_documentation_update.py --event new --stage {stage_path} --stage-name {stage} --phase {phase} --changelog {stage_path}/CHANGELOG.md --main-readme main_documantion/main_readme.md --main-changelog main_documantion/main_changelog.md --current-stage main_documantion/main_current_development_stage.md
+    - run: 'git add {stage_path} && git commit -m "feat({repo}/phase_{phase}_{stage}): create new stage"'
+    - note: 'A new stage was created; review the KPIs under outputs.'
+
+  on_update_stage:
+    - run: python agent/agents_tasks/validation_op/standards_validator.py --stage-root {stage_path}
+    - run: python agent/agents_tasks/change_op/auto_documentation_update.py --event update --stage {stage_path} --stage-name {stage} --phase {phase} --changelog {stage_path}/CHANGELOG.md --main-readme main_documantion/main_readme.md --main-changelog main_documantion/main_changelog.md --current-stage main_documantion/main_current_development_stage.md
+    - run: 'git add {stage_path} && git commit -m "fix({repo}/phase_{phase}_{stage}): update stage"'
+
+  on_delete_stage:
+    - run: python agent/agents_tasks/change_op/auto_documentation_update.py --event delete --stage {stage_path} --stage-name {stage} --phase {phase} --changelog {stage_path}/CHANGELOG.md --main-readme main_documantion/main_readme.md --main-changelog main_documantion/main_changelog.md --current-stage main_documantion/main_current_development_stage.md
+    - run: 'echo "Stage {stage_name} was removed from {repo}"'
+    - run: 'git commit -m "chore({repo}/phase_{phase}_{stage}): remove stage {stage_name}"'
