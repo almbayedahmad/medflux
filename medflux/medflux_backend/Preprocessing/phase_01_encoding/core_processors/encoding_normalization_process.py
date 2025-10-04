@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 from ..internal_helpers.encoding_detection_helper import (
-    convert_file_to_utf8,
-    detect_encoding_for_path,
+    normalize_encoding_file_to_utf8,
+    get_encoding_detection_for_path,
 )
 from ..schemas.encoding_types import EncodingItem, summarize_encoding_document, summarize_encoding_stats
 
@@ -27,7 +27,7 @@ class EncodingInputs:
     received_count: int
 
 
-def _extract_inputs(
+def process_encoding_prepare_inputs(
     items: Sequence[Dict[str, Any]],
     normalization_cfg: Dict[str, Any],
 ) -> EncodingInputs:
@@ -64,7 +64,7 @@ def process_encoding_stage(
     detection_cfg = dict(detection_cfg or {})
     normalization_cfg = dict(normalization_cfg or {})
 
-    inputs = _extract_inputs(items, normalization_cfg)
+    inputs = process_encoding_prepare_inputs(items, normalization_cfg)
     sample_bytes = int(detection_cfg.get("sample_bytes", 1024 * 1024))
     min_conf = float(detection_cfg.get("minimum_confidence", 0.0) or 0.0)
 
@@ -75,7 +75,7 @@ def process_encoding_stage(
     normalized_count = 0
 
     for enc_input in inputs.prepared:
-        detection = detect_encoding_for_path(enc_input.path, sample_bytes=sample_bytes)
+        detection = get_encoding_detection_for_path(enc_input.path, sample_bytes=sample_bytes)
         detection_payload = {
             "encoding": detection.encoding,
             "confidence": detection.confidence,
@@ -89,7 +89,7 @@ def process_encoding_stage(
         normalization_payload: Optional[Dict[str, Any]] = None
         if enc_input.normalize:
             dest_path = enc_input.dest_path
-            outcome = convert_file_to_utf8(
+            outcome = normalize_encoding_file_to_utf8(
                 enc_input.path,
                 detection=detection,
                 dest_path=dest_path,

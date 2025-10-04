@@ -7,7 +7,7 @@ from typing import Any, Dict
 from .encoding_pipeline import run_encoding_pipeline
 
 
-def _build_items(paths: list[str], normalize: bool) -> list[Dict[str, Any]]:
+def process_encoding_build_items(paths: list[str], normalize: bool) -> list[Dict[str, Any]]:
     items: list[Dict[str, Any]] = []
     for path in paths:
         entry: Dict[str, Any] = {"path": path}
@@ -17,7 +17,7 @@ def _build_items(paths: list[str], normalize: bool) -> list[Dict[str, Any]]:
     return items
 
 
-def main() -> None:
+def run_encoding_cli() -> None:
     parser = argparse.ArgumentParser(description="Run Encoding stage")
     parser.add_argument("paths", nargs="+", help="Input files to analyse")
     parser.add_argument("--stage", default="encoding", help="Stage name override")
@@ -27,7 +27,7 @@ def main() -> None:
     parser.add_argument("--errors", choices=["strict", "replace", "ignore"], help="Decoding error policy")
     args = parser.parse_args()
 
-    items = _build_items(list(args.paths), args.normalize)
+    items = process_encoding_build_items(list(args.paths), args.normalize)
 
     overrides: Dict[str, Any] = {}
     normalization_cfg: Dict[str, Any] = {}
@@ -61,4 +61,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_encoding_cli()

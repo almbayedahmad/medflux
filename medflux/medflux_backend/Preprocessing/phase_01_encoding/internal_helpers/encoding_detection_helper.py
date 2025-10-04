@@ -32,25 +32,25 @@ class EncodingNormalization:
     detected: EncodingDetection
 
 
-def _has_bom(data: bytes) -> bool:
+def check_encoding_has_bom(data: bytes) -> bool:
     return any(data.startswith(bom) for bom in _UTF8_BOMS)
 
 
-def _normalize_newlines(text: str, policy: str = "lf") -> str:
+def normalize_encoding_newlines(text: str, policy: str = "lf") -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     if policy == "crlf":
         return text.replace("\n", "\r\n")
     return text
 
 
-def detect_encoding_for_path(path: str, sample_bytes: int = 1024 * 1024) -> EncodingDetection:
+def get_encoding_detection_for_path(path: str, sample_bytes: int = 1024 * 1024) -> EncodingDetection:
     file_path = Path(path)
     if not file_path.exists():
         return EncodingDetection(encoding=None, confidence=None, bom=False, is_utf8=False, sample_len=0)
 
     data = file_path.read_bytes()
     sample = data[:sample_bytes]
-    bom = _has_bom(sample)
+    bom = check_encoding_has_bom(sample)
 
     encoding: Optional[str] = None
     confidence: Optional[float] = None
@@ -86,7 +86,7 @@ def detect_encoding_for_path(path: str, sample_bytes: int = 1024 * 1024) -> Enco
     )
 
 
-def convert_file_to_utf8(
+def normalize_encoding_file_to_utf8(
     path: str,
     *,
     detection: Optional[EncodingDetection] = None,
@@ -96,7 +96,7 @@ def convert_file_to_utf8(
 ) -> EncodingNormalization:
     file_path = Path(path)
     if detection is None:
-        detection = detect_encoding_for_path(path)
+        detection = get_encoding_detection_for_path(path)
 
     if not file_path.exists():
         return EncodingNormalization(
@@ -109,7 +109,7 @@ def convert_file_to_utf8(
 
     encoding = detection.encoding or "utf-8"
     raw = file_path.read_bytes()
-    if _has_bom(raw):
+    if check_encoding_has_bom(raw):
         raw = raw[len(_UTF8_BOMS[0]):]
 
     try:
@@ -119,7 +119,7 @@ def convert_file_to_utf8(
     except UnicodeDecodeError:
         text = raw.decode(encoding, errors="replace")
 
-    text = _normalize_newlines(text, newline_policy)
+    text = normalize_encoding_newlines(text, newline_policy)
 
     if dest_path is None:
         stem = file_path.stem or file_path.name
@@ -141,18 +141,18 @@ def convert_file_to_utf8(
 
 # Backwards compatibility helpers -------------------------------------------------
 
-def detect_text_encoding(path: str, read_bytes: int = 1024 * 1024) -> EncodingDetection:
-    return detect_encoding_for_path(path, sample_bytes=read_bytes)
+def get_encoding_text_detection(path: str, read_bytes: int = 1024 * 1024) -> EncodingDetection:
+    return get_encoding_detection_for_path(path, sample_bytes=read_bytes)
 
 
-def convert_to_utf8(
+def normalize_encoding_to_utf8(
     src_path: str,
     dest_path: Optional[str] = None,
     newline_policy: str = "lf",
     errors: str = "strict",
 ) -> Dict[str, Any]:
-    detection = detect_encoding_for_path(src_path)
-    outcome = convert_file_to_utf8(
+    detection = get_encoding_detection_for_path(src_path)
+    outcome = normalize_encoding_file_to_utf8(
         src_path,
         detection=detection,
         dest_path=dest_path,

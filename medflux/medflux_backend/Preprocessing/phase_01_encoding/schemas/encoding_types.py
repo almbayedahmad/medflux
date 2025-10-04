@@ -12,7 +12,7 @@ class EncodingItem:
     detection: Dict[str, Any]
     normalization: Optional[Dict[str, Any]] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def summarize_encoding_item_payload(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "file_path": self.file_path,
             "detection": self.detection,
@@ -25,7 +25,7 @@ class EncodingItem:
 def summarize_encoding_document(items: Sequence[EncodingItem]) -> Dict[str, Any]:
     return {
         "stage": "encoding",
-        "items": [item.to_dict() for item in items],
+        "items": [item.summarize_encoding_item_payload() for item in items],
     }
 
 

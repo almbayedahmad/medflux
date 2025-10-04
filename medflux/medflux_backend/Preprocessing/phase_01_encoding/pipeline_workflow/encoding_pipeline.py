@@ -11,7 +11,7 @@ from ..core_processors.encoding_normalization_process import process_encoding_st
 from ..outputs.encoding_output import save_encoding_doc, save_encoding_stats
 
 
-def _merge_encoding_config(base: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
+def process_encoding_merge_config(base: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
     merged = dict(base)
     for key, value in overrides.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -28,7 +28,7 @@ def run_encoding_pipeline(
 ) -> Dict[str, Any]:
     cfg = connect_encoding_config_connector(stage_name)
     if config_overrides:
-        cfg = _merge_encoding_config(cfg, config_overrides)
+        cfg = process_encoding_merge_config(cfg, config_overrides)
 
     upstream_items = connect_encoding_upstream_connector(generic_items)
 
