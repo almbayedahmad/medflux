@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from medflux_backend.Preprocessing.phase_02_readers import readers_core
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
+from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, ReadersOrchestrator
 
 
 class _DummyPixmap:
@@ -38,7 +38,7 @@ def reader(tmp_path):
         table_detect_min_area=9000.0,
         table_detect_max_cells=600,
     )
-    return UnifiedReaders(tmp_path, options)
+    return ReadersOrchestrator(tmp_path, options)
 
 
 def test_table_candidate_passes_threshold(monkeypatch, reader):

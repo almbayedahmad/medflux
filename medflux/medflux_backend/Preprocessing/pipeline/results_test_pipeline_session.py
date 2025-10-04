@@ -50,7 +50,7 @@ def run_detection(file_path: Path) -> dict:
     return _convert(res)
 
 # ===================== Readers import =====================
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import UnifiedReaders, ReaderOptions
+from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReadersOrchestrator, ReaderOptions
 
 def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> dict:
     opts = ReaderOptions(
@@ -61,7 +61,7 @@ def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> 
         overlay_area_thr=0.12,
         overlay_min_images=1,
     )
-    rdr = UnifiedReaders(outdir, opts)
+    rdr = ReadersOrchestrator(outdir, opts)
     rdr.process([file_path])  # Produces readers/readers_summary.json and related outputs
     sum_path = outdir / "readers" / "readers_summary.json"
     if sum_path.exists():

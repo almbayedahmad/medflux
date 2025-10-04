@@ -1,7 +1,7 @@
 import argparse, time, json
 from pathlib import Path
 from dataclasses import asdict
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import UnifiedReaders, ReaderOptions
+from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReadersOrchestrator, ReaderOptions
 
 
 def _convert(obj):
@@ -34,14 +34,14 @@ def main():
 
     files_report = []
 
-    # Run UnifiedReaders for each input file
+    # Run ReadersOrchestrator for each input file
     for f in args.inputs:
         fpath = Path(f)
         fname = fpath.stem
         outdir = session_dir / fname
         opts = ReaderOptions(mode="mixed", lang="deu+eng", native_ocr_overlay=True)
 
-        rdr = UnifiedReaders(outdir, opts)
+        rdr = ReadersOrchestrator(outdir, opts)
         result = rdr.process([fpath])
 
         # Load the file-specific readers_summary.json

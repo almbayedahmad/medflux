@@ -1,11 +1,11 @@
 import pytest
 
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, UnifiedReaders
+from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, ReadersOrchestrator
 
 
 @pytest.fixture
 def reader(tmp_path):
-    return UnifiedReaders(tmp_path, ReaderOptions())
+    return ReadersOrchestrator(tmp_path, ReaderOptions())
 
 
 def test_infer_language_hint_detects_german(reader):

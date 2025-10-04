@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from medflux_backend.Preprocessing.pipeline import detect_and_read
-import readers_outputs.doc_meta as doc_meta_module
+from medflux_backend.Preprocessing.phase_02_readers.outputs import readers_output_meta as doc_meta_module
 from schemas.readers_output_schema import SCHEMA_VERSION
 
 
