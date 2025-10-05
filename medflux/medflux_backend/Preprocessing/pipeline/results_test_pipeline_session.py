@@ -50,7 +50,7 @@ def run_detection(file_path: Path) -> dict:
     return _convert(res)
 
 # ===================== Readers import =====================
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReadersOrchestrator, ReaderOptions
+from medflux_backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_pipeline_main import ReadersOrchestrator\nfrom medflux_backend.Preprocessing.phase_02_readers.internal_helpers.reader_helpers_runtime_options import ReaderOptions
 
 def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> dict:
     opts = ReaderOptions(

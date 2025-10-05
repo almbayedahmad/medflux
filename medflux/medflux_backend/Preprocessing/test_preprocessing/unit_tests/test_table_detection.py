@@ -3,8 +3,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from medflux_backend.Preprocessing.phase_02_readers import readers_core
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, ReadersOrchestrator
+from medflux_backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_pipeline_main import ReadersOrchestrator
+from medflux_backend.Preprocessing.phase_02_readers.internal_helpers.reader_helpers_runtime_options import ReaderOptions
 
 
 class _DummyPixmap:
@@ -59,7 +59,7 @@ def test_table_candidate_passes_threshold(monkeypatch, reader):
             {"row_lines": [0, 50, 100], "col_lines": [0, 60, 120], "image_width": 200, "image_height": 200},
         )
 
-    monkeypatch.setattr(readers_core, "extract_tables_from_image", fake_extract)
+    monkeypatch.setattr("medflux_backend.Preprocessing.phase_02_readers.core_processors.reader_core_ocr_tables.extract_tables_from_image", fake_extract)
     reader._maybe_collect_tables(_DummyPage(), Path("dummy.pdf"), 1, "native", ocr_data={})
 
     assert reader._table_flags == {1}
@@ -93,7 +93,7 @@ def test_table_candidate_filtered(monkeypatch, reader):
             {"row_lines": [0, 10, 20], "col_lines": [0, 5, 10], "image_width": 40, "image_height": 40},
         )
 
-    monkeypatch.setattr(readers_core, "extract_tables_from_image", fake_extract)
+    monkeypatch.setattr("medflux_backend.Preprocessing.phase_02_readers.core_processors.reader_core_ocr_tables.extract_tables_from_image", fake_extract)
     reader._maybe_collect_tables(_DummyPage(), Path("dummy.pdf"), 2, "native", ocr_data={})
 
     assert reader._table_flags == set()

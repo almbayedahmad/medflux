@@ -1,6 +1,7 @@
 import pytest
 
-from medflux_backend.Preprocessing.phase_02_readers.readers_core import ReaderOptions, ReadersOrchestrator
+from medflux_backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_pipeline_main import ReadersOrchestrator
+from medflux_backend.Preprocessing.phase_02_readers.internal_helpers.reader_helpers_runtime_options import ReaderOptions
 
 
 @pytest.fixture
