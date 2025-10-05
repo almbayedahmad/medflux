@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from ..config.runtime_config import CFG
+from ..config_profiles.profiles_loader import CFG
 
 
 @dataclass(frozen=True, slots=True)
