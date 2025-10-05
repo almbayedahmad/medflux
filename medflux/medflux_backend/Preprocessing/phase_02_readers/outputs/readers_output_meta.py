@@ -9,7 +9,7 @@ from main_helpers.geom_utils import to_bottom_left
 from main_helpers.lang_utils import normalise_lang
 from main_helpers.num_utils import as_float, as_int
 
-from schemas.readers_output_schema import SCHEMA_VERSION
+from ..schemas.readers_output_schema import SCHEMA_VERSION
 
 from .readers_output_components import (
     compute_readers_detected_languages,

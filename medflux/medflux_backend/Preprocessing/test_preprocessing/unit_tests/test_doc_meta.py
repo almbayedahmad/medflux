@@ -6,7 +6,7 @@ import pytest
 
 from medflux_backend.Preprocessing.pipeline import detect_and_read
 from medflux_backend.Preprocessing.phase_02_readers.outputs import readers_output_meta as doc_meta_module
-from schemas.readers_output_schema import SCHEMA_VERSION
+from medflux_backend.Preprocessing.phase_02_readers.schemas.readers_output_schema import SCHEMA_VERSION
 
 
 _ALLOWED_FILE_TYPES = {"pdf_text", "pdf_scan", "pdf_scan_hybrid", "docx", "image"}

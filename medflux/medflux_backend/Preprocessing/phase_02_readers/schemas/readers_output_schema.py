@@ -21,3 +21,4 @@ READERS_OPTIONAL_TOP: Tuple[str, ...] = (
 )
 
 SCHEMA_VERSION: str = "readers.v1"
+
