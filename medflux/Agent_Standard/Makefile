@@ -10,10 +10,10 @@ scaffold:
 	python codegen/stage_scaffold.py $(MANIFEST)
 
 validate:
-	python agent/agents_tasks/validation_op/standards_validator.py --standards-dir agent/agents_rules --stage-root $(STAGE)
+	python agent/automation/v6_validator.py --stage-root $(STAGE)
 
 doc-update:
-	python agent/agents_tasks/change_op/auto_documentation_update.py --stage $(STAGE) --event $(EVENT) --stage-name $(STAGE_NAME) --phase $(PHASE) --changelog $(CHANGELOG) --main-readme main_documantion/main_readme.md --main-changelog main_documantion/main_changelog.md --current-stage main_documantion/main_current_development_stage.md
+	python agent/automation/auto_documentation_update.py --stage $(STAGE) --event $(EVENT) --stage-name $(STAGE_NAME) --phase $(PHASE) --changelog $(CHANGELOG) --main-readme main_documantion/main_readme.md --main-changelog main_documantion/main_changelog.md --current-stage main_documantion/main_current_development_stage.md
 
 docgen:
 	python tools/docgen/auto_doc_update.py

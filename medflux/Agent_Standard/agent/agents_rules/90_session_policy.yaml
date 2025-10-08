@@ -1,7 +1,0 @@
-meta:
-  version: 3
-  id: session_policy
-
-session_policy:
-  require_approval_for_new_files: true
-  steps: ["analyze_current_tree","propose_plan","wait_for_confirmation","apply_changes","run_validation_and_tests","deliver_summary"]
