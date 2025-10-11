@@ -1,0 +1,345 @@
+# Validation Rules
+
+# This file defines validation criteria for data and stages
+# It ensures explicit validation improves reliability
+
+meta:
+  version: 3
+  id: validation_rules
+  updated_at: "{{CREATED_AT}}"
+  description: "Validation criteria for data and stages"
+
+validation:
+  # Phase directory validation
+  check_phase_dir_pattern: true
+  check_required_subfolders: true
+  check_file_names_regex: true
+  check_stage_prefix_on_files: true
+  check_forbidden_terms: true
+  
+  # Regex patterns
+  regex:
+    phase_dir: "phase_[0-9]{2}_[a-z0-9_]+$"
+    file_allowed: "^[a-z0-9_]+_[a-z0-9_]+\\.py$"
+    function_allowed_strict: "^(run|connect|normalize|process|deduplicate|compute|aggregate|cluster|segment|index|anchor|to|from|validate|check|save|emit|summarize|record)_[a-z0-9]+_[a-z0-9]+$"
+    forbidden_terms: "\\bload(?:er)?\\b"
+  
+  # Input validation
+  input_validation:
+    # File format validation
+    file_format:
+      enabled: true
+      supported_formats: ["pdf", "docx", "txt", "png", "jpg", "jpeg", "tiff"]
+      check_mime_type: true
+      check_file_extension: true
+      check_file_signature: true
+    
+    # File size validation
+    file_size:
+      enabled: true
+      max_size: "100MB"
+      min_size: "1KB"
+      check_available_space: true
+    
+    # File integrity validation
+    file_integrity:
+      enabled: true
+      check_checksum: true
+      check_corruption: true
+      validate_structure: true
+    
+    # Content validation
+    content_validation:
+      enabled: true
+      check_encoding: true
+      check_language: true
+      check_quality: true
+      min_confidence: 0.7
+  
+  # Output validation
+  output_validation:
+    # Schema validation
+    schema_validation:
+      enabled: true
+      strict_mode: false
+      check_required_fields: true
+      check_field_types: true
+      check_field_values: true
+    
+    # Completeness validation
+    completeness_validation:
+      enabled: true
+      check_missing_fields: true
+      check_empty_fields: true
+      check_null_values: true
+    
+    # Quality validation
+    quality_validation:
+      enabled: true
+      check_confidence_scores: true
+      check_accuracy: true
+      check_consistency: true
+      min_quality_score: 0.7
+  
+  # Configuration validation
+  config_validation:
+    # Required keys validation
+    required_keys:
+      enabled: true
+      keys:
+        - "io.out_root"
+        - "io.out_stats_path"
+        - "options.mode"
+        - "options.lang"
+        - "options.dpi"
+        - "options.psm"
+        - "options.tables_mode"
+    
+    # Value validation
+    value_validation:
+      enabled: true
+      ranges:
+        dpi: [72, 600]
+        psm: [0, 13]
+        oem: [0, 3]
+        confidence: [0.0, 1.0]
+        timeout: [1, 3600]
+    
+    # Type validation
+    type_validation:
+      enabled: true
+      types:
+        dpi: "integer"
+        psm: "integer"
+        oem: "integer"
+        confidence: "float"
+        timeout: "integer"
+        mode: "string"
+        lang: "string"
+  
+  # Data validation
+  data_validation:
+    # Text validation
+    text_validation:
+      enabled: true
+      check_encoding: true
+      check_language: true
+      check_quality: true
+      min_length: 1
+      max_length: 1000000
+    
+    # Image validation
+    image_validation:
+      enabled: true
+      check_format: true
+      check_resolution: true
+      check_quality: true
+      min_width: 100
+      min_height: 100
+      max_width: 10000
+      max_height: 10000
+    
+    # Table validation
+    table_validation:
+      enabled: true
+      check_structure: true
+      check_content: true
+      min_rows: 2
+      min_cols: 2
+      max_rows: 1000
+      max_cols: 100
+    
+    # Metadata validation
+    metadata_validation:
+      enabled: true
+      check_required_fields: true
+      check_field_types: true
+      check_field_values: true
+      check_consistency: true
+  
+  # Performance validation
+  performance_validation:
+    # Latency validation
+    latency_validation:
+      enabled: true
+      max_latency_per_item: 30.0
+      max_total_latency: 300.0
+      check_timeout: true
+    
+    # Memory validation
+    memory_validation:
+      enabled: true
+      max_memory_usage: "1GB"
+      check_memory_leaks: true
+      check_memory_growth: true
+    
+    # Throughput validation
+    throughput_validation:
+      enabled: true
+      min_throughput: 10
+      max_concurrent_items: 100
+      check_queue_size: true
+  
+  # Security validation
+  security_validation:
+    # Input sanitization
+    input_sanitization:
+      enabled: true
+      check_malicious_content: true
+      check_file_paths: true
+      check_metadata: true
+    
+    # Output sanitization
+    output_sanitization:
+      enabled: true
+      check_sensitive_data: true
+      check_personal_info: true
+      check_credentials: true
+    
+    # Access validation
+    access_validation:
+      enabled: true
+      check_permissions: true
+      check_ownership: true
+      check_acl: true
+  
+  # Error validation
+  error_validation:
+    # Error handling
+    error_handling:
+      enabled: true
+      max_error_rate: 0.05
+      max_consecutive_errors: 5
+      check_error_recovery: true
+    
+    # Exception validation
+    exception_validation:
+      enabled: true
+      check_exception_types: true
+      check_exception_messages: true
+      check_exception_stack_traces: true
+    
+    # Logging validation
+    logging_validation:
+      enabled: true
+      check_log_levels: true
+      check_log_messages: true
+      check_log_format: true
+  
+  # Integration validation
+  integration_validation:
+    # API validation
+    api_validation:
+      enabled: true
+      check_endpoints: true
+      check_authentication: true
+      check_authorization: true
+      check_rate_limiting: true
+    
+    # Service validation
+    service_validation:
+      enabled: true
+      check_availability: true
+      check_response_time: true
+      check_error_rates: true
+      check_health_checks: true
+    
+    # Data flow validation
+    data_flow_validation:
+      enabled: true
+      check_input_output: true
+      check_transformations: true
+      check_side_effects: true
+      check_dependencies: true
+  
+  # Compliance validation
+  compliance_validation:
+    # GDPR compliance
+    gdpr_compliance:
+      enabled: true
+      check_data_protection: true
+      check_privacy: true
+      check_consent: true
+      check_data_retention: true
+    
+    # Accessibility compliance
+    accessibility_compliance:
+      enabled: true
+      check_wcag: true
+      check_screen_readers: true
+      check_keyboard_navigation: true
+      check_color_contrast: true
+    
+    # Security compliance
+    security_compliance:
+      enabled: true
+      check_owasp: true
+      check_encryption: true
+      check_authentication: true
+      check_authorization: true
+  
+  # Custom validation
+  custom_validation:
+    # Business rules validation
+    business_rules:
+      enabled: true
+      check_domain_logic: true
+      check_business_constraints: true
+      check_workflow_rules: true
+    
+    # User-defined validation
+    user_defined:
+      enabled: true
+      check_custom_rules: true
+      check_custom_constraints: true
+      check_custom_validation: true
+  
+  # Validation reporting
+  validation_reporting:
+    # Report generation
+    report_generation:
+      enabled: true
+      format: "json"
+      include_details: true
+      include_metrics: true
+      include_recommendations: true
+    
+    # Report delivery
+    report_delivery:
+      enabled: true
+      email: true
+      webhook: true
+      file: true
+      console: true
+    
+    # Report retention
+    report_retention:
+      enabled: true
+      retention_days: 30
+      archive_old_reports: true
+      compress_reports: true
+  
+  # Validation configuration
+  validation_config:
+    # Validation levels
+    validation_levels:
+      strict: true
+      normal: true
+      lenient: true
+    
+    # Validation modes
+    validation_modes:
+      real_time: true
+      batch: true
+      scheduled: true
+      on_demand: true
+    
+    # Validation scope
+    validation_scope:
+      input: true
+      output: true
+      intermediate: true
+      configuration: true
+      performance: true
+      security: true
+      compliance: true

@@ -1,0 +1,116 @@
+{
+  "name": "Preprocessing_Module",
+  "rankdir": "LR",
+  "nodes": [
+    {
+      "id": "det",
+      "label": "Detect Type & Encoding"
+    },
+    {
+      "id": "pdftext",
+      "label": "PDF (text)\n→ PyMuPDF/pdfminer"
+    },
+    {
+      "id": "pdfscan",
+      "label": "PDF (scanned)\n→ OCR (Tesseract/OCRmyPDF)"
+    },
+    {
+      "id": "docx",
+      "label": "DOCX\n→ python-docx"
+    },
+    {
+      "id": "img",
+      "label": "Image\n→ OCR (Tesseract)"
+    },
+    {
+      "id": "merge",
+      "label": "Merge Content\n(text/pages/tables/coords)"
+    },
+    {
+      "id": "clean",
+      "label": "Cleaning & Normalization\n(Unicode, de-hyphenation, numbers)"
+    },
+    {
+      "id": "tables",
+      "label": "Table Extraction & Normalization\n(camelot/tabula)"
+    },
+    {
+      "id": "seg",
+      "label": "Segmentation\n(sections, paragraphs, sentences, tables)"
+    },
+    {
+      "id": "off",
+      "label": "Offsets & Provenance\n(start/end/page/bbox)"
+    }
+  ],
+  "edges": [
+    [
+      "det",
+      "pdftext",
+      "route: PDF (text)"
+    ],
+    [
+      "det",
+      "pdfscan",
+      "route: PDF (scanned)"
+    ],
+    [
+      "det",
+      "docx",
+      "route: DOCX"
+    ],
+    [
+      "det",
+      "img",
+      "route: Image"
+    ],
+    [
+      "pdftext",
+      "merge",
+      "blocks/pages"
+    ],
+    [
+      "pdfscan",
+      "merge",
+      "OCR text/pages"
+    ],
+    [
+      "docx",
+      "merge",
+      "paragraphs/tables"
+    ],
+    [
+      "img",
+      "merge",
+      "OCR text"
+    ],
+    [
+      "merge",
+      "clean",
+      "raw → cleaned"
+    ],
+    [
+      "clean",
+      "tables",
+      "detect/normalize tables"
+    ],
+    [
+      "clean",
+      "seg",
+      "cleaned text → segments"
+    ],
+    [
+      "tables",
+      "seg",
+      "table segments"
+    ],
+    [
+      "seg",
+      "off",
+      "add offsets/bboxes"
+    ]
+  ],
+  "style": {
+    "rankdir": "TB"
+  }
+}

@@ -1,0 +1,20 @@
+product_root: stages_demo
+domain_root: ingestion
+phase_number: 03
+stage_name: merge
+
+features:
+  normalization: true
+  deduplication: true
+  indexing: true
+  upstream: true
+  schemas: true
+
+generate:
+  root: true
+  config: true
+  connectors: true
+  core: true
+  helpers: true
+  outputs: true
+  tests: true

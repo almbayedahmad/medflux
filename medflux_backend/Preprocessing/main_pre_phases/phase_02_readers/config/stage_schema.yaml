@@ -1,0 +1,58 @@
+type: object
+required: ['stage', 'io']
+properties:
+  stage:
+    type: string
+  io:
+    type: object
+    required: ['out_root', 'out_doc_path', 'out_stats_path']
+    properties:
+      out_root:
+        type: string
+      out_doc_path:
+        type: string
+      out_stats_path:
+        type: string
+      out_summary_path:
+        type: string
+  options:
+    type: object
+    properties:
+      mode:
+        type: string
+      lang:
+        type: string
+      dpi:
+        type: integer
+      oem:
+        type: integer
+      psm:
+        type: integer
+      workers:
+        type: integer
+      tables_mode:
+        type: string
+      tables_min_words:
+        type: integer
+      table_detect_min_area:
+        type: number
+      table_detect_max_cells:
+        type: integer
+      blocks_threshold:
+        type: integer
+      native_ocr_overlay:
+        type: boolean
+      use_pre:
+        type: boolean
+      export_xlsx:
+        type: boolean
+      verbose:
+        type: boolean
+      save_table_crops:
+        type: boolean
+      overlay_area_thr:
+        type: number
+      overlay_min_images:
+        type: integer
+      overlay_if_any_image:
+        type: boolean

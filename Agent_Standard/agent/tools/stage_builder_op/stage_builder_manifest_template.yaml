@@ -1,0 +1,12 @@
+# stage_builder_manifest_template.yaml
+product_root: my_product
+domain_root: my_domain
+phase_number: 03
+stage_name: merge
+
+features:
+  normalization: true
+  deduplication: true
+  indexing: false
+  upstream: true
+  schemas: true

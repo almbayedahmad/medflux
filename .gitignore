@@ -1,0 +1,21 @@
+# Bytecode caches
+__pycache__/
+*.py[cod]
+
+# Test artefacts
+.pytest_cache/
+.benchmarks/
+
+# Local output files
+output/
+medflux_backend/Preprocessing/test_preprocessing/results_tests/__pycache__/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Logs / temp files
+*.log
+*.tmp
+

@@ -1,0 +1,5 @@
+MedFlux Synthetic Reader Sample
+------------------------------
+
+This plain-text file exercises the readers pipeline when PDFs are unavailable.
+It mixes German terms wie Krankenhaus, Patienten, Aufnahme and English terms such as hospital, admission, discharge.
