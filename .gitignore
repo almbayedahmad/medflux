@@ -19,3 +19,36 @@ env/
 *.log
 *.tmp
 
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+
+# Local user folders accidentally added
+OneDrive/
+
+# Build & dist
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Python tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Project outputs (ensure not tracked)
+outputs/
+medflux/outputs/
+
