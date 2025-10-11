@@ -1,1 +1,0 @@
-STAGE={{ stage_name }}\n\nrun:\n\tpython -m pipeline_workflow.$(STAGE)_pipeline\n\ntest:\n\tpytest -q tests\n\nlint:\n\tflake8 .\n\nformat:\n\tblack .\n
