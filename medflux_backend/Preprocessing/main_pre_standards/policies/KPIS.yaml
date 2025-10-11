@@ -18,7 +18,7 @@ kpis:
       type: "counter"
       target: "> 0"
       critical: "= 0"
-    
+
     - name: "avg_latency_per_unit_ms"
       description: "Average latency per processing unit"
       unit: "milliseconds"
@@ -26,7 +26,7 @@ kpis:
       target: "< 30"
       warning: "> 30"
       critical: "> 60"
-    
+
     - name: "low_confidence_ratio"
       description: "Ratio of low confidence results"
       unit: "ratio"
@@ -34,7 +34,7 @@ kpis:
       target: "< 0.05"
       warning: "> 0.05"
       critical: "> 0.1"
-    
+
     - name: "error_rate"
       description: "Error rate percentage"
       unit: "percentage"
@@ -42,7 +42,7 @@ kpis:
       target: "< 1%"
       warning: "> 1%"
       critical: "> 5%"
-    
+
     - name: "throughput_items_per_second"
       description: "Items processed per second"
       unit: "items/second"
@@ -50,7 +50,7 @@ kpis:
       target: "> 10"
       warning: "< 10"
       critical: "< 5"
-    
+
     - name: "memory_usage_mb"
       description: "Memory usage in megabytes"
       unit: "megabytes"
@@ -58,7 +58,7 @@ kpis:
       target: "< 512"
       warning: "> 512"
       critical: "> 1024"
-    
+
     - name: "cpu_usage_percent"
       description: "CPU usage percentage"
       unit: "percentage"
@@ -66,7 +66,7 @@ kpis:
       target: "< 80%"
       warning: "> 80%"
       critical: "> 95%"
-    
+
     - name: "disk_usage_percent"
       description: "Disk usage percentage"
       unit: "percentage"
@@ -74,7 +74,7 @@ kpis:
       target: "< 80%"
       warning: "> 80%"
       critical: "> 95%"
-  
+
   # Stage-specific KPIs
   by_stage_type:
     # Aggregation stage KPIs
@@ -85,7 +85,7 @@ kpis:
         type: "counter"
         target: "> 0"
         critical: "= 0"
-      
+
       - name: "conflicts_count"
         description: "Number of conflicts detected"
         unit: "count"
@@ -93,7 +93,7 @@ kpis:
         target: "< 10"
         warning: "> 10"
         critical: "> 50"
-      
+
       - name: "duplicate_ratio"
         description: "Ratio of duplicate items"
         unit: "ratio"
@@ -101,7 +101,7 @@ kpis:
         target: "< 0.1"
         warning: "> 0.1"
         critical: "> 0.2"
-    
+
     # Cleaning stage KPIs
     cleaning:
       - name: "normalized_tokens_count"
@@ -110,14 +110,14 @@ kpis:
         type: "counter"
         target: "> 0"
         critical: "= 0"
-      
+
       - name: "fixed_hyphenations_count"
         description: "Number of fixed hyphenations"
         unit: "count"
         type: "counter"
         target: "> 0"
         critical: "= 0"
-      
+
       - name: "cleaning_accuracy"
         description: "Cleaning accuracy percentage"
         unit: "percentage"
@@ -125,7 +125,7 @@ kpis:
         target: "> 95%"
         warning: "< 95%"
         critical: "< 90%"
-    
+
     # Segmentation stage KPIs
     segmentation:
       - name: "segments_count"
@@ -134,7 +134,7 @@ kpis:
         type: "counter"
         target: "> 0"
         critical: "= 0"
-      
+
       - name: "avg_segment_length"
         description: "Average segment length"
         unit: "characters"
@@ -142,7 +142,7 @@ kpis:
         target: "50-500"
         warning: "< 50 or > 500"
         critical: "< 10 or > 1000"
-      
+
       - name: "segmentation_quality"
         description: "Segmentation quality score"
         unit: "score"
@@ -150,7 +150,7 @@ kpis:
         target: "> 0.8"
         warning: "< 0.8"
         critical: "< 0.6"
-    
+
     # Indexing stage KPIs
     indexing:
       - name: "indexed_items_count"
@@ -159,7 +159,7 @@ kpis:
         type: "counter"
         target: "> 0"
         critical: "= 0"
-      
+
       - name: "index_size_mb"
         description: "Index size in megabytes"
         unit: "megabytes"
@@ -167,7 +167,7 @@ kpis:
         target: "< 100"
         warning: "> 100"
         critical: "> 500"
-      
+
       - name: "index_build_time_ms"
         description: "Index build time"
         unit: "milliseconds"
@@ -175,7 +175,7 @@ kpis:
         target: "< 1000"
         warning: "> 1000"
         critical: "> 5000"
-    
+
     # Readers stage KPIs
     readers:
       - name: "ocr_accuracy"
@@ -185,7 +185,7 @@ kpis:
         target: "> 90%"
         warning: "< 90%"
         critical: "< 80%"
-      
+
       - name: "table_detection_rate"
         description: "Table detection rate"
         unit: "percentage"
@@ -193,7 +193,7 @@ kpis:
         target: "> 85%"
         warning: "< 85%"
         critical: "< 70%"
-      
+
       - name: "language_detection_accuracy"
         description: "Language detection accuracy"
         unit: "percentage"
@@ -201,7 +201,7 @@ kpis:
         target: "> 95%"
         warning: "< 95%"
         critical: "< 90%"
-      
+
       - name: "text_extraction_completeness"
         description: "Text extraction completeness"
         unit: "percentage"
@@ -209,7 +209,7 @@ kpis:
         target: "> 95%"
         warning: "< 95%"
         critical: "< 90%"
-      
+
       - name: "processing_time_per_page_ms"
         description: "Processing time per page"
         unit: "milliseconds"
@@ -217,7 +217,7 @@ kpis:
         target: "< 5000"
         warning: "> 5000"
         critical: "> 10000"
-  
+
   # Quality KPIs
   quality:
     - name: "overall_quality_score"
@@ -227,7 +227,7 @@ kpis:
       target: "> 0.8"
       warning: "< 0.8"
       critical: "< 0.6"
-    
+
     - name: "user_satisfaction_score"
       description: "User satisfaction score"
       unit: "score"
@@ -235,7 +235,7 @@ kpis:
       target: "> 4.0"
       warning: "< 4.0"
       critical: "< 3.0"
-    
+
     - name: "data_accuracy"
       description: "Data accuracy percentage"
       unit: "percentage"
@@ -243,7 +243,7 @@ kpis:
       target: "> 95%"
       warning: "< 95%"
       critical: "< 90%"
-    
+
     - name: "consistency_score"
       description: "Consistency score"
       unit: "score"
@@ -251,7 +251,7 @@ kpis:
       target: "> 0.9"
       warning: "< 0.9"
       critical: "< 0.8"
-  
+
   # Reliability KPIs
   reliability:
     - name: "uptime_percentage"
@@ -261,7 +261,7 @@ kpis:
       target: "> 99%"
       warning: "< 99%"
       critical: "< 95%"
-    
+
     - name: "mean_time_to_recovery"
       description: "Mean time to recovery"
       unit: "minutes"
@@ -269,7 +269,7 @@ kpis:
       target: "< 5"
       warning: "> 5"
       critical: "> 15"
-    
+
     - name: "failure_rate"
       description: "Failure rate percentage"
       unit: "percentage"
@@ -277,7 +277,7 @@ kpis:
       target: "< 0.1%"
       warning: "> 0.1%"
       critical: "> 1%"
-    
+
     - name: "availability_score"
       description: "Availability score"
       unit: "score"
@@ -285,7 +285,7 @@ kpis:
       target: "> 0.99"
       warning: "< 0.99"
       critical: "< 0.95"
-  
+
   # Security KPIs
   security:
     - name: "security_vulnerabilities_count"
@@ -295,7 +295,7 @@ kpis:
       target: "= 0"
       warning: "> 0"
       critical: "> 5"
-    
+
     - name: "failed_authentication_attempts"
       description: "Failed authentication attempts"
       unit: "count"
@@ -303,7 +303,7 @@ kpis:
       target: "< 10"
       warning: "> 10"
       critical: "> 50"
-    
+
     - name: "data_breach_incidents"
       description: "Data breach incidents"
       unit: "count"
@@ -311,7 +311,7 @@ kpis:
       target: "= 0"
       warning: "> 0"
       critical: "> 0"
-    
+
     - name: "security_compliance_score"
       description: "Security compliance score"
       unit: "score"
@@ -319,7 +319,7 @@ kpis:
       target: "> 0.95"
       warning: "< 0.95"
       critical: "< 0.90"
-  
+
   # Cost KPIs
   cost:
     - name: "cost_per_item"
@@ -329,7 +329,7 @@ kpis:
       target: "< 0.01"
       warning: "> 0.01"
       critical: "> 0.05"
-    
+
     - name: "infrastructure_cost"
       description: "Infrastructure cost"
       unit: "currency"
@@ -337,7 +337,7 @@ kpis:
       target: "< 100"
       warning: "> 100"
       critical: "> 500"
-    
+
     - name: "operational_cost"
       description: "Operational cost"
       unit: "currency"
@@ -345,7 +345,7 @@ kpis:
       target: "< 50"
       warning: "> 50"
       critical: "> 200"
-    
+
     - name: "cost_efficiency_ratio"
       description: "Cost efficiency ratio"
       unit: "ratio"
@@ -353,7 +353,7 @@ kpis:
       target: "> 0.8"
       warning: "< 0.8"
       critical: "< 0.6"
-  
+
   # Innovation KPIs
   innovation:
     - name: "feature_adoption_rate"
@@ -363,7 +363,7 @@ kpis:
       target: "> 50%"
       warning: "< 50%"
       critical: "< 25%"
-    
+
     - name: "innovation_index"
       description: "Innovation index"
       unit: "score"
@@ -371,7 +371,7 @@ kpis:
       target: "> 0.7"
       warning: "< 0.7"
       critical: "< 0.5"
-    
+
     - name: "time_to_market"
       description: "Time to market"
       unit: "days"
@@ -379,7 +379,7 @@ kpis:
       target: "< 30"
       warning: "> 30"
       critical: "> 60"
-    
+
     - name: "research_development_ratio"
       description: "Research and development ratio"
       unit: "percentage"
@@ -387,7 +387,7 @@ kpis:
       target: "> 10%"
       warning: "< 10%"
       critical: "< 5%"
-  
+
   # KPI collection and reporting
   collection:
     # Collection frequency
@@ -397,7 +397,7 @@ kpis:
       daily: true
       weekly: true
       monthly: true
-    
+
     # Collection methods
     methods:
       metrics: true
@@ -405,7 +405,7 @@ kpis:
       traces: true
       events: true
       surveys: true
-    
+
     # Collection sources
     sources:
       application: true
@@ -413,7 +413,7 @@ kpis:
       user_feedback: true
       external_apis: true
       monitoring_tools: true
-  
+
   # KPI reporting
   reporting:
     # Report formats
@@ -423,7 +423,7 @@ kpis:
       excel: true
       pdf: true
       html: true
-    
+
     # Report delivery
     delivery:
       email: true
@@ -431,7 +431,7 @@ kpis:
       dashboard: true
       api: true
       file: true
-    
+
     # Report scheduling
     scheduling:
       real_time: true
@@ -440,7 +440,7 @@ kpis:
       weekly: true
       monthly: true
       on_demand: true
-  
+
   # KPI alerting
   alerting:
     # Alert levels
@@ -449,7 +449,7 @@ kpis:
       warning: true
       critical: true
       emergency: true
-    
+
     # Alert channels
     channels:
       email: true
@@ -457,7 +457,7 @@ kpis:
       slack: true
       webhook: true
       pagerduty: true
-    
+
     # Alert rules
     rules:
       threshold_based: true

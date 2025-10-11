@@ -10,4 +10,3 @@ detection:
   text_len_thr: 200
   words_thr: 15
   blocks_thr: 3
-

@@ -220,7 +220,7 @@ class ReadersOutput(TypedDict, total=False):
 __all__ = [
     # Schema constants
     "READERS_REQUIRED_TOP",
-    "READERS_OPTIONAL_TOP", 
+    "READERS_OPTIONAL_TOP",
     "SCHEMA_VERSION",
     # TypedDict classes
     "PageTiming",

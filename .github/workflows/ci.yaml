@@ -29,4 +29,3 @@ jobs:
       - name: Forbidden paths check
         run: |
           python scripts/ci_check_paths.py
-

@@ -7,10 +7,10 @@ pipeline:
     - phase_00_detect_type
     - phase_01_encoding
     - phase_02_readers
-  
+
   execution_model: sequential
   failure_handling: stop_on_error
-  
+
   default_io:
     out_root: outputs/
     cache_dir: cache/

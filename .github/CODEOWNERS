@@ -1,0 +1,10 @@
+# Default owner(s) for all files
+* @almbayedahmad
+
+# Backend
+medflux_backend/ @almbayedahmad
+
+# Docs and standards
+Agent_Standard/ @almbayedahmad
+README.md @almbayedahmad
+CONTRIBUTING.md @almbayedahmad

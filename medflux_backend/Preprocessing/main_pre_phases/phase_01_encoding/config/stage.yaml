@@ -9,4 +9,3 @@ normalization:
   enabled: false
   newline_policy: lf
   errors: strict
-

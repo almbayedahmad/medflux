@@ -13,31 +13,31 @@ meta:
 logging:
   # Version
   version: 1
-  
+
   # Disable existing loggers
   disable_existing_loggers: false
-  
+
   # Formatters
   formatters:
     # Standard formatter
     standard:
       format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
       datefmt: "%Y-%m-%d %H:%M:%S"
-    
+
     # Detailed formatter
     detailed:
       format: "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s"
       datefmt: "%Y-%m-%d %H:%M:%S"
-    
+
     # JSON formatter
     json:
       format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
       datefmt: "%Y-%m-%d %H:%M:%S"
-    
+
     # Simple formatter
     simple:
       format: "%(levelname)s - %(message)s"
-    
+
     # Colored formatter
     colored:
       format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -50,7 +50,7 @@ logging:
         WARNING: "yellow"
         ERROR: "red"
         CRITICAL: "red,bg_white"
-  
+
   # Handlers
   handlers:
     # Console handler
@@ -59,7 +59,7 @@ logging:
       level: "INFO"
       formatter: "standard"
       stream: "ext://sys.stdout"
-    
+
     # File handler
     file:
       class: "logging.handlers.RotatingFileHandler"
@@ -69,7 +69,7 @@ logging:
       maxBytes: 10485760  # 10MB
       backupCount: 5
       encoding: "utf-8"
-    
+
     # Error file handler
     error_file:
       class: "logging.handlers.RotatingFileHandler"
@@ -79,7 +79,7 @@ logging:
       maxBytes: 10485760  # 10MB
       backupCount: 5
       encoding: "utf-8"
-    
+
     # JSON file handler
     json_file:
       class: "logging.handlers.RotatingFileHandler"
@@ -89,109 +89,109 @@ logging:
       maxBytes: 10485760  # 10MB
       backupCount: 5
       encoding: "utf-8"
-    
+
     # Colored console handler
     colored_console:
       class: "logging.StreamHandler"
       level: "INFO"
       formatter: "colored"
       stream: "ext://sys.stdout"
-    
+
     # Null handler
     null:
       class: "logging.NullHandler"
-  
+
   # Loggers
   loggers:
     # Root logger
     root:
       level: "INFO"
       handlers: ["console", "file"]
-    
+
     # Phase-specific logger
     "{{PHASE_NAME}}":
       level: "DEBUG"
       handlers: ["console", "file", "error_file"]
       propagate: false
-    
+
     # Core functions logger
     "{{PHASE_NAME}}.core_functions":
       level: "DEBUG"
       handlers: ["file", "error_file"]
       propagate: false
-    
+
     # Pipeline workflow logger
     "{{PHASE_NAME}}.pipeline_workflow":
       level: "DEBUG"
       handlers: ["console", "file", "error_file"]
       propagate: false
-    
+
     # Connectors logger
     "{{PHASE_NAME}}.connecters":
       level: "DEBUG"
       handlers: ["file", "error_file"]
       propagate: false
-    
+
     # Schemas logger
     "{{PHASE_NAME}}.schemas":
       level: "DEBUG"
       handlers: ["file"]
       propagate: false
-    
+
     # Outputs logger
     "{{PHASE_NAME}}.outputs":
       level: "DEBUG"
       handlers: ["file", "error_file"]
       propagate: false
-    
+
     # Internal helpers logger
     "{{PHASE_NAME}}.internal_helpers":
       level: "DEBUG"
       handlers: ["file"]
       propagate: false
-    
+
     # Tests logger
     "{{PHASE_NAME}}.tests":
       level: "DEBUG"
       handlers: ["console", "file"]
       propagate: false
-    
+
     # External libraries loggers
     "pytesseract":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     "fitz":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     "PIL":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     "numpy":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     "pandas":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     "requests":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     "urllib3":
       level: "WARNING"
       handlers: ["file"]
       propagate: false
-    
+
     # Third-party loggers
     "third_party":
       level: "WARNING"
@@ -231,7 +231,7 @@ environments:
           level: "DEBUG"
           handlers: ["console", "file"]
           propagate: false
-  
+
   # Staging environment
   staging:
     logging:
@@ -263,7 +263,7 @@ environments:
           level: "INFO"
           handlers: ["console", "file"]
           propagate: false
-  
+
   # Production environment
   production:
     logging:
@@ -308,14 +308,14 @@ utilities:
     WARNING: 30
     ERROR: 40
     CRITICAL: 50
-  
+
   # Log formats
   formats:
     standard: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     detailed: "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s"
     json: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     simple: "%(levelname)s - %(message)s"
-  
+
   # Log handlers
   handlers:
     console: "logging.StreamHandler"
@@ -324,13 +324,13 @@ utilities:
     syslog: "logging.handlers.SysLogHandler"
     smtp: "logging.handlers.SMTPHandler"
     http: "logging.handlers.HTTPHandler"
-  
+
   # Log filters
   filters:
     level_filter: "logging.Filter"
     name_filter: "logging.Filter"
     custom_filter: "custom.logging.CustomFilter"
-  
+
   # Log adapters
   adapters:
     context_adapter: "custom.logging.ContextAdapter"
