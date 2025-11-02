@@ -17,7 +17,7 @@ stage_contract:
     version: "{{PHASE_VERSION}}"
     order: 2
     description: "{{PHASE_DESCRIPTION}}"
-  
+
   # Input contract
   inputs:
     - name: "generic_items"
@@ -39,7 +39,7 @@ stage_contract:
               type: "object"
               description: "Processing options"
           required: ["path"]
-    
+
     - name: "io_config"
       type: "object"
       description: "I/O configuration"
@@ -57,7 +57,7 @@ stage_contract:
             type: "integer"
             description: "Maximum worker processes"
         required: ["out_root"]
-    
+
     - name: "options_config"
       type: "object"
       description: "Processing options configuration"
@@ -83,7 +83,7 @@ stage_contract:
             enum: ["detect", "extract", "none"]
             description: "Table processing mode"
         required: ["mode"]
-    
+
     - name: "run_metadata"
       type: "object"
       description: "Runtime metadata"
@@ -104,7 +104,7 @@ stage_contract:
           user_id:
             type: "string"
             description: "User identifier"
-  
+
   # Output contract
   outputs:
     - name: "unified_document"
@@ -139,7 +139,7 @@ stage_contract:
             type: "array"
             description: "Processing logs"
         required: ["schema_version", "run_id", "pipeline_id", "doc_meta"]
-    
+
     - name: "stage_stats"
       type: "object"
       description: "Aggregated stage metrics"
@@ -169,7 +169,7 @@ stage_contract:
             type: "number"
             description: "Memory usage"
         required: ["processed_items_count", "avg_latency_per_unit_ms"]
-  
+
   # Required configuration keys
   required_config_keys:
     - "io.out_root"
@@ -179,11 +179,11 @@ stage_contract:
     - "options.dpi"
     - "options.psm"
     - "options.tables_mode"
-  
+
   # Coordinate system
   coordinate_origin: "bottom-left"
   coordinate_unit: "pdf_points"
-  
+
   # Data formats
   supported_input_formats:
     - "pdf"
@@ -193,26 +193,26 @@ stage_contract:
     - "jpg"
     - "jpeg"
     - "tiff"
-  
+
   supported_output_formats:
     - "json"
     - "yaml"
     - "xml"
-  
+
   # Quality requirements
   quality_requirements:
     min_confidence: 0.7
     max_processing_time: 300
     max_memory_usage: "1GB"
     max_error_rate: 0.05
-  
+
   # Performance requirements
   performance_requirements:
     max_latency_per_item: 30.0
     min_throughput: 10
     max_concurrent_items: 100
     max_queue_size: 1000
-  
+
   # Error handling
   error_handling:
     fail_fast: false
@@ -220,7 +220,7 @@ stage_contract:
     retry_delay: 1.0
     error_threshold: 0.1
     fallback_behavior: "skip"
-  
+
   # Validation rules
   validation_rules:
     input_validation:
@@ -228,13 +228,13 @@ stage_contract:
       check_file_size: true
       check_file_integrity: true
       max_file_size: "100MB"
-    
+
     output_validation:
       check_schema: true
       check_completeness: true
       check_quality: true
       min_confidence: 0.7
-  
+
   # Monitoring and observability
   monitoring:
     enable_metrics: true
@@ -242,7 +242,7 @@ stage_contract:
     enable_tracing: true
     metrics_interval: 60
     log_level: "INFO"
-  
+
   # Security requirements
   security:
     enable_validation: true
@@ -250,7 +250,7 @@ stage_contract:
     allow_unsafe: false
     sanitize_inputs: true
     validate_outputs: true
-  
+
   # Dependencies
   dependencies:
     required:
@@ -259,12 +259,12 @@ stage_contract:
       - "Pillow"
       - "numpy"
       - "pandas"
-    
+
     optional:
       - "opencv-python"
       - "scikit-learn"
       - "matplotlib"
-  
+
   # External services
   external_services:
     ocr_service:
@@ -272,20 +272,20 @@ stage_contract:
       description: "External OCR service"
       timeout: 30
       retry_attempts: 3
-    
+
     table_service:
       required: false
       description: "External table detection service"
       timeout: 30
       retry_attempts: 3
-  
+
   # Versioning
   versioning:
     schema_version: "1.0.0"
     api_version: "v1"
     backward_compatibility: true
     deprecation_notice: 30
-  
+
   # Testing requirements
   testing:
     unit_tests: true
@@ -293,7 +293,7 @@ stage_contract:
     performance_tests: true
     load_tests: true
     coverage_threshold: 80
-  
+
   # Documentation requirements
   documentation:
     api_docs: true
@@ -301,7 +301,7 @@ stage_contract:
     developer_guide: true
     troubleshooting: true
     examples: true
-  
+
   # Compliance
   compliance:
     gdpr: true

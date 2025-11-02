@@ -134,4 +134,3 @@ def process_readers_segment(
         "stage_stats": stage_stats,
         "summary": summary_payload,
     }
-

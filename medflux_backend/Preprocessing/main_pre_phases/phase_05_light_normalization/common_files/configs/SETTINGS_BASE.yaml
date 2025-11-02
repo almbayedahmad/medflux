@@ -18,14 +18,14 @@ global:
     description: "{{PHASE_DESCRIPTION}}"
     author: "{{AUTHOR}}"
     created_at: "{{CREATED_AT}}"
-  
+
   # Environment settings
   environment:
     default: "development"
     allowed: ["development", "staging", "production"]
     debug: true
     verbose: false
-  
+
   # Logging settings
   logging:
     level: "INFO"
@@ -33,14 +33,14 @@ global:
     file: "logs/{{PHASE_NAME}}.log"
     max_size: "10MB"
     backup_count: 5
-  
+
   # Performance settings
   performance:
     max_workers: 4
     timeout: 300
     retry_attempts: 3
     retry_delay: 1.0
-  
+
   # Security settings
   security:
     enable_validation: true
@@ -55,21 +55,21 @@ phase:
     max_file_size: "100MB"
     batch_size: 10
     timeout: 300
-  
+
   # Output settings
   output:
     format: "json"
     compression: false
     include_metadata: true
     include_stats: true
-  
+
   # Processing settings
   processing:
     mode: "mixed"
     quality: "high"
     parallel: true
     cache: true
-  
+
   # Feature flags
   features:
     enable_ocr: true
@@ -78,14 +78,14 @@ phase:
     enable_validation: true
     enable_caching: true
     enable_profiling: false
-  
+
   # Thresholds
   thresholds:
     confidence_min: 0.7
     quality_min: 0.8
     timeout_max: 300
     memory_max: "1GB"
-  
+
   # Limits
   limits:
     max_files: 1000
@@ -101,14 +101,14 @@ ocr:
   psm: 6
   oem: 3
   confidence_threshold: 75.0
-  
+
   # Advanced OCR settings
   advanced:
     enable_preprocessing: true
     enable_postprocessing: true
     enable_table_detection: true
     enable_text_detection: true
-  
+
   # Performance settings
   performance:
     max_workers: 4
@@ -121,13 +121,13 @@ tables:
   enabled: true
   mode: "detect"
   confidence_threshold: 0.45
-  
+
   # Detection methods
   detection:
     enable_morphology: true
     enable_text_alignment: true
     enable_contour_detection: true
-  
+
   # Processing settings
   processing:
     min_cells: 2
@@ -142,13 +142,13 @@ language:
   enabled: true
   default_language: "de"
   supported_languages: ["de", "en", "fr", "es", "it"]
-  
+
   # Detection settings
   detection:
     confidence_threshold: 0.8
     fallback_language: "de"
     enable_fallback: true
-  
+
   # Processing settings
   processing:
     normalize_text: true
@@ -159,19 +159,19 @@ language:
 validation:
   enabled: true
   strict_mode: false
-  
+
   # Input validation
   input:
     check_file_format: true
     check_file_size: true
     check_file_integrity: true
-  
+
   # Output validation
   output:
     check_schema: true
     check_completeness: true
     check_quality: true
-  
+
   # Error handling
   error_handling:
     fail_fast: false
@@ -185,7 +185,7 @@ cache:
   location: "cache/"
   ttl: 3600
   max_size: "1GB"
-  
+
   # Cache policies
   policies:
     input_cache: true
@@ -196,14 +196,14 @@ cache:
 # Monitoring settings
 monitoring:
   enabled: true
-  
+
   # Metrics collection
   metrics:
     enable_performance: true
     enable_quality: true
     enable_usage: true
     enable_errors: true
-  
+
   # Alerting
   alerting:
     enable_alerts: true
@@ -211,7 +211,7 @@ monitoring:
       error_rate: 0.05
       response_time: 5.0
       memory_usage: 0.8
-  
+
   # Reporting
   reporting:
     enable_reports: true
@@ -223,13 +223,13 @@ development:
   debug: true
   verbose: false
   profiling: false
-  
+
   # Testing
   testing:
     enable_mocks: true
     enable_fixtures: true
     enable_coverage: true
-  
+
   # Development tools
   tools:
     enable_linting: true
@@ -241,19 +241,19 @@ production:
   debug: false
   verbose: false
   profiling: false
-  
+
   # Performance
   performance:
     optimize_memory: true
     optimize_cpu: true
     enable_compression: true
-  
+
   # Security
   security:
     strict_mode: true
     enable_validation: true
     allow_unsafe: false
-  
+
   # Monitoring
   monitoring:
     enable_detailed_logging: true
@@ -265,13 +265,13 @@ staging:
   debug: true
   verbose: true
   profiling: false
-  
+
   # Testing
   testing:
     enable_integration_tests: true
     enable_performance_tests: true
     enable_load_tests: true
-  
+
   # Monitoring
   monitoring:
     enable_detailed_logging: true

@@ -50,4 +50,3 @@ rules:
       - if:   {"file_type":"pdf_scanned"} ; then: {"set":{"readers.mode":"ocr"}}
       - elif: {"file_type":"pdf_mixed"}   ; then: {"set":{"readers.mode":"mixed"}}
       - next: "readers"
-

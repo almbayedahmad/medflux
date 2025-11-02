@@ -26,4 +26,3 @@ properties:
         type: integer
       blocks_thr:
         type: integer
-

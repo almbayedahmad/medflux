@@ -399,5 +399,3 @@ __all__ = [
     "process_readers_pdf_document",
     "process_readers_ocr_image",
 ]
-
-

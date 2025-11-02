@@ -1,0 +1,27 @@
+# Default owner(s) for all files
+* @almbayedahmad
+
+# Backend
+medflux_backend/ @almbayedahmad
+medflux_backend/**/tests/ @almbayedahmad
+
+# Docs and standards
+Agent_Standard/ @almbayedahmad
+README.md @almbayedahmad
+CONTRIBUTING.md @almbayedahmad
+
+# CI and tooling
+.github/ @almbayedahmad
+scripts/ @almbayedahmad
+.pre-commit-config.yaml @almbayedahmad
+.gitignore @almbayedahmad
+requirements.txt @almbayedahmad
+
+# Markdown docs
+**/*.md @almbayedahmad
+
+# Optional: replace with your teams and remove these comments
+# medflux_backend/ @org/backend-team
+# .github/ @org/devops-team
+# scripts/ @org/devtools-team
+# docs/ @org/docs-team

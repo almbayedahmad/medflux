@@ -22,4 +22,3 @@ def connect_readers_config_connector(stage_name: str = _STAGE_NAME) -> Dict[str,
             return yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
 
     raise FileNotFoundError(f"No configuration file found for stage '{stage_name}' in {config_dir}")
-

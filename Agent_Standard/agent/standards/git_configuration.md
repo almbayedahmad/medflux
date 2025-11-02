@@ -8,5 +8,3 @@ origin  https://github.com/almbayedahmad/medflux.git (push)
 `
 
 Use the standard Git workflow (git status, git commit, git push) from the repository root.
-
-

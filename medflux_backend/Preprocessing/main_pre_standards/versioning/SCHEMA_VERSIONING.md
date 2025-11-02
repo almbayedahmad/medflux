@@ -96,15 +96,15 @@ def migrate_schema_v1_to_v2(data):
     # Handle breaking changes
     if 'old_field' in data:
         data['new_field'] = data.pop('old_field')
-    
+
     # Handle type changes
     if isinstance(data.get('field'), str):
         data['field'] = int(data['field'])
-    
+
     # Handle structure changes
     if 'nested' in data:
         data['flat'] = data.pop('nested')
-    
+
     return data
 ```
 
@@ -116,11 +116,11 @@ def validate_schema_v2(data):
     for field in required_fields:
         if field not in data:
             raise ValueError(f"Missing required field: {field}")
-    
+
     # Type validation
     if not isinstance(data.get('field'), int):
         raise TypeError("Field must be integer")
-    
+
     return True
 ```
 

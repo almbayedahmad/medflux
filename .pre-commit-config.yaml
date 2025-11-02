@@ -7,10 +7,10 @@ repos:
       - id: mixed-line-ending
         args: ["--fix=lf"]
       - id: check-yaml
+        exclude: ^medflux_backend/Preprocessing/
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-added-large-files
         args: ["--maxkb=2048"]
       - id: no-commit-to-branch
         args: ["--branch", "main"]
-

@@ -30,4 +30,3 @@ What Hooks Enforce
 CI Workflow
 - GitHub Actions runs pre‑commit and a forbidden‑paths check on every push/PR.
 - CI fails if files under local OS folders (e.g., `OneDrive/`) or `outputs/` are tracked.
-

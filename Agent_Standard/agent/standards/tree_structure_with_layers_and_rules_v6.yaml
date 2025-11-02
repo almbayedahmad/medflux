@@ -2,8 +2,8 @@ meta:
   version: 6
   id: tree_structure_comprehensive
   updated_at: '2025-01-15T13:00:00Z'
-  notes: Comprehensive architecture standard covering all folder structures, naming conventions, 
-    pipeline architecture, cross-phase code classification, and migration strategies for both 
+  notes: Comprehensive architecture standard covering all folder structures, naming conventions,
+    pipeline architecture, cross-phase code classification, and migration strategies for both
     existing and new code. Includes complete decision trees and validation rules.
 
 structural_evolution:
@@ -37,14 +37,14 @@ tree_structure:
       - "Standardized structure for consistency and maintainability"
       - "Pure functions preferred for testability"
       - "Configuration-driven behavior over hardcoded values"
-    
+
     layer_architecture:
       phase_layer:
         description: "Code specific to a single phase lives INSIDE that phase directory"
         folders: ["phase_XX_<stage>/core_functions/", "phase_XX_<stage>/pipeline_workflow/", "phase_XX_<stage>/schemas/", "phase_XX_<stage>/tests/"]
         decision_question: "Will this code be reused by more than one phase?"
         if_no: "Place in phase-specific folder"
-      
+
       main_layer:
         description: "Code reused across MULTIPLE phases lives in global Preprocessing layer"
         folders: ["Preprocessing/main_pre_helpers/", "Preprocessing/main_pre_schemas/", "Preprocessing/main_pre_pipeline/", "Preprocessing/main_pre_tests/"]
@@ -54,7 +54,7 @@ tree_structure:
   # === CROSS-PHASE CODE CLASSIFICATION ===
   cross_phase_code_classification:
     principle: "Any code used by more than one phase belongs in main folders, organized by purpose and action"
-    
+
     main_folder_structure:
       main_pre_helpers:
         purpose: "Reusable utility functions across phases"
@@ -71,7 +71,7 @@ tree_structure:
           - "No business logic"
           - "No external dependencies"
           - "Stateless operations"
-      
+
       main_pre_pipeline:
         purpose: "Multi-phase orchestration and coordination"
         naming_pattern: "<purpose>_pipeline.py"
@@ -86,7 +86,7 @@ tree_structure:
           - "Handle cross-phase errors"
           - "Manage overall pipeline state"
           - "Provide unified CLI interface"
-      
+
       main_pre_schemas:
         purpose: "Shared data structures and contracts"
         naming_pattern: "<entity>_schema.py"
@@ -100,7 +100,7 @@ tree_structure:
           - "Validate data structures"
           - "Provide type definitions"
           - "Ensure consistency across phases"
-      
+
       main_pre_config:
         purpose: "Global configuration and rules"
         naming_pattern: "<topic>_config.yaml"
@@ -114,7 +114,7 @@ tree_structure:
           - "Configure cross-phase behavior"
           - "Set validation rules"
           - "Manage feature flags"
-      
+
       main_pre_output:
         purpose: "Cross-phase output management and routing"
         naming_pattern: "<functionality>_router.py"
@@ -127,7 +127,7 @@ tree_structure:
           - "Route outputs to correct locations"
           - "Aggregate results from multiple phases"
           - "Handle output formatting"
-      
+
       main_pre_tests:
         purpose: "Cross-phase integration and system tests"
         naming_pattern: "test_<topic>.py"
@@ -141,7 +141,7 @@ tree_structure:
           - "Validate system contracts"
           - "Test helper functions"
           - "Ensure end-to-end functionality"
-      
+
       main_pre_samples:
         purpose: "Sample data and test files"
         naming_pattern: "<type>_samples/"
@@ -155,7 +155,7 @@ tree_structure:
           - "Support development and testing"
           - "Enable reproducible testing"
           - "Document expected formats"
-      
+
       main_pre_standards:
         purpose: "Project-wide standards, policies, and development guidelines"
         location: "Preprocessing/main_pre_standards/"
@@ -205,7 +205,7 @@ tree_structure:
         - "Call core functions"
         - "Save outputs"
         - "Handle phase-level errors"
-    
+
     multi_phase_pipelines:
       location: "Preprocessing/main_pre_pipeline/"
       naming_pattern: "<purpose>_pipeline.py"
@@ -297,7 +297,7 @@ tree_structure:
       - "🖼 assets"           # Static non-code resources
       - "♻️ external_helpers" # Reusable utilities across phases
       - "🗃 common_files"     # Shared static artifacts
-    
+
     migration_notes:
       core_processors_to_core_functions: "Phases 00-01 use 'core_processors/' - migrate to 'core_functions/' for consistency"
       folder_standardization: "All phases should use identical folder structure"
@@ -314,7 +314,7 @@ tree_structure:
             - "readers_core_ocr.py"
             - "detect_type_core_classifier.py"  # Future migration from core_processors
             - "encoding_core_normalizer.py"      # Future migration from core_processors
-        
+
         pipeline_workflow:
           pattern: "<stage>_pipeline.py"
           description: "Phase orchestration/entry modules"
@@ -322,7 +322,7 @@ tree_structure:
             - "readers_pipeline.py"
             - "detect_type_pipeline.py"
             - "encoding_pipeline.py"
-        
+
         connecters:
           pattern: "<stage>_connector_<type>.py"
           description: "External I/O adapters"
@@ -330,7 +330,7 @@ tree_structure:
             - "readers_connector_config.py"
             - "readers_connector_upstream.py"
             - "detect_type_config_connector.py"
-        
+
         schemas:
           pattern: "<stage>_schema_<type>.py"
           description: "Phase-scoped type definitions and schemas"
@@ -340,7 +340,7 @@ tree_structure:
             - "readers_schema_models.py"     # Runtime models
             - "readers_schema_options.py"    # Runtime options
             - "readers_schema_settings.py"   # Runtime settings
-        
+
         tests:
           pattern: "test_<stage>_<module>.py"
           description: "Tests mirroring target modules"
@@ -348,14 +348,14 @@ tree_structure:
             - "test_readers_core_pdf.py"
             - "test_detect_type_pipeline.py"
             - "test_encoding_config.py"
-        
+
         internal_helpers:
           pattern: "<stage>_helper_<topic>.py"
           description: "Local utilities"
           examples:
             - "readers_helper_textnorm.py"
             - "detect_type_detection_helper.py"
-      
+
       main_layer:
         helpers:
           pattern: "main_pre_helpers_<topic>.py"
@@ -364,7 +364,7 @@ tree_structure:
             - "main_pre_helpers_lang.py"
             - "main_pre_helpers_num.py"
             - "main_pre_helpers_logger.py"
-        
+
         pipelines:
           pattern: "<purpose>_pipeline.py"
           description: "Multi-phase pipeline orchestration"
@@ -372,14 +372,14 @@ tree_structure:
             - "preprocessing_chain.py"
             - "detect_and_read.py"
             - "smoke_test_pipeline.py"
-        
+
         schemas:
           pattern: "<entity>_schema.py"
           description: "Global schemas shared by multiple phases"
           examples:
             - "document_meta_schema.py"
             - "stage_contract_schema.py"
-        
+
         tests:
           pattern: "test_<topic>.py"
           description: "Global tests for cross-phase helpers"
@@ -396,14 +396,14 @@ tree_structure:
           - "compute_readers_table_bbox"
           - "record_readers_table_candidate"
           - "process_detect_type_classifier"  # Current pattern
-      
+
       main_functions:
         pattern: "<verb>_main_pre_<topic>"
         description: "Cross-phase utility functions"
         examples:
           - "compute_main_pre_helpers_lang"
           - "process_main_pre_helpers_image"
-      
+
       pipeline_functions:
         single_phase:
           pattern: "run_<stage>_pipeline"
@@ -664,25 +664,25 @@ tree_structure:
         files: ["detect_type_classifier_process.py"]
         target: "core_functions/"
         new_naming: "detect_type_core_classifier.py"
-      
+
       phase_01_encoding:
         folder: "core_processors/"  # Needs migration
         files: ["encoding_normalization_process.py"]
         target: "core_functions/"
         new_naming: "encoding_core_normalizer.py"
-      
+
       phase_02_readers:
         folder: "core_functions/"  # Already correct
         files: ["readers_core_*.py"]
         status: "COMPLIANT"
-    
+
     migration_plan:
       step_1: "Rename core_processors/ to core_functions/ in phases 00-01"
       step_2: "Update file names to follow <stage>_core_<functionality>.py pattern"
       step_3: "Update imports and references"
       step_4: "Update tests to match new naming"
       step_5: "Validate all phases follow unified structure"
-    
+
     backward_compatibility:
       note: "Maintain backward compatibility during migration"
       approach: "Gradual migration with deprecation warnings"
@@ -697,7 +697,7 @@ tree_structure:
         - "collapse_doc_lang(doc_share: Dict[str, float]) -> str"
         - "tokenise_langs(text: str) -> Dict[str, int]"
       used_by: ["phase_01_encoding", "phase_02_readers", "phase_08_heavy_normalization"]
-    
+
     orchestration:
       file: "preprocessing_chain.py"
       purpose: "Multi-phase pipeline orchestration"
@@ -706,7 +706,7 @@ tree_structure:
         - "_resolve_inputs(inputs: Sequence[str]) -> List[str]"
         - "_run_phase_sequence()"
       coordinates: ["phase_00_detect_type", "phase_01_encoding", "phase_02_readers"]
-    
+
     output_management:
       file: "output_router.py"
       purpose: "Cross-phase output directory management"
@@ -715,7 +715,7 @@ tree_structure:
         - "get_stage_output_dir(stage: str) -> Path"
         - "get_all_phases_dir() -> Path"
       manages: ["All phase outputs", "Smoke test results", "Aggregated results"]
-    
+
     configuration:
       file: "preprocessing_rules.yaml"
       purpose: "Global preprocessing configuration"
@@ -736,11 +736,11 @@ tree_structure:
       step_5: "Add tests and documentation"
       step_6: "Validate against structure rules"
       step_7: "Test phase integration with pipeline"
-    
+
     creating_pipeline:
       single_phase: "Place in phase_XX_<stage>/pipeline_workflow/ as <stage>_pipeline.py"
       multi_phase: "Place in Preprocessing/main_pre_pipeline/ as <purpose>_pipeline.py"
-    
+
     creating_cross_phase_code:
       utility_functions: "Place in main_pre_helpers/ as main_pre_helpers_<topic>.py"
       orchestration: "Place in main_pre_pipeline/ as <purpose>_pipeline.py"
@@ -760,21 +760,21 @@ tree_structure:
       - "Creating single-phase pipelines in main_pre_pipeline/"
       - "Creating multi-phase pipelines in phase folders"
       - "Using 'core_processors' instead of 'core_functions'"
-    
+
     naming_mistakes:
       - "Using wrong case (OCR vs ocr)"
       - "Missing stage prefix in file names"
       - "Using forbidden terms like 'load' or 'loader'"
       - "Inconsistent naming between phase and main layers"
       - "Wrong naming pattern for cross-phase code"
-    
+
     documentation_issues:
       - "Missing required documentation files"
       - "Not following documentation conventions"
       - "Outdated documentation after code changes"
       - "Missing docstrings in functions"
       - "Missing cross-phase integration notes"
-    
+
     testing_problems:
       - "Tests not mirroring module structure"
       - "Missing test coverage for core functions"
@@ -809,7 +809,7 @@ tree_structure:
         - "No forbidden terms in code"
         - "File names match regex patterns"
         - "Integration tests pass"
-    
+
     cross_phase_code_creation:
       structure:
         - "Placed in correct main folder"
@@ -829,28 +829,28 @@ tree_structure:
       - "Must have comprehensive docstrings"
       - "Must have unit tests"
       - "Must be stateless"
-    
+
     orchestration:
       - "Must handle phase failures gracefully"
       - "Must provide clear error messages"
       - "Must support configuration overrides"
       - "Must have integration tests"
       - "Must document phase dependencies"
-    
+
     data_structures:
       - "Must be versioned"
       - "Must have validation logic"
       - "Must be backward compatible"
       - "Must have migration paths"
       - "Must be well documented"
-    
+
     configuration:
       - "Must be validated on load"
       - "Must have default values"
       - "Must support environment overrides"
       - "Must be documented"
       - "Must be versioned"
-    
+
     output_management:
       - "Must handle concurrent access"
       - "Must provide atomic operations"
@@ -861,7 +861,7 @@ tree_structure:
   # === QUICK REFERENCE FOR AGENTS ===
   agent_quick_reference:
     decision_question: "Is this code used by more than one phase?"
-    
+
     if_yes_cross_phase:
       utility_functions: "main_pre_helpers/main_pre_helpers_<topic>.py"
       orchestration: "main_pre_pipeline/<purpose>_pipeline.py"
@@ -870,13 +870,13 @@ tree_structure:
       output_management: "main_pre_output/<functionality>_router.py"
       testing: "main_pre_tests/test_<topic>.py"
       sample_data: "main_pre_samples/<type>_samples/"
-    
+
     if_no_phase_specific:
       core_functions: "phase_XX_<stage>/core_functions/<stage>_core_<functionality>.py"
       pipeline: "phase_XX_<stage>/pipeline_workflow/<stage>_pipeline.py"
       schemas: "phase_XX_<stage>/schemas/<stage>_schema_<type>.py"
       tests: "phase_XX_<stage>/tests/test_<stage>_<module>.py"
-    
+
     naming_patterns:
       cross_phase_helpers: "main_pre_helpers_<topic>.py"
       cross_phase_pipelines: "<purpose>_pipeline.py"

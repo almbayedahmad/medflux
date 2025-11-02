@@ -17,10 +17,10 @@ from datetime import datetime
 
 def create_directory_structure(phase_path: Path) -> None:
     """Create the required directory structure for a new phase."""
-    
+
     directories = [
         "config",
-        "pipeline_workflow", 
+        "pipeline_workflow",
         "connecters",
         "core_functions",
         "schemas",
@@ -33,7 +33,7 @@ def create_directory_structure(phase_path: Path) -> None:
         "common_files/policies",
         "common_files/others"
     ]
-    
+
     for directory in directories:
         dir_path = phase_path / directory
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -42,19 +42,19 @@ def create_directory_structure(phase_path: Path) -> None:
 
 def create_init_files(phase_path: Path, phase_name: str) -> None:
     """Create __init__.py files for Python packages."""
-    
+
     init_dirs = [
         "",
         "config",
         "pipeline_workflow",
-        "connecters", 
+        "connecters",
         "core_functions",
         "schemas",
         "outputs",
         "internal_helpers",
         "tests"
     ]
-    
+
     for init_dir in init_dirs:
         init_path = phase_path / init_dir / "__init__.py"
         init_path.write_text(f'"""Package initialization for {phase_name}."""\n')
@@ -63,7 +63,7 @@ def create_init_files(phase_path: Path, phase_name: str) -> None:
 
 def create_schema_files(phase_path: Path, phase_name: str, stage_name: str) -> None:
     """Create schema files for the phase."""
-    
+
     # Create types schema
     types_content = f'''"""Type definitions for {stage_name} phase."""
 
@@ -84,7 +84,7 @@ class {stage_name.title()}Config(TypedDict):
     io: Dict[str, Any]
     features: Dict[str, Any]
 '''
-    
+
     schema_path = phase_path / "schemas" / f"{stage_name}_schema_types.py"
     schema_path.write_text(types_content)
     print(f"Created: {schema_path}")
@@ -92,7 +92,7 @@ class {stage_name.title()}Config(TypedDict):
 
 def create_core_function(phase_path: Path, phase_name: str, stage_name: str) -> None:
     """Create core function file."""
-    
+
     core_content = f'''"""Core processing logic for {stage_name} phase."""
 
 from typing import List, Dict, Any
@@ -101,23 +101,23 @@ from ..schemas.{stage_name}_schema_types import {stage_name.title()}Input, {stag
 
 def process_{stage_name}_items(items: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Process items through {stage_name} phase.
-    
+
     Args:
         items: List of input items to process
-        
+
     Returns:
         Dictionary containing processed results and statistics
     """
     # TODO: Implement core processing logic
     result = {{"processed_items": len(items), "status": "success"}}
     stats = {{"items_processed": len(items), "processing_time": 0.0}}
-    
+
     return {{
         "unified_document": result,
         "stage_stats": stats
     }}
 '''
-    
+
     core_path = phase_path / "core_functions" / f"{stage_name}_core_process.py"
     core_path.write_text(core_content)
     print(f"Created: {core_path}")
@@ -125,7 +125,7 @@ def process_{stage_name}_items(items: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def create_pipeline_workflow(phase_path: Path, phase_name: str, stage_name: str) -> None:
     """Create pipeline workflow file."""
-    
+
     pipeline_content = f'''"""Pipeline orchestration for {stage_name} phase."""
 
 from typing import List, Dict, Any
@@ -138,19 +138,19 @@ def run_{stage_name}_pipeline(
     options_config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Main entry point for {stage_name} pipeline.
-    
+
     Args:
         generic_items: Input items to process
         io_config: I/O configuration
         options_config: Processing options
-        
+
     Returns:
         Dictionary containing pipeline results
     """
     # TODO: Implement pipeline orchestration
     return process_{stage_name}_items(generic_items)
 '''
-    
+
     pipeline_path = phase_path / "pipeline_workflow" / f"{stage_name}_pipeline.py"
     pipeline_path.write_text(pipeline_content)
     print(f"Created: {pipeline_path}")
@@ -158,7 +158,7 @@ def run_{stage_name}_pipeline(
 
 def create_test_file(phase_path: Path, phase_name: str, stage_name: str) -> None:
     """Create test file."""
-    
+
     test_content = f'''"""Tests for {stage_name} core functions."""
 
 import pytest
@@ -172,17 +172,17 @@ def test_process_{stage_name}_items():
         {{"id": "test_1", "data": "sample_data"}},
         {{"id": "test_2", "data": "another_sample"}}
     ]
-    
+
     # Run processing
     result = process_{stage_name}_items(test_items)
-    
+
     # Assertions
     assert "unified_document" in result
     assert "stage_stats" in result
     assert result["stage_stats"]["items_processed"] == 2
     assert result["unified_document"]["status"] == "success"
 '''
-    
+
     test_path = phase_path / "tests" / f"test_{stage_name}_core.py"
     test_path.write_text(test_content)
     print(f"Created: {test_path}")
@@ -190,7 +190,7 @@ def test_process_{stage_name}_items():
 
 def create_common_files(phase_path: Path, phase_name: str, stage_name: str) -> None:
     """Create essential common files."""
-    
+
     # README.md
     readme_content = f'''# {stage_name.title()} Stage ({phase_name})
 
@@ -230,11 +230,11 @@ Entries are appended automatically by the documentation updater after each chang
 - Why it was needed: New phase created for {stage_name} processing.
 - Result: Phase structure created with basic functionality.
 '''
-    
+
     readme_path = phase_path / "common_files" / "docs" / "README.md"
     readme_path.write_text(readme_content)
     print(f"Created: {readme_path}")
-    
+
     # CHANGELOG.md
     changelog_content = f'''# Changelog
 
@@ -248,11 +248,11 @@ All notable changes to the {stage_name} stage will be documented in this file.
 - Test framework
 - Documentation templates
 '''
-    
+
     changelog_path = phase_path / "common_files" / "docs" / "CHANGELOG.md"
     changelog_path.write_text(changelog_content)
     print(f"Created: {changelog_path}")
-    
+
     # Makefile
     makefile_content = f'''# {stage_name.title()} Stage Makefile
 
@@ -279,11 +279,11 @@ clean:
 \tfind . -type f -name "*.pyc" -delete
 \tfind . -type d -name "__pycache__" -delete
 '''
-    
+
     makefile_path = phase_path / "common_files" / "git" / "Makefile"
     makefile_path.write_text(makefile_content)
     print(f"Created: {makefile_path}")
-    
+
     # .gitmessage
     gitmessage_content = f'''# {stage_name.title()} Stage Commit Message
 
@@ -292,17 +292,17 @@ clean:
 # Subject: Brief description of changes
 
 # Body: Detailed description of changes
-# 
+#
 # Footer: Breaking changes, issues fixed, etc.
 
 # Example:
 # feat({stage_name}): add new processing feature
-# 
+#
 # Add new feature to process additional file types
-# 
+#
 # Closes #123
 '''
-    
+
     gitmessage_path = phase_path / "common_files" / "git" / ".gitmessage"
     gitmessage_path.write_text(gitmessage_content)
     print(f"Created: {gitmessage_path}")
@@ -310,7 +310,7 @@ clean:
 
 def create_config_files(phase_path: Path, phase_name: str, stage_name: str) -> None:
     """Create configuration files."""
-    
+
     # ENV.sample
     env_content = f'''# {stage_name.title()} Stage Environment Variables
 
@@ -334,53 +334,53 @@ def create_config_files(phase_path: Path, phase_name: str, stage_name: str) -> N
 {stage_name.upper()}_OCR_LOW_CONF=75.0
 {stage_name.upper()}_SUSPICIOUS_TEXT_CHARS_MIN=40
 '''
-    
+
     env_path = phase_path / "common_files" / "configs" / "ENV.sample"
     env_path.write_text(env_content)
     print(f"Created: {env_path}")
-    
+
     # LOGGING_BASE.yaml
     logging_content = f'''# {stage_name.title()} Stage Logging Configuration
 
 logging:
   version: 1
   disable_existing_loggers: false
-  
+
   formatters:
     standard:
       format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     detailed:
       format: '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
-  
+
   handlers:
     console:
       class: logging.StreamHandler
       level: INFO
       formatter: standard
       stream: ext://sys.stdout
-    
+
     file:
       class: logging.FileHandler
       level: DEBUG
       formatter: detailed
       filename: logs/{stage_name}.log
       mode: a
-  
+
   loggers:
     {phase_name}:
       level: DEBUG
       handlers: [console, file]
       propagate: false
-  
+
   root:
     level: INFO
     handlers: [console]
 '''
-    
+
     logging_path = phase_path / "common_files" / "configs" / "LOGGING_BASE.yaml"
     logging_path.write_text(logging_content)
     print(f"Created: {logging_path}")
-    
+
     # SETTINGS_BASE.yaml
     settings_content = f'''# {stage_name.title()} Stage Settings
 
@@ -388,12 +388,12 @@ stage:
   name: "{stage_name}"
   version: "1.0.0"
   description: "Processing stage for {stage_name}"
-  
+
   inputs:
     - name: "generic_items"
       type: "array"
       description: "Generic input collection"
-  
+
   outputs:
     - name: "unified_document"
       type: "json"
@@ -425,7 +425,7 @@ thresholds:
   ocr_low_conf: 75.0
   suspicious_text_chars_min: 40
 '''
-    
+
     settings_path = phase_path / "common_files" / "configs" / "SETTINGS_BASE.yaml"
     settings_path.write_text(settings_content)
     print(f"Created: {settings_path}")
@@ -433,40 +433,40 @@ thresholds:
 
 def main():
     """Main function to generate a new phase."""
-    
+
     parser = argparse.ArgumentParser(description="Generate a new phase")
     parser.add_argument("phase_number", type=int, help="Phase number (e.g., 03)")
     parser.add_argument("stage_name", help="Stage name (e.g., segment)")
     parser.add_argument("--output-dir", default=".", help="Output directory")
-    
+
     args = parser.parse_args()
-    
+
     # Create phase name
     phase_name = f"phase_{args.phase_number:02d}_{args.stage_name}"
     stage_name = args.stage_name
-    
+
     # Create phase path
     phase_path = Path(args.output_dir) / phase_name
-    
+
     print(f"Generating phase: {phase_name}")
     print(f"Output directory: {phase_path}")
-    
+
     # Create directory structure
     create_directory_structure(phase_path)
-    
+
     # Create Python package files
     create_init_files(phase_path, phase_name)
-    
+
     # Create core files
     create_schema_files(phase_path, phase_name, stage_name)
     create_core_function(phase_path, phase_name, stage_name)
     create_pipeline_workflow(phase_path, phase_name, stage_name)
     create_test_file(phase_path, phase_name, stage_name)
-    
+
     # Create common files
     create_common_files(phase_path, phase_name, stage_name)
     create_config_files(phase_path, phase_name, stage_name)
-    
+
     print(f"\nPhase {phase_name} generated successfully!")
     print(f"Next steps:")
     print(f"1. cd {phase_path}")

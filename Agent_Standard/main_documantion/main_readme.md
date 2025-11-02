@@ -4,7 +4,7 @@ This directory groups the automated tooling used by the project.
 
 ## Sub-directories
 - **automation/**: Change pipeline automation and documentation updates
-- **standards/**: Consolidated standards and workflow instructions  
+- **standards/**: Consolidated standards and workflow instructions
 - **tools/stage_builder_op/**: The stage builder CLI and its template bundle
 
 ## Managed Stages

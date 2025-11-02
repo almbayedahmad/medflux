@@ -212,4 +212,3 @@ LightTableDetector._compute_confidence = LightTableDetector.compute_readers_ligh
 LightTableDetector._compute_cues = LightTableDetector.compute_readers_light_cues
 LightTableDetector._bbox_or_default = LightTableDetector.compute_readers_bbox_or_default
 LightTableDetector._bbox_intersects = LightTableDetector.check_readers_bbox_intersects
-

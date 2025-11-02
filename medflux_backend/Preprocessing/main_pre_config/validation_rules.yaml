@@ -4,7 +4,7 @@ meta:
 
 validation:
   phase_dir_pattern: "phase_[0-9]{2}_[a-z0-9_]+$"
-  required_subfolders: 
+  required_subfolders:
     - config
     - pipeline_workflow
     - connecters

@@ -951,13 +951,3 @@ def process_readers_enrich_summary_on_disk(outdir: Path, opts: ReaderOptions):
     except Exception:
         pass
 # === end auto-added enrichment ===
-
-
-
-
-
-
-
-
-
-

@@ -29,4 +29,3 @@ make validate STAGE={{ stage_dir_name }}
 
 ## Change Log
 Entries are appended automatically by the documentation updater after each change. Replace the TODO text in each entry with real context when you review the update.
-
