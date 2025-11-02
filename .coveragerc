@@ -6,7 +6,6 @@ source =
 omit =
     */tests/*
     backend/Preprocessing/*
-    backend/api/middleware/request_log.py
     core/exec/*
     core/monitoring/metrics.py
     core/monitoring/__init__.py
