@@ -6,13 +6,15 @@
   smtp_require_tls: true
 
 route:
-  receiver: 'email'
+  # Email temporarily disabled: route to blackhole receiver
+  receiver: 'blackhole'
   group_by: ['alertname']
   group_wait: 10s
   group_interval: 1m
   repeat_interval: 4h
 
 receivers:
+  - name: 'blackhole'
   - name: 'email'
     email_configs:
       - to: 'bruecke.zum.erfolg@gmail.com'

@@ -16,19 +16,22 @@ route:
       matchers:
         - severity = "critical"
       continue: true
-    - receiver: 'email-critical'
+    # Email temporarily disabled: route to blackhole instead of email
+    - receiver: 'blackhole'
       matchers:
         - severity = "critical"
     - receiver: 'slack-warning'
       matchers:
         - severity = "warning"
       continue: true
-    - receiver: 'email-warning'
+    # Email temporarily disabled: route to blackhole instead of email
+    - receiver: 'blackhole'
       matchers:
         - severity = "warning"
 
 receivers:
   - name: 'default'
+  - name: 'blackhole'
   - name: 'slack-warning'
     slack_configs:
       - api_url: ${SLACK_API_URL}
