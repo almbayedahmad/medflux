@@ -15,10 +15,6 @@ omit =
     core/logging/uncaught.py
     core/validation/engine.py
     core/validation/decorators.py
-    core/validation/loader.py
-    core/validation/policy.py
-    core/validation/registry.py
-    core/validation/formats.py
 
 [report]
 exclude_lines =
