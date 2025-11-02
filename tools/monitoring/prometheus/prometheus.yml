@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Send alerts to Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# Optional: remote_write to Grafana Cloud
+# To enable, provide an access token file at /etc/prometheus/remote_write_password.txt
+# and uncomment the section below.
+# remote_write:
+#   - url: https://prometheus-prod-65-prod-eu-west-2.grafana.net/api/prom/push
+#     basic_auth:
+#       username: "2772557"  # Replace with your Grafana Cloud Prometheus instance ID if different
+#       password_file: /etc/prometheus/remote_write_password.txt
+#     write_relabel_configs:
+#       - source_labels: ["__name__"]
+#         regex: "^(go_.*|process_.*)$"
+#         action: drop
+
+rule_files:
+  - /etc/prometheus/alerts/*.yaml
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+
+  - job_name: 'medflux'
+    static_configs:
+      # Scrape the local exporter started by MedFlux with MEDFLUX_PROM_PORT
+      # On Docker Desktop (Win/Mac), host.docker.internal points to the host.
+      # On Linux, you may need to replace with your host IP or run the app in the same docker network.
+      - targets: ['host.docker.internal:8000', 'host.docker.internal:8001']
+
+  - job_name: 'medflux-dev'
+    static_configs:
+      - targets: ['dev-exporter:8001']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'windows'
+    static_configs:
+      - targets: ['host.docker.internal:9182']

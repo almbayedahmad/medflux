@@ -1,0 +1,39 @@
+{
+  "title": "MedFlux - Home",
+  "uid": "medflux-home",
+  "schemaVersion": 39,
+  "refresh": "",
+  "panels": [
+    {
+      "type": "text",
+      "title": "Welcome",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 6},
+      "options": {
+        "mode": "markdown",
+        "content": "# MedFlux Observability\n\n- Start the stack: `docker compose -f tools/monitoring/docker-compose.yml up -d`\n- Use the quick links below to jump to common dashboards and Explore.\n- The default landing page is Monitoring Overview."
+      }
+    },
+    {
+      "type": "text",
+      "title": "Quick Links",
+      "gridPos": {"x": 0, "y": 6, "w": 24, "h": 8},
+      "options": {
+        "mode": "markdown",
+        "content": "- [Monitoring Overview](/d/medflux-overview)\\n- [Tempo Explore](/explore?left=%7B%22datasource%22:%22Tempo%22%7D)\\n- [Logs Overview](/d/medflux-logs)\\n- [Validation Health](/d/medflux-validation)\\n- [API Overview](/d/medflux-api)\\n- [SLO Overview](/d/medflux-slo)"
+      }
+    },
+    {
+      "type": "dashlist",
+      "title": "MedFlux Dashboards",
+      "gridPos": {"x": 0, "y": 14, "w": 24, "h": 18},
+      "options": {
+        "maxItems": 20,
+        "query": "folder:MedFlux",
+        "showHeadings": true,
+        "onlyDashboards": true
+      }
+    }
+  ],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

@@ -1,0 +1,39 @@
+name: Python Setup
+description: Set up Python with pip cache and install requirements
+inputs:
+  python-version:
+    description: Python version, e.g. '3.12'
+    required: false
+    default: '3.12'
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+
+    - name: Upgrade pip
+      shell: bash
+      run: python -m pip install --upgrade pip
+
+    - name: Install requirements (if present)
+      shell: bash
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt || true; fi
+        # Ensure pytest and coverage are available for test jobs
+        python - <<'PY'
+import importlib, sys
+missing = []
+for m in ("pytest","pytest_cov"):
+  try:
+    importlib.import_module(m)
+  except Exception:
+    missing.append(m.replace('_cov','-cov'))
+if missing:
+  print("Installing:", missing)
+  import subprocess
+  subprocess.check_call([sys.executable,'-m','pip','install',*missing])
+PY

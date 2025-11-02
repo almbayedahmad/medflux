@@ -1,0 +1,12 @@
+groups:
+  - name: medflux-performance
+    rules:
+      - alert: MedfluxValidationLatencyHigh
+        expr: |
+          histogram_quantile(0.95, sum(rate(medflux_validation_duration_ms_bucket[10m])) by (le, phase, kind)) > 500
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Validation p95 latency high (>500ms)"
+          description: "Phase {{ $labels.phase }} {{ $labels.kind }} has p95 latency above 500ms for 10 minutes."

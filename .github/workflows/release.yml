@@ -1,0 +1,41 @@
+name: Release (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Type of bump"
+        required: true
+        default: "patch"
+        type: choice
+        options: [major, minor, patch]
+
+jobs:
+  bump-and-release:
+    permissions: { contents: write }
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install deps (strict)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+      - name: Bump VERSION
+        run: |
+          python tools/versioning/bump_version.py "${{ inputs.bump }}"
+          NEWV=$(cat core/versioning/VERSION)
+          echo "NEW_VERSION=$NEWV" >> $GITHUB_ENV
+      - name: Commit bump and tag
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(release): bump version to ${{ env.NEW_VERSION }}"
+          file_pattern: core/versioning/VERSION
+          tagging_message: "v${{ env.NEW_VERSION }}"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ env.NEW_VERSION }}"
+          name: "v${{ env.NEW_VERSION }}"
+          generate_release_notes: true

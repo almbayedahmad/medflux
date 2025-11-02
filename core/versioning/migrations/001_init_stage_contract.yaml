@@ -1,0 +1,9 @@
+# Migration 001: Initialize stage_contract schema
+id: 001_init_stage_contract
+schema: stage_contract
+from: null
+to: 1.0.0
+date: 2025-10-26
+steps:
+  - action: init
+    description: Initialize base contract schema

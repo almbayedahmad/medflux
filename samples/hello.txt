@@ -1,0 +1,3 @@
+This is a small sample text file for smoke testing.
+It contains a few words spread across lines.
+123, csv-like content, but still text.

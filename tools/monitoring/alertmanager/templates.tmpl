@@ -1,0 +1,26 @@
+{{ define "medflux.title" }}
+{{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}MedFlux Alert: {{ .CommonLabels.alertname }}{{ end }}
+{{ end }}
+
+{{ define "medflux.text" }}
+{{- $graf := env "GRAFANA_URL" -}}
+{{- $prom := env "PROMETHEUS_URL" -}}
+*Alert:* {{ .CommonLabels.alertname }}
+*Severity:* {{ .CommonLabels.severity }}
+*Job:* {{ .CommonLabels.job }}
+*Instance:* {{ .CommonLabels.instance }}
+{{- if .CommonAnnotations.description }}
+*Description:* {{ .CommonAnnotations.description }}
+{{- end }}
+
+{{- range .Alerts }}
+- {{ .Labels.phase }} {{ .Labels.status }} {{ .Annotations.summary }}
+{{- end }}
+
+{{- if $graf }}
+Grafana: {{ $graf }}
+{{- end }}
+{{- if $prom }}
+Prometheus: {{ $prom }}/alerts
+{{- end }}
+{{ end }}

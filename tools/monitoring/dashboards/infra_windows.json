@@ -1,0 +1,68 @@
+{
+  "title": "MedFlux - Infra Overview (Windows)",
+  "uid": "medflux-infra-win",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Install windows_exporter (port 9182): `choco install windows-exporter`.\\n- Prometheus scrapes host.docker.internal:9182 (job: windows).\\n- This dashboard uses windows_* metrics; container panels are omitted on Windows."
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Usage % (avg)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "100 * (1 - avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) by (instance))", "legendFormat": "{{instance}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Used %",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "100 * (1 - (windows_memory_available_bytes / windows_cs_physical_memory_bytes))", "legendFormat": "mem used"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Used % (per volume)",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "100 * (1 - (sum by (volume) (windows_logical_disk_free_bytes{type=\"Fixed\"}) / sum by (volume) (windows_logical_disk_size_bytes{type=\"Fixed\"})))", "legendFormat": "{{volume}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network I/O bytes/s (top 5)",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "topk(5, (sum by (nic) (rate(windows_net_bytes_total[5m])) OR sum by (interface) (rate(windows_net_bytes_total[5m]))))", "legendFormat": "{{nic}}{{interface}}"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "System Uptime (hours)",
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 4},
+      "targets": [
+        {"expr": "windows_system_system_up_time / 3600", "legendFormat": "uptime"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "h"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Prometheus Scrape Duration (windows)",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "sum(scrape_duration_seconds{job=\"windows\"}) by (instance)", "legendFormat": "{{instance}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

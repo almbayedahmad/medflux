@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Document Meta",
+  "type": "object",
+  "properties": {
+    "pages": { "type": "integer", "minimum": 0 },
+    "lang_overall": { "type": ["string", "null"] },
+    "has_ocr": { "type": ["boolean", "null"] }
+  },
+  "additionalProperties": true
+}

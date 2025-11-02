@@ -1,0 +1,74 @@
+{
+  "title": "MedFlux - Flow Overview",
+  "uid": "medflux-flow",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Panels filter to job=\"medflux\" (host metrics). dev-exporter data is under job=\"medflux-dev\".\\n- Use CLI runs and dev exporter to populate; API traffic generator can feed API panels.\\n- Enable OTEL tracing + Tempo for exemplars on histograms."
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Validation Success Ratio (5m)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_validation_ok_total{job=\"medflux\"}[5m])) by (phase) / (sum(rate(medflux_validation_ok_total{job=\"medflux\"}[5m])) by (phase) + sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) by (phase))", "legendFormat": "{{phase}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Validation Duration p95 (ms)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(medflux_validation_duration_ms_bucket{job=\"medflux\"}[5m])) by (le, phase))", "legendFormat": "{{phase}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Phase Runs OK vs Error (5m)",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_phase_runs_total{job=\"medflux\",status=\"ok\"}[5m])) by (phase)", "legendFormat": "ok: {{phase}}"},
+        {"expr": "sum(rate(medflux_phase_runs_total{job=\"medflux\",status=\"error\"}[5m])) by (phase)", "legendFormat": "error: {{phase}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Validation Fail Rate & Burn Rate",
+      "gridPos": {"x": 0, "y": 20, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) by (phase) / (sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) by (phase) + sum(rate(medflux_validation_ok_total{job=\"medflux\"}[5m])) by (phase))", "legendFormat": "fail_rate_5m: {{phase}}"},
+        {"expr": "(sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) by (phase) / (sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) by (phase) + sum(rate(medflux_validation_ok_total{job=\"medflux\"}[5m])) by (phase))) / 0.02", "legendFormat": "burn_5m: {{phase}}"},
+        {"expr": "(sum(rate(medflux_validation_failed_total{job=\"medflux\"}[1h])) by (phase) / (sum(rate(medflux_validation_failed_total{job=\"medflux\"}[1h])) by (phase) + sum(rate(medflux_validation_ok_total{job=\"medflux\"}[1h])) by (phase))) / 0.02", "legendFormat": "burn_1h: {{phase}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}}
+    },
+    {
+      "type": "heatmap",
+      "title": "Phase Step Duration Heatmap (ms)",
+      "gridPos": {"x": 0, "y": 28, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_phase_step_duration_ms_bucket{job=\"medflux\"}[5m])) by (le, phase, step)", "legendFormat": "{{phase}}/{{step}}"}
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Recent Validation Logs (code present)",
+      "gridPos": {"x": 0, "y": 36, "w": 24, "h": 8},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\\\"medflux-logs\\\", code=~\\\".+\\\"}", "refId": "L1"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true}
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

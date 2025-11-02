@@ -1,0 +1,80 @@
+{
+  "title": "MedFlux - API Overview",
+  "uid": "medflux-api",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Start your API and generate load with: `python tools/monitoring/gen_api_traffic.py --base http://localhost:8000 --rate 5`.\\n- medflux_api_* metrics are emitted by the app (and simulated by dev-exporter).\\n- Enable tracing to correlate logs/metrics via trace_id.\\n- Explore logs: [Loki Explore](/explore?orgId=1&left=%7B%22datasource%22:%22Loki%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22%7Bjob%3D%5C%22medflux-logs%5C%22%7D%22%7D%5D%7D) | Explore traces: [Tempo Explore](/explore?orgId=1&left=%7B%22datasource%22:%22Tempo%22,%22queries%22:%5B%7B%22query%22:%22%22%7D%5D%7D)"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by Route (req/s)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_api_requests_total{job=\\\"medflux\\\", route=~\\\"${route:regex}\\\", method=~\\\"${method:regex}\\\"}[5m])) by (route, method)", "legendFormat": "{{route}} {{method}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate 5xx (5m)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_api_requests_total{job=\\\"medflux\\\", status=~\\\"5..\\\", route=~\\\"${route:regex}\\\", method=~\\\"${method:regex}\\\"}[5m])) / sum(rate(medflux_api_requests_total{job=\\\"medflux\\\", route=~\\\"${route:regex}\\\", method=~\\\"${method:regex}\\\"}[5m]))", "legendFormat": "5xx"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p95 (ms) by Route",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(medflux_api_duration_ms_bucket{job=\\\"medflux\\\", route=~\\\"${route:regex}\\\", method=~\\\"${method:regex}\\\"}[5m])) by (le, route, method))", "legendFormat": "{{route}} {{method}}"}
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Logs by Route",
+      "gridPos": {"x": 0, "y": 20, "w": 24, "h": 8},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\\\"medflux-logs\\\", route=~\\\".+\\\"}", "refId": "LR0"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true}
+    },
+    {
+      "type": "logs",
+      "title": "Recent API 5xx Logs",
+      "gridPos": {"x": 0, "y": 28, "w": 24, "h": 8},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\\\"medflux-logs\\\", status=~\\\"5..\\\"}", "refId": "L5"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true}
+    }
+  ],
+  "templating": {"list": [
+    {
+      "name": "route",
+      "type": "query",
+      "label": "Route",
+      "datasource": "Loki",
+      "refresh": 2,
+      "query": "label_values({job=\\\"medflux-logs\\\"}, route)",
+      "current": {"text": "", "value": ""}
+    },
+    {
+      "name": "method",
+      "type": "custom",
+      "label": "Method",
+      "query": "GET,POST,PUT,DELETE",
+      "current": {"text": "GET", "value": "GET"}
+    }
+  ]},
+  "time": {"from": "now-6h", "to": "now"}
+}

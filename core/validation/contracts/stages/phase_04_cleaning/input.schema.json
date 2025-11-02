@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/stages/phase_04_cleaning/input.schema.json",
+  "title": "Cleaning - Input",
+  "type": "object",
+  "required": ["run_id", "items"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1, "format": "run-id"},
+    "items": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string"}}, "additionalProperties": true}}
+  },
+  "additionalProperties": true
+}

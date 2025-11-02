@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/stages/phase_00_detect_type/output.schema.json",
+  "title": "DetectType - Output",
+  "type": "object",
+  "required": ["run_id", "unified_document", "stage_stats", "versioning"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1, "format": "run-id"},
+    "unified_document": {
+      "type": "object",
+      "required": ["stage", "items"],
+      "properties": {
+        "stage": {"const": "detect_type"},
+        "items": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/detect_item"},
+          "minItems": 0
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "items_received": {"type": "integer", "minimum": 0},
+            "items_included": {"type": "integer", "minimum": 0}
+          },
+          "required": ["items_received", "items_included"],
+          "additionalProperties": true
+        },
+        "errors": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": false
+    },
+    "stage_stats": {
+      "type": "object",
+      "required": ["stage", "total_items"],
+      "properties": {
+        "stage": {"const": "detect_type"},
+        "total_items": {"type": "integer", "minimum": 0},
+        "counts": {"type": "object"},
+        "items_received": {"type": "integer", "minimum": 0},
+        "items_included": {"type": "integer", "minimum": 0},
+        "items_skipped": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "versioning": {"$ref": "../../base/base_contract.schema.json#/$defs/versioning"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "detect_item": {
+      "type": "object",
+      "required": ["file_path", "extension", "file_type"],
+      "properties": {
+        "file_path": {"type": "string"},
+        "extension": {"type": "string"},
+        "mime": {"type": ["string", "null"]},
+        "file_type": {"type": "string"},
+        "ocr_recommended": {"type": ["boolean", "null"]},
+        "confidence": {"type": ["number", "null"]},
+        "recommended": {"type": "object"},
+        "details": {"type": "object"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

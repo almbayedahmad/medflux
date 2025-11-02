@@ -1,0 +1,90 @@
+{
+  "title": "MedFlux - Windows System",
+  "uid": "medflux-win-system",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Notes",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Ensure windows_exporter is installed and running on port 9182.\n- For process CPU/memory panels, enable the 'process' collector in windows_exporter."
+      }
+    },
+    {
+      "type": "stat",
+      "title": "CPU Usage %",
+      "gridPos": {"x": 0, "y": 4, "w": 6, "h": 6},
+      "targets": [
+        {"expr": "100 * (1 - avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])))", "legendFormat": "cpu"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal"}
+    },
+    {
+      "type": "stat",
+      "title": "Memory Used %",
+      "gridPos": {"x": 6, "y": 4, "w": 6, "h": 6},
+      "targets": [
+        {"expr": "100 * (1 - avg(windows_memory_available_bytes / windows_cs_physical_memory_bytes))", "legendFormat": "mem"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal"}
+    },
+    {
+      "type": "stat",
+      "title": "Disk Used % (max volume)",
+      "gridPos": {"x": 12, "y": 4, "w": 6, "h": 6},
+      "targets": [
+        {"expr": "max(100 * (1 - (sum by (volume) (windows_logical_disk_free_bytes{type=\"Fixed\"}) / sum by (volume) (windows_logical_disk_size_bytes{type=\"Fixed\"}))))", "legendFormat": "disk"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal"}
+    },
+    {
+      "type": "stat",
+      "title": "Uptime (hours)",
+      "gridPos": {"x": 18, "y": 4, "w": 6, "h": 6},
+      "targets": [
+        {"expr": "avg(windows_system_system_up_time) / 3600", "legendFormat": "uptime"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "h"}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal"}
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 5 Processes by Memory",
+      "gridPos": {"x": 0, "y": 10, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "topk(5, windows_process_working_set_bytes)", "legendFormat": "{{process}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 5 Processes by CPU (5m)",
+      "gridPos": {"x": 12, "y": 10, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "topk(5, rate(windows_process_cpu_time_total[5m]))", "legendFormat": "{{process}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Used % per Volume",
+      "gridPos": {"x": 0, "y": 18, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "100 * (1 - (sum by (volume) (windows_logical_disk_free_bytes{type=\"Fixed\"}) / sum by (volume) (windows_logical_disk_size_bytes{type=\"Fixed\"})))", "legendFormat": "{{volume}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network I/O bytes/s (top 5)",
+      "gridPos": {"x": 12, "y": 18, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "topk(5, (sum by (interface) (rate(windows_net_bytes_total[5m])) OR sum by (nic) (rate(windows_net_bytes_total[5m]))))", "legendFormat": "{{interface}}{{nic}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",`n  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

@@ -1,0 +1,49 @@
+groups:
+  - name: medflux-api
+    rules:
+      - alert: HighApiErrorRate
+        expr: |
+          sum(rate(medflux_api_requests_total{status=~"5.."}[5m]))
+            / sum(rate(medflux_api_requests_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API 5xx error rate"
+          description: "More than 5% of API requests are 5xx over 10m"
+
+      - alert: ApiLatencyHighP95ByRoute
+        expr: |
+          medflux_api_p95_ms > 500
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API p95 latency by route"
+          description: "{{ $labels.route }} {{ $labels.method }} p95 > 500ms for 10m"
+
+  - name: medflux-ocr
+    rules:
+      - alert: OcrLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(medflux_ocr_time_ms_bucket[5m])) by (le)
+          ) > 2000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High OCR p95 latency"
+          description: "OCR p95 time > 2s for 10m"
+
+      - alert: OcrConfidenceLow
+        expr: |
+          (avg_over_time(medflux_ocr_confidence_sum[10m])
+            / avg_over_time(medflux_ocr_confidence_count[10m])) < 60
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low OCR confidence"
+          description: "Average OCR confidence < 60 over 10m"

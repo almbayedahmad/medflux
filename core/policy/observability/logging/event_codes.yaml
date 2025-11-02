@@ -1,0 +1,61 @@
+meta:
+  version: 1
+  id: event_codes
+
+codes:
+  detect_type:
+    warnings:
+      - code: DT-W001
+        message: Unsupported or unknown file extension
+        severity: WARNING
+    errors:
+      - code: DT-E001
+        message: Failed to open input file
+        severity: ERROR
+  readers:
+    warnings:
+      - code: RD-W001
+        message: Low OCR confidence on page
+        severity: WARNING
+      - code: RD-W002
+        message: Table extraction failed, fallback used
+        severity: WARNING
+    errors:
+      - code: RD-E001
+        message: OCR engine failure
+        severity: ERROR
+  encoding:
+    warnings:
+      - code: EN-W001
+        message: Normalization truncated invalid bytes
+        severity: WARNING
+    errors:
+      - code: EN-E001
+        message: Failed to decode input file
+        severity: ERROR
+
+  validation:
+    warnings:
+      - code: VL-W001
+        message: Input validation soft-fail
+        severity: WARNING
+      - code: VL-W002
+        message: Output validation soft-fail
+        severity: WARNING
+      - code: VL-W010
+        message: Output cross-field validation soft-fail
+        severity: WARNING
+    info:
+      - code: VL-I000
+      message: Validation OK
+      severity: INFO
+    errors:
+      - code: VL-E001
+        message: Input validation failed
+        severity: ERROR
+      - code: VL-E002
+        message: Output validation failed
+        severity: ERROR
+      - code: VL-E010
+        message: Output cross-field validation failed
+        severity: ERROR

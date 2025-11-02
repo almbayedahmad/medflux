@@ -1,0 +1,13 @@
+profile: staging
+thresholds:
+  ocr_low_conf: 68
+  ocr_low_text_min_words: 10
+  table_candidate_min_conf: 0.55
+  suspicious_text_chars_min: 180
+  low_conf_pages_ratio_review: 0.15
+  multi_column_left_thr: 0.45
+  multi_column_right_thr: 0.55
+features:
+  tables_mode: detect
+  image_morph_detection: false
+  text_alignment_detection: true

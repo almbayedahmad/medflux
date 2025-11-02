@@ -1,0 +1,41 @@
+groups:
+  - name: medflux-recording
+    interval: 30s
+    rules:
+      # Overall validation p95 (no labels)
+      - record: medflux_validation_p95_ms_overall
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(medflux_validation_duration_ms_bucket[5m])) by (le)
+          )
+
+      # Validation p95 by phase/kind
+      - record: medflux_validation_p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(medflux_validation_duration_ms_bucket[5m])) by (le, phase, kind)
+          )
+
+      # Validation p99 by phase/kind
+      - record: medflux_validation_p99_ms
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(medflux_validation_duration_ms_bucket[5m])) by (le, phase, kind)
+          )
+
+      # Validation fail rate by phase/kind (0..1)
+      - record: medflux_validation_fail_rate
+        expr: |
+          sum by (phase, kind) (rate(medflux_validation_failed_total[5m]))
+          /
+          (
+            sum by (phase, kind) (rate(medflux_validation_failed_total[5m]))
+            + sum by (phase, kind) (rate(medflux_validation_ok_total[5m]))
+          )
+
+      # API p95 latency by route/method
+      - record: medflux_api_p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(medflux_api_duration_ms_bucket[5m])) by (le, route, method)
+          )

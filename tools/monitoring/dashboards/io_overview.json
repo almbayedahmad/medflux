@@ -1,0 +1,35 @@
+{
+  "title": "MedFlux - IO Overview",
+  "uid": "medflux-io",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- I/O durations/errors recorded around stage output writes.\\n- Use CLI runs to populate actual write metrics; dev-exporter simulates docs processed."
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "I/O Duration p95 (ms) by Op/Kind",
+      "gridPos": {"x": 0, "y": 4, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(medflux_io_duration_ms_bucket[5m])) by (le, op, kind))", "legendFormat": "{{op}}/{{kind}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "I/O Errors (5m) by Op/Kind",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_io_errors_total[5m])) by (op, kind)", "legendFormat": "{{op}}/{{kind}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

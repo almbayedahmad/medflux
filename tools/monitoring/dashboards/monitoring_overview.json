@@ -1,0 +1,125 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "uid": "medflux-overview",
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Alerts",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "refId": "A",
+          "expr": "count(ALERTS{alertstate=\"firing\"})"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Prometheus up (targets)",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "refId": "A",
+          "expr": "sum(up)"
+        }
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "Validation p95 (ms)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "refId": "A",
+          "expr": "medflux_validation_p95_ms_overall"
+        }
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "Log lines rate by service",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "refId": "A",
+          "expr": "sum by (service) (rate({service=~\\\".+\\\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "Validation p95 by phase/kind (ms)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "refId": "A",
+          "expr": "medflux_validation_p95_ms",
+          "legendFormat": "{{phase}} {{kind}}"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Recent error logs",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 12},
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "refId": "A",
+          "expr": "{service=~\\\".+\\\"} |~ \"(?i)error\""
+        }
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "API p95 latency by route/method (ms)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "refId": "A",
+          "expr": "medflux_api_p95_ms",
+          "legendFormat": "{{route}} {{method}}"
+        }
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "Validation fail rate by phase/kind",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "refId": "A",
+          "expr": "medflux_validation_fail_rate",
+          "legendFormat": "{{phase}} {{kind}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["medflux", "observability"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Monitoring Overview",
+  "version": 1
+}

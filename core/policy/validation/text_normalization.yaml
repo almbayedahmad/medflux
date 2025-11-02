@@ -1,0 +1,21 @@
+meta:
+  version: 1
+  id: text_normalization_policy
+  updated_at: "{{CREATED_AT}}"
+
+text_normalization:
+  # Target encoding for normalized text files
+  target_encoding: "utf-8"
+
+  # BOM handling for UTF-8-SIG inputs
+  normalize_bom: "remove"   # options: remove|keep
+
+  # Newline normalization policy
+  newline_policy: "lf"       # options: lf|crlf
+
+  # Decoding error handling policy
+  errors: "strict"           # options: strict|replace|ignore
+
+  # File matching and exclusions
+  apply_to_extensions: [".txt", ".csv", ".md", ".log"]
+  exclude_name_regex: "\\.utf8(\\.|$)"

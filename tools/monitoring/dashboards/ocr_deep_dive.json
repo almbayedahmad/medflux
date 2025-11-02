@@ -1,0 +1,43 @@
+{
+  "title": "MedFlux - OCR Deep Dive",
+  "uid": "medflux-ocr",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Readers/OCR metrics appear when OCR runs; dev-exporter emits demo data.\\n- Enable PyMuPDF/PIL/pytesseract for OCR; OpenCV is optional (preprocessing).\\n- Use CLI readers stage or dev-exporter to populate."
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "OCR Time per Page p95 (ms)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(medflux_ocr_time_ms_bucket[5m])) by (le))"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "OCR Avg Confidence",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "avg_over_time(medflux_ocr_confidence_sum[5m]) / avg_over_time(medflux_ocr_confidence_count[5m])", "legendFormat": "confidence"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Documents Processed (by Type)",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "sum(increase(medflux_docs_processed_total[5m])) by (phase, type)", "legendFormat": "{{phase}}/{{type}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

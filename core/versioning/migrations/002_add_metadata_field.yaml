@@ -1,0 +1,10 @@
+# Migration 002: Add metadata field to artifacts
+id: 002_add_metadata_field
+schema: stage_contract
+from: 1.0.0
+to: 1.1.0
+date: 2025-10-26
+steps:
+  - action: add
+    path: versioning
+    description: Add artifact stamp with app version and git SHA
