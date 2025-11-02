@@ -6,8 +6,10 @@ All notable changes to this project will be documented here.
 - Initial internal versioning structure implemented.
 
 ## [Unreleased]
-- feat(monitoring): added full observability stack (metrics + tracing + dashboards)
-  - Tracing sampler + OTLP endpoint config, service metadata
-  - API request spans + metrics exemplars
-  - Grafana dashboards and Prometheus alerts
-  - Alertmanager Slack routing via env
+
+## [v0.1.1] - 2025-11-02
+- ci: add schema compatibility guard and improve gates (project 70%, Codecov patch 80%)
+- test: add logging + versioning unit tests (redaction, formatter, context, schema)
+- docs: add architecture overview, validation playbook, logs guide
+- chore: remove legacy folders (medflux_backend, Agent_Standard) and tracked logs
+- ci: consolidate workflows and validation steps
