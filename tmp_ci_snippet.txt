@@ -1,0 +1,13 @@
+        run: |
+          python - <<'PY'
+import os, xml.etree.ElementTree as ET
+root = ET.parse('coverage.xml').getroot()
+rate = float(root.get('line-rate', '0')) * 100.0
+py = os.getenv('PYVER','')
+print(f'Coverage (Python {py}): {rate:.2f}%')
+summary = os.getenv('GITHUB_STEP_SUMMARY')
+if summary:
+    with open(summary,'a',encoding='utf-8') as f:
+        f.write(f"### Coverage (Python {py})\n\n{rate:.2f}%\n")
+PY
+      - name: Upload to Codecov (optional)
