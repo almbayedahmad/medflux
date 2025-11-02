@@ -86,11 +86,11 @@ jobs:
       - uses: ./.github/actions/python-setup
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run tests with coverage (>=70%)
+      - name: Run tests with coverage (>=75%)
         env:
           PYTHONPATH: .
         run: |
-          pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-fail-under=70 --junitxml=pytest-junit.xml
+          pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-fail-under=75 --junitxml=pytest-junit.xml
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
@@ -110,16 +110,16 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-import os, xml.etree.ElementTree as ET
-root = ET.parse('coverage.xml').getroot()
-rate = float(root.get('line-rate', '0')) * 100.0
-py = os.getenv('PYVER','')
-print(f'Coverage (Python {py}): {rate:.2f}%')
-summary = os.getenv('GITHUB_STEP_SUMMARY')
-if summary:
-    with open(summary,'a',encoding='utf-8') as f:
-        f.write(f"### Coverage (Python {py})\n\n{rate:.2f}%\n")
-PY
+          import os, xml.etree.ElementTree as ET
+          root = ET.parse('coverage.xml').getroot()
+          rate = float(root.get('line-rate', '0')) * 100.0
+          py = os.getenv('PYVER','')
+          print(f'Coverage (Python {py}): {rate:.2f}%')
+          summary = os.getenv('GITHUB_STEP_SUMMARY')
+          if summary:
+              with open(summary,'a',encoding='utf-8') as f:
+                  f.write(f"### Coverage (Python {py})\n\n{rate:.2f}%\n")
+          PY
       - name: Upload to Codecov (optional)
         if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
@@ -188,10 +188,10 @@ PY
           source .pkgvenv/bin/activate
           python -m pip install dist/*.whl
           INST=$(python - <<'PY'
-import core.versioning as v
-print(v.__version__)
-PY
-)
+          import core.versioning as v
+          print(v.__version__)
+          PY
+          )
           FILEV=$(cat core/versioning/VERSION | tr -d '\n')
           if [ "$INST" != "$FILEV" ]; then
             echo "Installed version $INST does not match file version $FILEV" >&2
@@ -221,15 +221,15 @@ PY
           MEDFLUX_LOG_PROFILE: dev
         run: |
           python - <<'PY'
-import logging
-from core.logging import configure_logging, configure_log_destination
-configure_logging(force=True)
-p=configure_log_destination('CI_RUN','phase_demo')
-log=logging.getLogger('medflux.ci')
-log.info('hello', extra={'run_id':'CI_RUN','phase':'phase_demo'})
-log.warning('warn', extra={'run_id':'CI_RUN','phase':'phase_demo','code':'CI-W001'})
-print(str(p))
-PY
+          import logging
+          from core.logging import configure_logging, configure_log_destination
+          configure_logging(force=True)
+          p=configure_log_destination('CI_RUN','phase_demo')
+          log=logging.getLogger('medflux.ci')
+          log.info('hello', extra={'run_id':'CI_RUN','phase':'phase_demo'})
+          log.warning('warn', extra={'run_id':'CI_RUN','phase':'phase_demo','code':'CI-W001'})
+          print(str(p))
+          PY
       - name: Validate log records
         run: python tools/logs/validate_records.py --root logs --glob "**/phase_demo.jsonl" --min-context 0.9
       - name: No stray prints in runtime code
