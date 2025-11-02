@@ -12,7 +12,6 @@ omit =
     core/monitoring/__init__.py
     core/monitoring/tracing.py
     core/logging/validate.py
-    core/logging/uncaught.py
     core/validation/engine.py
     core/validation/decorators.py
 
