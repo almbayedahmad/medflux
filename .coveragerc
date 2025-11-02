@@ -1,0 +1,29 @@
+[run]
+branch = True
+source =
+    core
+    backend/api
+omit =
+    */tests/*
+    backend/Preprocessing/*
+    backend/api/middleware/request_log.py
+    core/exec/*
+    core/monitoring/metrics.py
+    core/monitoring/__init__.py
+    core/monitoring/tracing.py
+    core/logging/validate.py
+    core/logging/json_formatter.py
+    core/logging/uncaught.py
+    core/validation/engine.py
+    core/validation/decorators.py
+    core/validation/loader.py
+    core/validation/policy.py
+    core/validation/registry.py
+    core/validation/formats.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+show_missing = True
