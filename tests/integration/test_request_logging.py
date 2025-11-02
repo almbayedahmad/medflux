@@ -55,3 +55,23 @@ def test_request_log_error_path(app: FastAPI, caplog: pytest.LogCaptureFixture) 
     # terminal info record present
     info = [rec for rec in caplog.records if rec.name == "medflux.api" and rec.levelno == logging.INFO and rec.getMessage() == "request"]
     assert info, "no terminal request info log emitted"
+
+
+@pytest.mark.integration
+def test_request_log_with_traceparent(app: FastAPI, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+    client = TestClient(app)
+    tp = "00-abcdef1234567890abcdef1234567890-1234567890abcdef-01"
+    r = client.get("/api/v1/version", headers={"x-request-id": "RID-TP", "traceparent": tp, "user-agent": "pytest"})
+    assert r.status_code == 200
+    # Middleware should echo traceparent
+    assert r.headers.get("traceparent") == tp
+    # Find request info log and assert traceparent and latency present
+    recs = [
+        rec for rec in caplog.records
+        if rec.name == "medflux.api" and rec.levelno == logging.INFO and rec.getMessage() == "request"
+    ]
+    assert recs, "no request info log emitted"
+    rec = recs[-1]
+    assert getattr(rec, "traceparent", None) == tp
+    assert isinstance(getattr(rec, "latency_ms", None), int)

@@ -33,3 +33,19 @@ def test_json_formatter_structured_error():
     assert "boom" in out["err"]["msg"]
     assert "ValueError" in out["err"]["stack"]
 
+
+def test_json_formatter_truncation_and_repr():
+    f = JSONLogFormatter()
+    # Very long string
+    long_text = "x" * 5000
+    rec = logging.LogRecord("medflux", logging.INFO, __file__, 1, "hello", (), None)
+    rec.long = long_text
+    # Non-JSON-serializable object
+    rec.bad = set([1, 2, 3])
+    data = json.loads(f.format(rec))
+    # long should be truncated and truncated flag set
+    assert len(data["long"]) == 4096
+    assert data.get("truncated") is True
+    # bad should be repr string
+    assert isinstance(data["bad"], str)
+
