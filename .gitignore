@@ -18,6 +18,7 @@ env/
 # Logs / temp files
 *.log
 *.tmp
+logs/
 
 # OS / Editor junk
 .DS_Store
