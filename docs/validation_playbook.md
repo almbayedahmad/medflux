@@ -16,6 +16,10 @@ How to validate (local)
 - Validate a stage output: python tools/validation/validate_phase.py <phase> output <path> --log-json
 - Validate logs in repo: python tools/logs/validate_records.py --root logs --glob "**/*.jsonl" --min-context 0.95
 
+Dry-run and demotions
+- Set `MEDFLUX_VALIDATION_DRYRUN=1` to downgrade validation failures to warnings (VL-W001/VL-W002) without raising.
+- Demotion rules are defined in `core/policy/validation/validation_rules.yaml` (e.g., demote `additionalProperties` or specific schema paths during iteration).
+
 CI Alignment
 - See .github/workflows/ci.yaml jobs: schema-validation and smoke for automated checks.
 - Breaking schema changes must accompany a version bump per core/policy/versioning/schema_versioning.md.

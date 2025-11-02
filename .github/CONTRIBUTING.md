@@ -31,5 +31,24 @@ What Hooks Enforce
 - Valid YAML and normalized line endings.
 
 CI Workflow
-- GitHub Actions runs pre‑commit and a forbidden‑paths check on every push/PR.
-- CI fails if files under local OS folders (e.g., `OneDrive/`) or `outputs/` are tracked.
+- Checks run on every push/PR:
+  - pre-commit (format, lint, no large files/secrets)
+  - Tests + coverage (project ≥ 80%) across a matrix
+  - Codecov (patch ≥ 80%)
+  - Schema validation + docs generation checks
+  - Schema compatibility guard vs last tag (breaking changes require MAJOR bump)
+  - Packaging parity (wheel version matches VERSION)
+  - Smoke + integration tests
+
+Conventional Commits
+- Use `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`
+- Commitlint runs in CI.
+
+Releases
+- Bump `core/versioning/VERSION`, tag `vX.Y.Z`, and push; or
+- Use the manual Release workflow (GitHub Actions) to bump and tag.
+
+Required status checks (suggested)
+- Lint (pre-commit), Tests (matrix), Schema & Docs, Policy & Version Checks,
+  Package Parity, Smoke, Integration, CodeQL, Commitlint
+  (see docs/BRANCH_PROTECTION.md for exact job names).

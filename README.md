@@ -1,6 +1,22 @@
-# Medflux Backend Preprocessing
+# MedFlux
 
-Standalone OCR-driven preprocessing pipeline (file type detection, encoding normalisation, readers) extracted from the larger Medflux project.
+Core services and tooling for MedFlux: preprocessing stages, API, policies (logging, validation, versioning), CI/CD, and local observability.
+
+Highlights
+- Versioning: single source of truth at `core/versioning/VERSION`; releases via GitHub Actions.
+- Quality gates: tests + coverage (project ≥ 80%, patch ≥ 80%), schema compatibility guard in CI.
+- Structured logging: policy-driven JSON logs, redaction, daily rotation (prod), queue handler in prod.
+- Observability: Prometheus + Grafana + Loki + Tempo via `tools/monitoring`.
+- Contracts: JSON Schemas for stages and artifacts with validators and dry‑run demotions.
+
+Quick links
+- Repo structure: docs/STRUCTURE.md
+- Architecture overview: docs/architecture_overview.md
+- Validation playbook: docs/validation_playbook.md
+- Branch protection: docs/BRANCH_PROTECTION.md
+
+Note on alerts
+- Email notifications are currently disabled by routing to a blackhole receiver in Alertmanager. See `tools/monitoring/alertmanager/alertmanager.yml` to re‑enable by switching warning/critical routes back to email.
 
 ## Environment
 
@@ -10,7 +26,7 @@ Standalone OCR-driven preprocessing pipeline (file type detection, encoding norm
    `
 2. Activate the tooling and switch into the project:
    `powershell
-   . .\environment_activate.ps1
+   . .\\scripts\\environment_activate.ps1
    `
    The helper picks a .venv in this folder by default. Pass -VenvPath if you want to reuse another environment.
 3. Install Python dependencies:
@@ -18,18 +34,13 @@ Standalone OCR-driven preprocessing pipeline (file type detection, encoding norm
    pip install -r requirements.txt
    `
 
-## Running the pipeline on samples
+## Running a stage on samples
 
 `powershell
-python run_readers.py --out output\run_20251003_0001 `
-    --input samples\Sample_pdftext.pdf `
-    --input samples\sample_pdfscanned.pdf `
-    --input samples\Sample_pdfmixed.pdf `
-    --input samples\demo_vertrag.docx `
-    --input samples\Sample.txt
+# Detect type stage (example)
+python -m backend.Preprocessing.main_pre_phases.phase_00_detect_type.pipeline_workflow.detect_type_cli samples\Sample.txt --log-json --log-level INFO
 `
-> **Tip**: You can also call the CLI via the module entrypoint: `python -m medflux_backend.Preprocessing.phase_02_readers.run_readers ...`. Flag `--input` may be repeated; positional file arguments still work.
-> **Note**: When invoking the CLI directly with `python -m medflux_backend...` make sure the repository root is on `PYTHONPATH` (e.g. PowerShell: `$env:PYTHONPATH='.'`).
+> Ensure `PYTHONPATH='.'` if running module entry points directly.
 
 All output artefacts (reports, per-file summaries, raw readers output) end up inside the folder passed to --outdir.
 
@@ -131,11 +142,25 @@ The `doc_meta.py` entry point assembles `doc_meta.json` by loading reader summar
 - Text blocks carry structured presentation hints (`font_size`, `paragraph_style`, `list_level`) alongside existing OCR confidence and language tags.
 Adjustments to the JSON contract should happen in `components.py` (shared helpers), `per_page_stats.py` (per-page details), and `text_blocks.py` (block-level details), with coverage in `test_doc_meta.py`.
 
-## Running tests
+## Running tests & coverage
 
 `powershell
-python -m pytest medflux_backend/Preprocessing/test_preprocessing/unit_tests -q
+pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=term
 `
+- CI requires project coverage ≥ 80% and patch coverage ≥ 80% (Codecov).
+- See `.coveragerc` for measured scope (focus on `core` and `backend/api`).
+
+## API quick start
+`powershell
+uvicorn backend.api.main:app --reload --port 8000
+`
+- Health: `GET /api/v1/health`
+- Version: `GET /api/v1/version`
+
+## CI & Releases
+- CI: `.github/workflows/ci.yaml` runs lint, tests, schema checks, packaging, smoke, integration, and security.
+- Schema compatibility guard: blocks breaking schema changes unless MAJOR version increases.
+- Releases: bump `core/versioning/VERSION`, tag `vX.Y.Z`, or run the manual Release workflow.
 
 ## Repository layout
 
@@ -186,3 +211,4 @@ Use the standard Git workflow (git status, git commit, git push) from the reposi
 2. Introduce the YAML-backed readers config (`configs/readers.yaml`) and loader, wiring thresholds/feature flags via `CFG[...]`.
 3. Re-run `python -m pytest medflux_backend/Preprocessing/test_preprocessing/unit_tests -q` and smoke the CLI to confirm the refactor.
 4. Capture updated screenshots/log outputs once the new config and utils are active.
+

@@ -5,10 +5,11 @@ Layer A – Versioning
 - Policy: core/policy/versioning/*
 - CI checks: .github/workflows/ci.yaml (policy-version job), tools/versioning/verify_version.py
 
-Layer B – Testing
+Layer B - Testing
 - Pytest config: pytest.ini (markers, discovery)
 - Tests tree: tests/{unit,component,contract,integration,golden,smoke,e2e}
 - CI: .github/workflows/ci.yaml (tests matrix), .github/workflows/tests.yml (fast pack)
+- Coverage gates: project ≥ 80% (pytest & Codecov), patch ≥ 80% (Codecov)
 
 Layer C – Validation (Contracts)
 - Schemas: core/validation/contracts/** (JSON Schema, Draft 2020-12)
@@ -27,10 +28,12 @@ Layer E – Monitoring / Observability
 - Dashboards: tools/monitoring/dashboards/*.json
 - Alerts: tools/monitoring/alerts/*.yaml
 
-Layer F – CI/CD Integration
+Layer F - CI/CD Integration
 - Workflows: .github/workflows/{ci.yaml,tests.yml,release.yml,release-drafter.yml}
 - Python toolchain action: .github/actions/python-setup
 - Packaging parity: ci.yaml package-parity job
+- Schema compatibility: tools/schema/check_compat.py blocks breaking changes unless MAJOR bump
+- Conventional Commits enforced via commitlint; Release Drafter prepares notes
 
 Layer G – Infrastructure & Documentation
 - Compose: tools/monitoring/docker-compose.yml

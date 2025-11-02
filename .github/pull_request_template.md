@@ -12,8 +12,9 @@ Testing
 
 Checklist
 - [ ] Ran `pre-commit run --all-files` locally
-- [ ] Updated docs/README if behavior changed
-- [ ] Added/updated tests where applicable
+- [ ] Added/updated tests; project coverage remains ≥ 80%; patch ≥ 80%
+- [ ] Schema compatibility guard passes (no unbumped breaking changes)
+- [ ] Updated docs if behavior changed (README/docs/*)
 - [ ] No local paths or outputs committed (CI check passes)
 
 Notes

@@ -92,11 +92,16 @@ Alerting (Alertmanager)
     2) `docker compose -f tools/monitoring/docker-compose.yml up -d alertmanager`
     3) `docker compose -f tools/monitoring/docker-compose.yml restart prometheus`
   - Prometheus is configured to send alerts to alertmanager:9093.
-  - Email:
-    - Set in `tools/monitoring/.env`:
-      - `SMTP_SMARTHOST`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`
-      - `EMAIL_TO` (default recipient), optionally `EMAIL_TO_WARN`, `EMAIL_TO_CRIT`
-    - Note: For Gmail, use `smtp.gmail.com:587` and an App Password on your account.
+  - Email (disabled by default):
+    - The repo currently routes email alerts to a blackhole receiver to avoid sending emails unintentionally.
+    - To enable email routing:
+      - Edit `tools/monitoring/alertmanager/alertmanager.yml` and switch the routes for `severity=warning`/`critical` from `blackhole` back to `email-warning`/`email-critical`.
+      - Or, in `tools/monitoring/alertmanager/config.yml`, set `route.receiver: email`.
+      - Set in `tools/monitoring/.env`:
+        - `SMTP_SMARTHOST`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`
+        - `EMAIL_TO` (default recipient), optionally `EMAIL_TO_WARN`, `EMAIL_TO_CRIT`
+      - Note: For Gmail, use `smtp.gmail.com:587` and an App Password on your account.
+    - Reload: `docker compose -f tools/monitoring/docker-compose.yml restart alertmanager`
 
 Tracing (Tempo)
 - A Tempo instance is included for traces.

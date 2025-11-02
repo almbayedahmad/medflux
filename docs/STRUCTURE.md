@@ -13,7 +13,7 @@ High-level overview of the MedFlux repository layout and purpose of each top-lev
   - `core/policy/*` is the canonical home for standards and rules.
 - docs/
   - Developer documentation.
-  - `docs/legacy/Agent_Standard/` contains archived materials kept for reference.
+  - Key docs: architecture_overview.md, validation_playbook.md, logs_guide.md, BRANCH_PROTECTION.md
 - local/
   - Local-only files (gitignored) – safe place for developer environment bits.
 - logs/
