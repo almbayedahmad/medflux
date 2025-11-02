@@ -4,6 +4,7 @@ import os
 import threading
 import time
 from typing import Optional, Dict, Any
+import socket
 
 _PROM_READY = False
 _OTEL_READY = False
@@ -95,17 +96,40 @@ _otel_validator_requests = None
 _otel_validator_compiles = None
 
 
+def _wait_http_server(port: int, *, timeout_s: float = 5.0) -> bool:
+    """Wait briefly for the Prometheus HTTP server to accept connections.
+
+    Polls 127.0.0.1:port until connected or timeout reached.
+    """
+    deadline = time.time() + float(timeout_s)
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", int(port)), timeout=0.2):
+                return True
+        except Exception:
+            time.sleep(0.05)
+    return False
+
+
 def init_metrics() -> None:
     global _PROM_READY, _OTEL_READY, _otel_meter
     # Prometheus
     if _PROM_IMPORTED and not _PROM_READY:
         port = os.environ.get("MEDFLUX_PROM_PORT")
         if port:
-            try:
-                start_http_server(int(port))
-                _PROM_READY = True
-            except Exception:
-                pass
+            # Try to bind to 127.0.0.1, then fall back to default addr
+            for addr in ("127.0.0.1", None):
+                try:
+                    if addr is None:
+                        start_http_server(int(port))
+                    else:
+                        start_http_server(int(port), addr=addr)
+                    # Ensure the thread is ready to accept connections
+                    if _wait_http_server(int(port)):
+                        _PROM_READY = True
+                        break
+                except Exception:
+                    continue
     # OpenTelemetry Metrics
     if _OTEL_IMPORTED and not _OTEL_READY:
         try:
@@ -465,10 +489,5 @@ def record_validator_compile(kind: str, phase: str) -> None:
     if _OTEL_READY and _otel_meter is not None:
         try:
             _otel_validator_compiles.add(1, attributes={"phase": phase, "kind": kind})
-        except Exception:
-            pass
-    if _OTEL_READY and _otel_meter is not None:
-        try:
-            _otel_flow_duration.record(float(duration_ms), attributes={"flow": flow})
         except Exception:
             pass
