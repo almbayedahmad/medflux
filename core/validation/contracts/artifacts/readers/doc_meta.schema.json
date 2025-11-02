@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/artifacts/readers/doc_meta.schema.json",
+  "title": "Readers Doc Meta Artifact",
+  "type": "object",
+  "required": ["documents", "versioning"],
+  "properties": {
+    "documents": {"type": "array"},
+    "versioning": {
+      "type": "object",
+      "required": ["app_version"],
+      "properties": {
+        "app_version": {"type": "string"},
+        "schema_version": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

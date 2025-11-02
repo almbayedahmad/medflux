@@ -1,0 +1,67 @@
+{
+  "title": "MedFlux - Infra Overview",
+  "uid": "medflux-infra",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Linux: start node-exporter and (optionally) cAdvisor from docker-compose.\n- Windows: install windows_exporter (port 9182). This dashboard auto-detects Windows (windows_*) or Linux (node_*) metrics.\n- On Docker Desktop, cAdvisor may require additional privileges; omit if failing."
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Usage % (avg)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "(100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance))) OR (100 * (1 - avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) by (instance)))", "legendFormat": "{{instance}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Used %",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "(100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))) OR (100 * (1 - (windows_memory_available_bytes / windows_cs_physical_memory_bytes)))", "legendFormat": "mem used"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Used % (rootfs/volumes)",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "(100 * (1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\",mountpoint=\"/\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\",mountpoint=\"/\"}))) OR (100 * (1 - (sum by (volume) (windows_logical_disk_free_bytes{type=\"Fixed\"}) / sum by (volume) (windows_logical_disk_size_bytes{type=\"Fixed\"}))))", "legendFormat": "{{mountpoint}}{{volume}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Container CPU (top 5)",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "topk(5, sum(rate(container_cpu_usage_seconds_total[5m])) by (name))", "legendFormat": "{{name}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Container Memory (top 5)",
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "topk(5, container_memory_working_set_bytes)", "legendFormat": "{{name}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Prometheus Scrape Duration (medflux)",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "sum(scrape_duration_seconds{job=\"medflux\"}) by (instance)", "legendFormat": "{{instance}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

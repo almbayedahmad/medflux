@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/stages/phase_00_detect_type/input.schema.json",
+  "title": "DetectType - Input",
+  "type": "object",
+  "required": ["run_id", "items"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1, "format": "run-id"},
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/input_item"}
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "input_item": {
+      "type": "object",
+      "anyOf": [
+        {"required": ["path"]},
+        {"required": ["file_path"]},
+        {"required": ["source_path"]}
+      ],
+      "properties": {
+        "path": {"type": "string"},
+        "file_path": {"type": "string"},
+        "source_path": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

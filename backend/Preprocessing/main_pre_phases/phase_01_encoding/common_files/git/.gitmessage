@@ -1,0 +1,13 @@
+Encoding: <summary>
+
+Problem:
+-
+
+Solution:
+-
+
+Impact:
+-
+
+Tests:
+- pytest medflux_backend/Preprocessing/main_pre_phases/phase_01_encoding/tests

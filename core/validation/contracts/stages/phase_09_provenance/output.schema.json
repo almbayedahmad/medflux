@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/stages/phase_09_provenance/output.schema.json",
+  "title": "Provenance - Output",
+  "type": "object",
+  "required": ["run_id", "stage_stats", "versioning"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1, "format": "run-id"},
+    "items": {"type": "array", "minItems": 0},
+    "unified_document": {"type": "object"},
+    "stage_stats": {"type": "object", "minProperties": 1},
+    "versioning": {"$ref": "../../base/base_contract.schema.json#/$defs/versioning"}
+  },
+  "additionalProperties": true
+}

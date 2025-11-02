@@ -1,0 +1,10 @@
+fastapi
+pydantic
+openpyxl
+pillow
+chardet
+pyyaml
+jsonschema
+prometheus-client
+opentelemetry-sdk
+opentelemetry-exporter-otlp

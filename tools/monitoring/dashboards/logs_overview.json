@@ -1,0 +1,48 @@
+{
+  "title": "MedFlux - Logs Overview",
+  "uid": "medflux-logs",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Promtail ships JSON logs from `logs/**/*.jsonl` to Loki.\\n- Labels parsed: level, logger, trace_id, span_id, code, phase, run_id.\\n- Use queries like `{job=\"medflux-logs\"}` or `{job=\"medflux-logs\", code=~\".+\"}`.\\n- Click on trace links (derived field) to open matching traces in Tempo."
+      }
+    },
+    {
+      "type": "logs",
+      "title": "All MedFlux Logs",
+      "gridPos": {"x": 0, "y": 4, "w": 24, "h": 10},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\\\"medflux-logs\\\"}", "refId": "A"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true}
+    },
+    {
+      "type": "logs",
+      "title": "Validation Logs (with code)",
+      "gridPos": {"x": 0, "y": 14, "w": 24, "h": 10},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "{job=\\\"medflux-logs\\\", code=~\\\".+\\\"}", "refId": "B"}
+      ],
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true}
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Count (5m)",
+      "gridPos": {"x": 0, "y": 24, "w": 24, "h": 8},
+      "datasource": "Loki",
+      "targets": [
+        {"expr": "sum(count_over_time({job=\\\"medflux-logs\\\", level=\\\"ERROR\\\"}[5m]))", "refId": "C"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

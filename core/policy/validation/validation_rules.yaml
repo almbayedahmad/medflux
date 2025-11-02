@@ -1,0 +1,11 @@
+meta:
+  version: 1
+  id: validation_rules
+
+demotions:
+  by_validator:
+    # Example: allow unknown properties in dev
+    - additionalProperties
+  by_schema_path_contains:
+    # Example: relax stage_stats shape during iteration
+    - /properties/stage_stats

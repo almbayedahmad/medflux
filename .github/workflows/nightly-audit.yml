@@ -1,0 +1,26 @@
+name: Nightly Dependency Audit
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/python-setup
+      - name: Run pip-audit
+        shell: bash
+        run: |
+          python -m pip install pip-audit
+          pip-audit -r requirements.txt -r requirements-dev.txt -f json -o pip-audit.json || true
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit.json

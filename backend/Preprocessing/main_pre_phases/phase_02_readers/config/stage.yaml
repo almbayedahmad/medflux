@@ -1,0 +1,26 @@
+stage: readers
+io:
+  out_root: outputs/phase_02_readers
+  out_doc_path: outputs/phase_02_readers/readers_doc_meta.json
+  out_stats_path: outputs/phase_02_readers/readers_stage_stats.json
+  out_summary_path: outputs/phase_02_readers/readers_summary.json
+options:
+  mode: mixed
+  lang: deu+eng
+  dpi: 300
+  oem: 3
+  psm: 6
+  workers: 4
+  tables_mode: detect
+  tables_min_words: 12
+  table_detect_min_area: 9000.0
+  table_detect_max_cells: 600
+  blocks_threshold: 3
+  native_ocr_overlay: false
+  use_pre: false
+  export_xlsx: false
+  verbose: false
+  save_table_crops: false
+  overlay_area_thr: 0.35
+  overlay_min_images: 1
+  overlay_if_any_image: false

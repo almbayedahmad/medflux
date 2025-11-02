@@ -1,0 +1,17 @@
+[project]
+name = "medflux"
+version = { file = "core/versioning/VERSION" }
+requires-python = ">=3.11"
+description = "MedFlux core services"
+readme = "README.md"
+
+[project.optional-dependencies]
+monitoring = [
+  "prometheus-client>=0.17.0",
+  "opentelemetry-sdk>=1.26.0",
+  "opentelemetry-exporter-otlp>=1.26.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

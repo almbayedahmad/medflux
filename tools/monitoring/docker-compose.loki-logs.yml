@@ -1,0 +1,48 @@
+services:
+  prometheus:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-external-labels: "service={{.Name}},container_id={{.ID}}"
+        loki-timeout: "10s"
+
+  grafana:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-external-labels: "service={{.Name}},container_id={{.ID}}"
+        loki-timeout: "10s"
+
+  tempo:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-external-labels: "service={{.Name}},container_id={{.ID}}"
+        loki-timeout: "10s"
+
+  dev-exporter:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-external-labels: "service={{.Name}},container_id={{.ID}}"
+        loki-timeout: "10s"
+
+  cadvisor:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-external-labels: "service={{.Name}},container_id={{.ID}}"
+        loki-timeout: "10s"
+
+  loki:
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-external-labels: "service={{.Name}},container_id={{.ID}}"
+        loki-timeout: "10s"

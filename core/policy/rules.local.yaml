@@ -1,0 +1,9 @@
+# Local overrides for developers or environments.
+# Do NOT commit secrets or machine-specific paths.
+# Example:
+# validation:
+#   config_validation:
+#     required_keys:
+#       keys:
+#         - "io.out_root"
+#         - "options.mode"

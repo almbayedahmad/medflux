@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/artifacts/readers/stage_stats.schema.json",
+  "title": "Readers Stage Stats Artifact",
+  "type": "object",
+  "required": ["documents", "items_processed", "versioning"],
+  "properties": {
+    "documents": {"type": "integer", "minimum": 0},
+    "items_processed": {"type": "integer", "minimum": 0},
+    "avg_conf": {"type": ["number", "null"]},
+    "warnings": {"type": ["integer", "null"], "minimum": 0},
+    "versioning": {
+      "type": "object",
+      "required": ["app_version"],
+      "properties": {
+        "app_version": {"type": "string"},
+        "schema_version": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

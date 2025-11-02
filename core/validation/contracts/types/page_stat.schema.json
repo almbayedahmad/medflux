@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Page Stat",
+  "type": "object",
+  "properties": {
+    "page": { "type": "integer", "minimum": 1 },
+    "tables_found": { "type": ["integer", "null"], "minimum": 0 },
+    "low_conf": { "type": ["boolean", "null"] }
+  },
+  "required": ["page"],
+  "additionalProperties": true
+}

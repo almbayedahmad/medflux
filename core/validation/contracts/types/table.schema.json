@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table",
+  "type": "object",
+  "properties": {
+    "page": { "type": "integer", "minimum": 1 },
+    "cells": { "type": "integer", "minimum": 0 }
+  },
+  "required": ["page"],
+  "additionalProperties": true
+}

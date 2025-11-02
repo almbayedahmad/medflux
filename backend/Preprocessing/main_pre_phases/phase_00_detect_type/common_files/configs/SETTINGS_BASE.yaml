@@ -1,0 +1,279 @@
+# Base Settings Configuration
+
+# This file defines the base configuration structure for all phases
+# It should be extended by phase-specific configuration files
+
+meta:
+  version: "1.0.0"
+  id: "settings_base"
+  updated_at: "{{CREATED_AT}}"
+  description: "Base configuration settings for all phases"
+
+# Global settings
+global:
+  # Application settings
+  app:
+    name: "{{PHASE_NAME}}"
+    version: "{{PHASE_VERSION}}"
+    description: "{{PHASE_DESCRIPTION}}"
+    author: "{{AUTHOR}}"
+    created_at: "{{CREATED_AT}}"
+
+  # Environment settings
+  environment:
+    default: "development"
+    allowed: ["development", "staging", "production"]
+    debug: true
+    verbose: false
+
+  # Logging settings
+  logging:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    file: "logs/{{PHASE_NAME}}.log"
+    max_size: "10MB"
+    backup_count: 5
+
+  # Performance settings
+  performance:
+    max_workers: 4
+    timeout: 300
+    retry_attempts: 3
+    retry_delay: 1.0
+
+  # Security settings
+  security:
+    enable_validation: true
+    strict_mode: false
+    allow_unsafe: false
+
+# Phase-specific settings
+phase:
+  # Input settings
+  input:
+    supported_formats: ["pdf", "docx", "txt", "png", "jpg", "jpeg", "tiff"]
+    max_file_size: "100MB"
+    batch_size: 10
+    timeout: 300
+
+  # Output settings
+  output:
+    format: "json"
+    compression: false
+    include_metadata: true
+    include_stats: true
+
+  # Processing settings
+  processing:
+    mode: "mixed"
+    quality: "high"
+    parallel: true
+    cache: true
+
+  # Feature flags
+  features:
+    enable_ocr: true
+    enable_tables: true
+    enable_lang_detect: true
+    enable_validation: true
+    enable_caching: true
+    enable_profiling: false
+
+  # Thresholds
+  thresholds:
+    confidence_min: 0.7
+    quality_min: 0.8
+    timeout_max: 300
+    memory_max: "1GB"
+
+  # Limits
+  limits:
+    max_files: 1000
+    max_pages: 10000
+    max_size: "1GB"
+    max_processing_time: 3600
+
+# OCR settings
+ocr:
+  engine: "tesseract"
+  language: "deu+eng"
+  dpi: 300
+  psm: 6
+  oem: 3
+  confidence_threshold: 75.0
+
+  # Advanced OCR settings
+  advanced:
+    enable_preprocessing: true
+    enable_postprocessing: true
+    enable_table_detection: true
+    enable_text_detection: true
+
+  # Performance settings
+  performance:
+    max_workers: 4
+    batch_size: 5
+    timeout: 300
+    retry_attempts: 3
+
+# Table detection settings
+tables:
+  enabled: true
+  mode: "detect"
+  confidence_threshold: 0.45
+
+  # Detection methods
+  detection:
+    enable_morphology: true
+    enable_text_alignment: true
+    enable_contour_detection: true
+
+  # Processing settings
+  processing:
+    min_cells: 2
+    max_cells: 1000
+    min_rows: 2
+    max_rows: 1000
+    min_cols: 2
+    max_cols: 100
+
+# Language detection settings
+language:
+  enabled: true
+  default_language: "de"
+  supported_languages: ["de", "en", "fr", "es", "it"]
+
+  # Detection settings
+  detection:
+    confidence_threshold: 0.8
+    fallback_language: "de"
+    enable_fallback: true
+
+  # Processing settings
+  processing:
+    normalize_text: true
+    remove_stopwords: false
+    enable_tokenization: true
+
+# Validation settings
+validation:
+  enabled: true
+  strict_mode: false
+
+  # Input validation
+  input:
+    check_file_format: true
+    check_file_size: true
+    check_file_integrity: true
+
+  # Output validation
+  output:
+    check_schema: true
+    check_completeness: true
+    check_quality: true
+
+  # Error handling
+  error_handling:
+    fail_fast: false
+    max_errors: 10
+    error_threshold: 0.1
+
+# Caching settings
+cache:
+  enabled: true
+  backend: "file"
+  location: "cache/"
+  ttl: 3600
+  max_size: "1GB"
+
+  # Cache policies
+  policies:
+    input_cache: true
+    output_cache: true
+    intermediate_cache: true
+    result_cache: true
+
+# Monitoring settings
+monitoring:
+  enabled: true
+
+  # Metrics collection
+  metrics:
+    enable_performance: true
+    enable_quality: true
+    enable_usage: true
+    enable_errors: true
+
+  # Alerting
+  alerting:
+    enable_alerts: true
+    alert_thresholds:
+      error_rate: 0.05
+      response_time: 5.0
+      memory_usage: 0.8
+
+  # Reporting
+  reporting:
+    enable_reports: true
+    report_frequency: "daily"
+    report_format: "json"
+
+# Development settings
+development:
+  debug: true
+  verbose: false
+  profiling: false
+
+  # Testing
+  testing:
+    enable_mocks: true
+    enable_fixtures: true
+    enable_coverage: true
+
+  # Development tools
+  tools:
+    enable_linting: true
+    enable_formatting: true
+    enable_type_checking: true
+
+# Production settings
+production:
+  debug: false
+  verbose: false
+  profiling: false
+
+  # Performance
+  performance:
+    optimize_memory: true
+    optimize_cpu: true
+    enable_compression: true
+
+  # Security
+  security:
+    strict_mode: true
+    enable_validation: true
+    allow_unsafe: false
+
+  # Monitoring
+  monitoring:
+    enable_detailed_logging: true
+    enable_metrics: true
+    enable_alerts: true
+
+# Staging settings
+staging:
+  debug: true
+  verbose: true
+  profiling: false
+
+  # Testing
+  testing:
+    enable_integration_tests: true
+    enable_performance_tests: true
+    enable_load_tests: true
+
+  # Monitoring
+  monitoring:
+    enable_detailed_logging: true
+    enable_metrics: true
+    enable_alerts: false

@@ -1,0 +1,131 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: medflux-prom
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts:/etc/prometheus/alerts:ro
+      # Remote write password (Grafana Cloud access token) can be mounted here when configured
+      # - ./prometheus/remote_write_password.txt:/etc/prometheus/remote_write_password.txt:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - alertmanager
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: medflux-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/home.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - tempo
+
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - ./tempo/data/traces:/var/tempo/traces
+      - ./tempo/data/wal:/var/tempo/wal
+      - ./tempo/data/compactor:/var/tempo/compactor
+    ports:
+      - "3200:3200"   # Tempo HTTP API / query
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    restart: unless-stopped
+
+  dev-exporter:
+    image: python:3.12-slim
+    container_name: medflux-dev-exporter
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - MEDFLUX_MONITORING=1
+      - MEDFLUX_PROM_PORT=8001
+      - PYTHONPATH=/app
+    volumes:
+      - ../..:/app:ro
+    command: /bin/sh -c "pip install --no-cache-dir -r requirements-dev.txt && python tools/monitoring/dev_exporter.py"
+    ports:
+      - "8001:8001"
+    depends_on:
+      - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: medflux-node-exporter
+    profiles: ["linux"]
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    volumes:
+      - '/:/host:ro,rslave'
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: medflux-cadvisor
+    profiles: ["linux"]
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: medflux-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: medflux-promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./promtail/config.yaml:/etc/promtail/config.yaml:ro
+      - promtail-data:/var/promtail
+      - ../..:/work:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+
+volumes:
+  tempo-data:
+  loki-data:
+  promtail-data:

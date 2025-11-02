@@ -1,0 +1,44 @@
+{
+  "title": "MedFlux - Validation Health",
+  "uid": "medflux-validation",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "text",
+      "title": "Onboarding",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "- Filters focus on job=\"medflux\" (host app); dev-exporter runs under job=\"medflux-dev\".\\n- Start stack + dev exporter for demo data. Use CLI runs to populate host metrics.\\n- Enable OTEL tracing + Tempo to see exemplars/trace links on histograms."
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Validation Fail Rate (5m)",
+      "gridPos": {"x": 0, "y": 4, "w": 8, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) / (sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) + sum(rate(medflux_validation_ok_total{job=\"medflux\"}[5m])))", "legendFormat": "fail_rate"}
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Validation Errors by Code",
+      "gridPos": {"x": 8, "y": 4, "w": 16, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(medflux_validation_failed_total{job=\"medflux\"}[5m])) by (code)", "legendFormat": "{{code}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Validation Duration p95 (ms)",
+      "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(medflux_validation_duration_ms_bucket{job=\"medflux\"}[5m])) by (le, phase, kind))", "legendFormat": "{{phase}}/{{kind}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"}
+}

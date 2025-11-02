@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.example/schemas/validation/base/base_contract.schema.json",
+  "title": "Base Artifact Contract",
+  "type": "object",
+  "properties": {
+    "versioning": {
+      "type": "object",
+      "properties": {
+        "app_version": { "type": "string" },
+        "schema_version": { "type": ["string", "null"] }
+      },
+      "required": ["app_version"],
+      "additionalProperties": true
+    }
+  },
+  "required": ["versioning"],
+  "additionalProperties": true,
+  "$defs": {
+    "versioning": {
+      "type": "object",
+      "properties": {
+        "app_version": { "type": "string" },
+        "schema_version": { "type": ["string", "null"] }
+      },
+      "required": ["app_version"],
+      "additionalProperties": true
+    }
+  }
+}

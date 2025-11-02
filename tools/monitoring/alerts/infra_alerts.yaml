@@ -1,0 +1,47 @@
+groups:
+  - name: medflux-infra
+    rules:
+      - alert: NodeCpuHigh
+        expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High node CPU usage"
+          description: "Node CPU usage > 90% for 10m on {{ $labels.instance }}"
+
+      - alert: NodeMemoryHigh
+        expr: 100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High node memory usage"
+          description: "Node memory usage > 90% for 10m"
+
+      - alert: NodeDiskHigh
+        expr: 100 * (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay",mountpoint="/"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay",mountpoint="/"})) > 90
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High node disk usage"
+          description: "Root filesystem usage > 90% for 15m"
+
+      - alert: MedfluxTargetDown
+        expr: up{job="medflux"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MedFlux exporter down"
+          description: "Target {{ $labels.instance }} is down for 5m"
+
+      - alert: MedfluxScrapeSlow
+        expr: avg_over_time(scrape_duration_seconds{job="medflux"}[5m]) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow Prometheus scrape for medflux"
+          description: "Average scrape duration > 2s over 5m for {{ $labels.instance }}"

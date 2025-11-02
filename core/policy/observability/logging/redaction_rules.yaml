@@ -1,0 +1,37 @@
+meta:
+  version: 1
+  id: redaction_rules
+
+keys:
+  # Keys whose values are redacted if present in log extras
+  - password
+  - token
+  - api_key
+  - authorization
+  - cookie
+  - secret
+  - access_key
+  - refresh_token
+
+patterns:
+  # Regexes applied to message text; replaced with "[REDACTED]"
+  - "(?i)bearer\s+[a-z0-9\-\._~\+\/=]+"
+  - "(?i)apikey[=:]\s*[a-z0-9\-\._~\+\/=]+"
+  - "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
+  - "+?[0-9][0-9\-\s]{6,}[0-9]"
+
+replacement: "[REDACTED]"
+
+never:
+  # Keys that must never be redacted (identifiers and context)
+  - run_id
+  - phase
+  - flow
+  - stage
+  - hostname
+  - pid
+
+hash_keys:
+  # Keys whose values should be hashed (SHA-256) instead of raw; uses env MEDFLUX_LOG_HASH_SALT as salt
+  - file_id
+  - user_id

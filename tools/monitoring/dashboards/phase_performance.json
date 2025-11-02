@@ -1,0 +1,25 @@
+{
+  "title": "MedFlux - Phase Performance",
+  "uid": "medflux-phase",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Phase Runs (rate)",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 6},
+      "targets": [
+        {"expr": "sum(rate(medflux_phase_runs_total[5m])) by (phase, status)", "legendFormat": "{{phase}} {{status}}"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Runs OK vs Error (5m)",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 6},
+      "targets": [
+        {"expr": "sum(rate(medflux_phase_runs_total{status=\"ok\"}[5m]))", "legendFormat": "ok"},
+        {"expr": "sum(rate(medflux_phase_runs_total{status=\"error\"}[5m]))", "legendFormat": "error"}
+      ]
+    }
+  ],
+  "refresh": "30s",\n  "time": {"from": "now-6h", "to": "now"}
+}

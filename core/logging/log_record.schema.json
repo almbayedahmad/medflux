@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medflux.local/schemas/log_record.schema.json",
+  "title": "MedFlux Log Record",
+  "type": "object",
+  "required": ["time", "level", "logger", "message"],
+  "properties": {
+    "ts": { "type": ["integer", "number"] },
+    "time": { "type": "string" },
+    "level": { "type": "string" },
+    "logger": { "type": "string" },
+    "message": { "type": "string" },
+    "run_id": { "type": ["string", "null"] },
+    "phase": { "type": ["string", "null"] },
+    "flow": { "type": ["string", "null"] },
+    "stage": { "type": ["string", "null"] },
+    "hostname": { "type": ["string", "null"] },
+    "pid": { "type": ["integer", "number", "null"] },
+    "code": { "type": ["string", "null"] },
+    "latency_ms": { "type": ["integer", "number", "null"] },
+    "truncated": { "type": ["boolean", "null"] },
+    "err": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "msg": { "type": "string" },
+        "stack": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

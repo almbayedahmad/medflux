@@ -1,0 +1,158 @@
+meta:
+  version: 1
+  id: docs_conventions
+  updated_at: "{{CREATED_AT}}"
+
+docs_conventions:
+  # Documentation style and formatting rules for all phases
+  stage_readme_sections:
+    - Purpose
+    - Workflow
+    - Outputs
+    - How to Run
+    - Latest Updates
+
+  # Changelog versioning strategy
+  changelog_versioning: semver
+
+  # Change type to version bump mapping
+  change_types:
+    feat: minor      # New features
+    fix: patch       # Bug fixes
+    breaking: major  # Breaking changes
+    default: patch   # Default for other changes
+
+  # Link policy between documentation files
+  link_policy:
+    from_changelog_to_readme: true
+    readme_anchor_format: "### <change_name> {#<slug>}"
+
+  # Language policy for documentation
+  hint_language_policy:
+    allowed_language: english
+    violation_response: reject and request rewrite
+    applies_to:
+      - stage readme hints
+      - documentation templates
+      - inline helper text
+
+  # Documentation formatting rules
+  formatting:
+    # Headers
+    header_levels:
+      main_title: 1
+      section: 2
+      subsection: 3
+      subsubsection: 4
+
+    # Code blocks
+    code_blocks:
+      language_specification: required
+      line_numbers: false
+      syntax_highlighting: true
+
+    # Lists
+    lists:
+      use_dash_for_unordered: true
+      use_numbers_for_ordered: true
+      indent_with_spaces: 2
+
+    # Tables
+    tables:
+      header_separator: "---"
+      alignment: left
+      max_width: 120
+
+  # Content guidelines
+  content_guidelines:
+    # Writing style
+    writing_style:
+      tone: professional
+      voice: active
+      person: third_person
+      tense: present
+
+    # Technical writing
+    technical_writing:
+      define_terms: true
+      use_examples: true
+      include_troubleshooting: true
+      provide_context: true
+
+    # Accessibility
+    accessibility:
+      use_alt_text_for_images: true
+      use_descriptive_links: true
+      maintain_heading_hierarchy: true
+      ensure_color_contrast: true
+
+  # File organization
+  file_organization:
+    # Directory structure
+    directory_structure:
+      docs: "docs/"
+      templates: "docs/templates/"
+      assets: "docs/assets/"
+      examples: "docs/examples/"
+
+    # File naming
+    file_naming:
+      readme: "README.md"
+      changelog: "CHANGELOG.md"
+      runbook: "RUNBOOK.md"
+      api_docs: "API.md"
+      examples: "EXAMPLES.md"
+
+    # File ordering
+    file_ordering:
+      - README.md
+      - CHANGELOG.md
+      - RUNBOOK.md
+      - API.md
+      - EXAMPLES.md
+      - templates/
+      - assets/
+
+  # Review process
+  review_process:
+    # Required reviewers
+    required_reviewers:
+      - technical_lead
+      - documentation_team
+
+    # Review criteria
+    review_criteria:
+      - accuracy
+      - completeness
+      - clarity
+      - consistency
+      - accessibility
+
+    # Approval process
+    approval_process:
+
+      min_approvals: 2
+      required_approvals:
+        - technical_lead
+        - documentation_team
+
+  # Maintenance
+  maintenance:
+    # Update frequency
+    update_frequency:
+      readme: on_change
+      changelog: on_release
+      runbook: quarterly
+      api_docs: on_change
+
+    # Deprecation policy
+    deprecation_policy:
+      notice_period: 30_days
+      migration_guide: required
+      backward_compatibility: maintained
+
+    # Archive policy
+    archive_policy:
+      archive_after: 2_years
+      archive_location: "docs/archive/"
+      maintain_access: true

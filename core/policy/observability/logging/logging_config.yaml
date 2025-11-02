@@ -1,0 +1,48 @@
+meta:
+  version: 2
+  id: logging_config_global
+
+logging:
+  version: 1
+  disable_existing_loggers: false
+
+  formatters:
+    standard:
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      datefmt: "%Y-%m-%d %H:%M:%S"
+    json:
+      '()': core.logging.json_formatter.JSONLogFormatter
+
+  filters:
+    # Wire redaction/sampling/rate-limit as needed
+    redaction:
+      '()': core.logging.redaction.RedactionFilter
+    context:
+      '()': core.logging.context.ContextFilter
+    # sampling:
+    #   '()': core.logging.filters.SamplingFilter
+    # ratelimit:
+    #   '()': core.logging.filters.RateLimitFilter
+
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: standard
+      stream: ext://sys.stdout
+      filters: [context, redaction]
+
+    json_file:
+      class: logging.handlers.RotatingFileHandler
+      level: INFO
+      formatter: json
+      filename: "logs/current.jsonl"  # replaced at runtime
+      maxBytes: 10485760
+      backupCount: 5
+      encoding: "utf-8"
+      delay: true
+      filters: [context, redaction]
+
+  root:
+    level: INFO
+    handlers: [console, json_file]
