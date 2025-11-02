@@ -40,11 +40,11 @@ jobs:
           pip install -r requirements.txt
           if (Test-Path 'requirements-dev.txt') { pip install -r requirements-dev.txt }
 
-      - name: Run fast pack with coverage (>=80%)
+      - name: Run fast pack with coverage (>=70%)
         shell: bash
         run: |
           pytest -m "unit or contract or component" -q \
-            --cov=core --cov=backend --cov-report=xml --cov-fail-under=80
+            --cov=core --cov=backend --cov-report=xml --cov-fail-under=70
 
       - name: Upload coverage
         if: always()

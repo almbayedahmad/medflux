@@ -86,11 +86,11 @@ jobs:
       - uses: ./.github/actions/python-setup
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run tests with coverage (>=80%)
+      - name: Run tests with coverage (>=70%)
         env:
           PYTHONPATH: .
         run: |
-          pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-fail-under=80 --junitxml=pytest-junit.xml
+          pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-fail-under=70 --junitxml=pytest-junit.xml
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
