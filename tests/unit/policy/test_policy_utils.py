@@ -33,4 +33,3 @@ def test_load_policy_with_overrides_merges(monkeypatch: pytest.MonkeyPatch, tmp_
     assert isinstance(data, dict)
     # Ensure override merged
     assert data.get("demotions", {}).get("by_validator") == ["additionalProperties"]
-

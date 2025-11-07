@@ -24,4 +24,3 @@ def test_uncaught_thread_exception_logged(caplog: pytest.LogCaptureFixture) -> N
     errs = [r for r in caplog.records if r.name == "medflux.uncaught" and r.levelno >= logging.ERROR]
     assert errs, "expected uncaught thread exception log"
     assert any("thread-boom" in (getattr(r, "exc", "") or getattr(r, "message", "")) for r in errs)
-

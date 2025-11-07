@@ -48,4 +48,3 @@ def test_json_formatter_truncation_and_repr():
     assert data.get("truncated") is True
     # bad should be repr string
     assert isinstance(data["bad"], str)
-

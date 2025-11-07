@@ -22,4 +22,3 @@ def test_tracing_init_no_crash(monkeypatch: pytest.MonkeyPatch) -> None:
     mod.init_tracer()
     # get_tracer may be None when OTEL is not installed; assert it doesn't error
     _ = mod.get_tracer()
-

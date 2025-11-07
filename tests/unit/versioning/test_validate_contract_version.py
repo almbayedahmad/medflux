@@ -24,4 +24,3 @@ def test_validate_contract_version_mismatch():
     ok, msg = validate_contract_version("stage_contract", doc)
     assert ok is False
     assert "mismatch" in msg or "missing" in msg
-

@@ -38,4 +38,3 @@ def test_policy_without_root_adds_default_console(monkeypatch: pytest.MonkeyPatc
     clog.configure_logging(force=True)
     # Root should have a console handler present
     assert any(isinstance(h, logging.StreamHandler) for h in logging.getLogger().handlers)
-

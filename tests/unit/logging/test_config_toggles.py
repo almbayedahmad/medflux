@@ -35,4 +35,3 @@ def test_disable_file_handler(monkeypatch: pytest.MonkeyPatch) -> None:
     configure_logging(force=True)
     # Ensure no rotating file handler is present
     assert not any(isinstance(h, logging.handlers.RotatingFileHandler) for h in logging.getLogger().handlers)
-

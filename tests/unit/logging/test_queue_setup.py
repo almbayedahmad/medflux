@@ -28,4 +28,3 @@ def test_queue_setup_and_effective_handlers() -> None:
     stop_queue()
     # After stopping, fall back to current root handlers (QueueHandler remains until reconfigured)
     _ = effective_handlers()  # should not raise
-

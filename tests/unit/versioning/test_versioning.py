@@ -27,4 +27,3 @@ def test_make_artifact_stamp_includes_schema_version():
     # schema version must be present and look like semver-ish
     sv = v.get("schema_version")
     assert isinstance(sv, str) and "." in sv
-

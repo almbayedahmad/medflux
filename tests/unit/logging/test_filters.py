@@ -62,4 +62,3 @@ def test_duplicate_filter_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
     cur["t"] = t0 + 1.1
     r3 = logging.LogRecord("medflux", logging.WARNING, __file__, 1, "dup", (), None)
     assert f.filter(r3) is True
-

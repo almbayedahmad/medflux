@@ -59,4 +59,3 @@ def test_middleware_error_unit(caplog: pytest.LogCaptureFixture) -> None:
     assert errs, "no error log emitted"
     infos = [r for r in caplog.records if r.name == "medflux.api" and r.levelno == logging.INFO and r.getMessage() == "request"]
     assert infos, "no terminal request info log emitted"
-

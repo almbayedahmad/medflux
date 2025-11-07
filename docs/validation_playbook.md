@@ -23,4 +23,3 @@ Dry-run and demotions
 CI Alignment
 - See .github/workflows/ci.yaml jobs: schema-validation and smoke for automated checks.
 - Breaking schema changes must accompany a version bump per core/policy/versioning/schema_versioning.md.
-

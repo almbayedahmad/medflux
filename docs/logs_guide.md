@@ -23,4 +23,3 @@ Policy references
 - core/policy/observability/logging/logging_config.yaml
 - core/policy/observability/logging/redaction_rules.yaml
 - core/logging/log_record.schema.json (used in CI validator)
-

@@ -30,4 +30,3 @@ def test_context_filter_injects_fields():
     assert getattr(rec, "pid") > 0
     # App version injected
     assert getattr(rec, "app_version")
-

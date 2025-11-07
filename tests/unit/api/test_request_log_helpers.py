@@ -55,4 +55,3 @@ def test_enrich_response_headers():
     enrich_response_headers(r, request_id="RID-2", traceparent="tp")
     assert r.headers.get("x-request-id") == "RID-2"
     assert r.headers.get("traceparent") == "tp"
-

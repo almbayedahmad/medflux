@@ -20,4 +20,3 @@ def test_console_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
     configure_logging(force=True)
     streams = [getattr(h, "stream", None) for h in logging.getLogger().handlers if isinstance(h, logging.StreamHandler)]
     assert any(s is sys.stderr for s in streams), "expected console stream to be stderr"
-

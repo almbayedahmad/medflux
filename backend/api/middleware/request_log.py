@@ -73,7 +73,7 @@ async def request_log_middleware(request: Request, call_next: Callable) -> Respo
         async with _span_ctx(span("http.request", attributes=attributes)) as _:
             response = await call_next(request)
             status = response.status_code
-            enrich_response_headers(response, request_id=meta["request_id"], traceparent=meta["traceparent"]) 
+            enrich_response_headers(response, request_id=meta["request_id"], traceparent=meta["traceparent"])
             # annotate current span with status code if tracing is active
             try:
                 from opentelemetry import trace as _trace  # lazy import
@@ -106,7 +106,7 @@ async def request_log_middleware(request: Request, call_next: Callable) -> Respo
             status_code=500,
             content={"detail": "Internal Server Error", "request_id": meta["request_id"]},
         )
-        enrich_response_headers(response, request_id=meta["request_id"], traceparent=meta["traceparent"]) 
+        enrich_response_headers(response, request_id=meta["request_id"], traceparent=meta["traceparent"])
     finally:
         dt = int((time.time() - t0) * 1000)
         try:

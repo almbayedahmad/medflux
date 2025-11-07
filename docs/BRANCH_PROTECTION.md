@@ -21,4 +21,3 @@ Notes
 - Matrix jobs appear as separate entries (e.g., Tests (matrix) (ubuntu-latest, 3.12)). You can require specific variants to balance thoroughness and speed.
 - To enforce coverage on new code, Codecov patch status is configured at 80% in codecov.yml; also consider enabling Codecov as a required check for PRs.
 - Keep “Allow force pushes” and “Allow deletions” disabled for main.
-

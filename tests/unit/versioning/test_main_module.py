@@ -15,4 +15,3 @@ def test_version_main_prints_json(capsys: pytest.CaptureFixture[str]) -> None:
     out = capsys.readouterr().out.strip()
     data = json.loads(out)
     assert isinstance(data.get("version"), str)
-

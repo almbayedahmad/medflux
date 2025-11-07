@@ -55,7 +55,7 @@ jobs:
       - name: Install pre-commit
         run: pip install pre-commit
       - name: Pre-commit (all files)
-        run: pre-commit run --all-files --show-diff-on-failure
+        run: SKIP=no-commit-to-branch pre-commit run --all-files --show-diff-on-failure
 
   typecheck:
     name: Type Check (mypy)

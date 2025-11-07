@@ -26,4 +26,3 @@ def test_uncaught_hook_logs_exception(caplog: pytest.LogCaptureFixture) -> None:
     assert records, "no uncaught error record captured"
     msg = records[-1].getMessage()
     assert "Uncaught exception" in msg
-
