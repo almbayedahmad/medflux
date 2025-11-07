@@ -167,7 +167,7 @@ tree_structure:
             files:
               - "core/policy/developer_setup/phase_scaffolding_guide.md"
               - "core/policy/developer_setup/development_checklist.md"
-              - "backend/Preprocessing/main_pre_standards/development/phase_generator.py"
+              - "tools/preprocessing/phase_generator.py"
           documentation:
             purpose: "Documentation and naming standards"
             files:

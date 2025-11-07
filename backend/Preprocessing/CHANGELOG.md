@@ -7,9 +7,7 @@ All notable changes to the Preprocessing Pipeline will be documented in this fil
 ### Major Structural Changes
 
 #### Added
-- **main_pre_standards/**: Lightweight scaffolding helpers (phase generator); canonical policies now live in core/policy/
-  - `development/`: Phase generator wrapper lives here; guides/checklists now live in `core/policy/developer_setup/`
-  - `documentation/`: Policies moved to `core/policy/documentation/`
+- **Phase generator**: `tools/preprocessing/phase_generator.py` replaces the old `main_pre_standards/development` wrapper; canonical policies live in `core/policy/`
   - `git/`: Git workflow rules and commit conventions
   - `policies/`: Stage contracts, validation rules, and KPIs
   - `versioning/`: Schema versioning and versioning policies

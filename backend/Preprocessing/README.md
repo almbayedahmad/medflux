@@ -6,7 +6,6 @@ This directory contains the preprocessing pipeline for the medflux backend syste
 
 ```
 Preprocessing/
-��� main_pre_standards/          # Scaffolding helpers (legacy wrappers live here)
 ��� main_pre_phases/             # Individual processing phases
 
 core/preprocessing/
@@ -20,9 +19,12 @@ core/preprocessing/
 samples/                        # Sample files for testing (moved from main_pre_samples/)
 tests/
 ��� preprocessing/               # Integration tests (detect_type -> encoding -> readers)
+tools/
+��� preprocessing/
+    ��� phase_generator.py       # Generates phase scaffolding per policy
 ```
 
-> Cross-phase code now lives in `core/preprocessing/...`. Legacy `main_pre_*` packages have been removed—update any remaining imports to the new modules before contributing.
+> Cross-phase code now lives in `core/preprocessing/...`. Legacy `main_pre_*` packages have been removed-update any remaining imports to the new modules before contributing.
 
 ## Phases
 
@@ -59,7 +61,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed migration notes.
 Use the phase generator script to create new phases:
 
 ```bash
-python main_pre_standards/development/phase_generator.py 11 validation
+python tools/preprocessing/phase_generator.py 11 validation
 ```
 
 - Follow guidelines in `core/policy/developer_setup/development_checklist.md`
