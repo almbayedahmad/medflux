@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_lang_detect import (
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_lang_detect import (
     compute_language_hint as compute_readers_language_hint,
     compute_locale_hint as compute_readers_locale_hint,
     compute_merged_language_hint as compute_readers_merged_language_hint,

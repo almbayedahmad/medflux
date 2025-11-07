@@ -21,9 +21,9 @@ Orchestrate document ingestion by dispatching native, OCR, and table extraction 
 python -m backend.Preprocessing.main_pre_phases.phase_02_readers.pipeline_workflow.readers_cli --out outputs/phase_02_readers samples/sample_text_smoke.txt
 ```
 
-Run the detect_type -> encoding -> readers chain (smoke defaults write to `main_pre_output/output_pre_smoke_results`):
+Run the detect_type -> encoding -> readers chain (smoke defaults write to ``MEDFLUX_OUTPUT_ROOT` (or <repo>/outputs/preprocessing/pre_smoke_results`)`):
 ```
-python -m backend.Preprocessing.main_pre_pipeline.preprocessing_chain \
+python -m core.preprocessing.pipeline.preprocessing_chain \
   --inputs samples/sample_text_smoke.txt samples/sample_pdf_smoke.pdf \
   --include-docs
 ```

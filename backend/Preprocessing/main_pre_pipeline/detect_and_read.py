@@ -1,14 +1,1 @@
-from __future__ import annotations
-
-"""Thin wrapper around the readers CLI for backwards compatibility."""
-
-from backend.Preprocessing.main_pre_phases.phase_02_readers.pipeline_workflow.readers_cli import run_readers_cli
-
-
-def main() -> None:
-    """Delegate to the unified run_readers CLI."""
-    run_readers_cli()
-
-
-if __name__ == "__main__":
-    main()
+"""Compatibility shim for legacy pipeline path."""\nfrom core.preprocessing.pipeline.detect_and_read import *  # noqa: F401,F403\n\nif __name__ == "__main__":\n    from core.preprocessing.pipeline.detect_and_read import main as _main\n    _main()\n

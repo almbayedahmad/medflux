@@ -5,7 +5,7 @@ import unicodedata
 from dataclasses import asdict
 from pathlib import Path
 
-from backend.Preprocessing.main_pre_output.output_router import OutputRouter
+from core.preprocessing.output.output_router import OutputRouter
 
 # ===================== Utilities =====================
 
@@ -170,7 +170,7 @@ def main() -> None:
         default=None,
         help=(
             "Optional base directory for smoke results. Defaults to "
-            "main_pre_output/output_pre_smoke_results."
+            "`MEDFLUX_OUTPUT_ROOT` (or <repo>/outputs/preprocessing/pre_smoke_results`)."
         ),
     )
     parser.add_argument(

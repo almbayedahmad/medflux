@@ -22,7 +22,7 @@ try:  # Optional dependency
 except Exception:  # pragma: no cover - pytesseract missing
     pytesseract = None
 
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_image import process_readers_preprocess_pipeline, to_readers_pil_image
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_image import process_readers_preprocess_pipeline, to_readers_pil_image
 from core.monitoring import observe_ocr_time_ms, observe_ocr_confidence
 
 

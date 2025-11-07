@@ -1,3 +1,1 @@
-from .output_router import OutputRouter, StageIO
-
-__all__ = ["OutputRouter", "StageIO"]
+"""Compatibility package for legacy output imports."""\nfrom core.preprocessing.output.output_router import OutputRouter, StageIO\n\n__all__ = ["OutputRouter", "StageIO"]\n

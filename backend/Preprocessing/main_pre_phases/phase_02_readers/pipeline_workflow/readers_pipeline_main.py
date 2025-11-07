@@ -13,7 +13,7 @@ from core.versioning import make_artifact_stamp
 from ..schemas.readers_schema_models import Summary, PageRecord, TableRecord
 from ..schemas.readers_schema_options import ReaderOptions
 from ..schemas.readers_schema_settings import get_runtime_settings
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_lang_detect import (
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_lang_detect import (
     compute_language_hint,
     compute_locale_hint,
     compute_merged_language_hint,

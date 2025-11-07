@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from ..schemas.readers_schema_settings import get_runtime_settings
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_geom import to_bottom_left, validate_bbox
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_lang import collapse_doc_lang, normalise_lang, tokenise_langs
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_num import as_float, as_int
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_geom import to_bottom_left, validate_bbox
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_lang import collapse_doc_lang, normalise_lang, tokenise_langs
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_num import as_float, as_int
 
 from ..schemas.readers_schema_types import TextBlock
 

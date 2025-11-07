@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.logging import emit_json_event, log_code
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_logger import log_event as _compat_log_event
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_logger import log_event as _compat_log_event
 
 
 def record_readers_warning(log_path: Path, warnings: List[str], code: str) -> None:

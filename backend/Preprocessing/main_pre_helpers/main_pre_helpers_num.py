@@ -1,8 +1,2 @@
-def as_int(x, default=0):
-    try: return int(x)
-    except: return default
-
-
-def as_float(x, default=0.0):
-    try: return float(x)
-    except: return default
+"""Compatibility shim. Use core.preprocessing.cross_phase.helpers instead."""
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_num import *  # noqa: F401,F403

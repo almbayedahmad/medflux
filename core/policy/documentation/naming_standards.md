@@ -50,6 +50,8 @@ This document defines the standardized naming conventions for the preprocessing 
 
 ### Main Layer Files
 
+> The physical location for these files is `core/preprocessing/cross_phase/...`. The legacy `main_pre_*` packages remain only as compatibility shims.
+
 #### Cross-Phase Helpers
 - **Pattern**: `main_pre_helpers_<topic>.py`
 - **Examples**:
@@ -116,7 +118,7 @@ This document defines the standardized naming conventions for the preprocessing 
   - `main_pre_helpers`
   - `main_pre_schemas`
   - `main_pre_pipeline`
-  - `main_pre_config`
+  - `core/preprocessing/cross_phase/config`
   - `core/policy` (canonical policies)
 
 ## Configuration Files
@@ -183,8 +185,8 @@ This document defines the standardized naming conventions for the preprocessing 
    - **Utility Functions**: `main_pre_helpers/` - Pure utility functions (math, text, file operations)
    - **Orchestration**: `main_pre_pipeline/` - Multi-phase coordination and workflow management
    - **Data Structures**: `main_pre_schemas/` - Shared schemas, contracts, and type definitions
-   - **Configuration**: `main_pre_config/` - Global configuration and rules
-   - **Output Management**: `main_pre_output/` - Cross-phase output management and routing
+   - **Configuration**: `core/preprocessing/cross_phase/config/` - Global configuration and rules
+   - **Output Management**: `core/preprocessing/output/` - Cross-phase output management and routing
    - **Testing**: `main_pre_tests/` - Cross-phase integration and system tests
    - **Samples**: `main_pre_samples/` - Sample data and test files
 

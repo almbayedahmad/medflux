@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_geom import to_bottom_left
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_lang import normalise_lang
-from backend.Preprocessing.main_pre_helpers.main_pre_helpers_num import as_float, as_int
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_geom import to_bottom_left
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_lang import normalise_lang
+from core.preprocessing.cross_phase.helpers.main_pre_helpers_num import as_float, as_int
 
 from ..schemas.readers_schema_types import (
     Artifact,
