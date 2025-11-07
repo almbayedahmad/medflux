@@ -1,3 +1,5 @@
+# Developer-friendly logging profile. Mirrors the global structure but keeps
+# DEBUG verbosity and disables sampling/rate limits so local troubleshooting is easy.
 meta:
   version: 1
   id: logging_config_dev

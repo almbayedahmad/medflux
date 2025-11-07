@@ -1,3 +1,5 @@
+# Production logging profile. Extends the base configuration with sampling,
+# rate limiting, and duplicate suppression to keep JSON logs lean under load.
 meta:
   version: 1
   id: logging_config_prod
