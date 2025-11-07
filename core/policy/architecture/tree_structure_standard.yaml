@@ -143,7 +143,7 @@ tree_structure:
           - "Test helper functions"
           - "Ensure end-to-end functionality"
 
-      main_pre_samples:
+      samples:
         purpose: "Sample data and test files"
         naming_pattern: "<type>_samples/"
         examples:
@@ -553,7 +553,7 @@ tree_structure:
 
         sample_data:
           description: "Test data and sample files"
-          location: "main_pre_samples/"
+          location: "samples/"
           naming: "<type>_samples/"
           examples:
             - "PDF sample files"
@@ -579,7 +579,7 @@ tree_structure:
       configuration: "core/preprocessing/cross_phase/config/"
       output_management: "core/preprocessing/output/"
       testing: "backend/Preprocessing/main_pre_tests/"
-      sample_data: "backend/Preprocessing/main_pre_samples/"
+      sample_data: "backend/Preprocessing/samples/"
 
     step_5:
       description: "Add required documentation and tests"
@@ -764,7 +764,7 @@ tree_structure:
       configuration: "Place in core/preprocessing/cross_phase/config/ as <topic>_config.yaml"
       output_management: "Place in core/preprocessing/output/ as <functionality>_router.py"
       testing: "Place in backend/Preprocessing/main_pre_tests/ as test_<topic>.py"
-      sample_data: "Place in main_pre_samples/ as <type>_samples/"
+      sample_data: "Place in samples/ as <type>_samples/"
 
   # === COMMON PITFALLS ===
   common_pitfalls:
@@ -885,7 +885,7 @@ tree_structure:
       configuration: "core/preprocessing/cross_phase/config/<topic>_config.yaml"
       output_management: "core/preprocessing/output/<functionality>_router.py"
       testing: "backend/Preprocessing/main_pre_tests/test_<topic>.py"
-      sample_data: "main_pre_samples/<type>_samples/"
+      sample_data: "samples/<type>_samples/"
 
     if_no_phase_specific:
       core_functions: "phase_XX_<stage>/core_functions/<stage>_core_<functionality>.py"
@@ -1135,7 +1135,7 @@ tree_structure:
             - "core/preprocessing/pipeline/"
             - "core/preprocessing/output/"
             - "backend/Preprocessing/main_pre_tests/"
-            - "main_pre_samples/"
+            - "samples/"
           phase_structure_validation:
             forbidden_directories:
               - "docs/" # Only common_files/docs/ allowed
@@ -1189,7 +1189,7 @@ tree_structure:
   - Name files according to file_naming_rules; keep tests as test_<target>.py mirroring
     their modules.
   - Production artifacts go under core/preprocessing/output/; sample/demo artifacts go under
-    main_pre_samples/ with phase/date/run subfolders.
+    samples/ with phase/date/run subfolders.
   - 'Cross-phase code: Any code used by multiple phases belongs in main folders organized by purpose.'
 
   code_commenting_guidelines:
@@ -1275,7 +1275,7 @@ tree_structure:
         - backend/Preprocessing/main_pre_tests/
         - core/preprocessing/cross_phase/config/
         - core/preprocessing/output/
-        - backend/Preprocessing/main_pre_samples/
+        - backend/Preprocessing/samples/
         naming_examples:
         - main_pre_helpers_lang.py
         - main_pre_helpers_num.py
@@ -1295,4 +1295,4 @@ tree_structure:
         schemas_go_to: core/preprocessing/cross_phase/schemas/<entity>_schema.py
       outputs_and_samples:
         production_outputs: core/preprocessing/output/ (official artifacts)
-        samples_outputs: backend/Preprocessing/main_pre_samples/ (by phase/date/run)
+        samples_outputs: backend/Preprocessing/samples/ (by phase/date/run)

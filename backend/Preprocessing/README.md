@@ -6,18 +6,19 @@ This directory contains the preprocessing pipeline for the medflux backend syste
 
 ```
 Preprocessing/
-├── main_pre_standards/          # Scaffolding helpers (legacy wrappers live here)
-├── main_pre_phases/             # Individual processing phases
-├── main_pre_samples/            # Sample files for testing
-└── main_pre_tests/              # Integration tests
+��� main_pre_standards/          # Scaffolding helpers (legacy wrappers live here)
+��� main_pre_phases/             # Individual processing phases
+��� main_pre_tests/              # Integration tests
 
 core/preprocessing/
-├── cross_phase/
-│   ├── helpers/                 # Shared helper modules (lang, geom, num, etc.)
-│   ├── schemas/                 # Shared schema definitions (stage contracts, pipeline config)
-│   └── config/                  # Centralized preprocessing config loaders
-├── pipeline/                    # Multi-phase orchestration entry points
-└── output/                      # Output router + helpers
+��� cross_phase/
+�   ��� helpers/                 # Shared helper modules (lang, geom, num, etc.)
+�   ��� schemas/                 # Shared schema definitions (stage contracts, pipeline config)
+�   ��� config/                  # Centralized preprocessing config loaders
+��� pipeline/                    # Multi-phase orchestration entry points
+��� output/                      # Output router + helpers
+
+samples/                        # Sample files for testing (moved from main_pre_samples/)
 ```
 
 > Cross-phase code now lives in `core/preprocessing/...`. Legacy `main_pre_*` packages have been removed—update any remaining imports to the new modules before contributing.
@@ -137,7 +138,7 @@ python -m pytest main_pre_tests/ -v
 
 ## Samples
 
-Test files are available in `main_pre_samples/`:
+Test files are available in `samples/`:
 - PDF samples
 - DOCX samples
 - Image samples
