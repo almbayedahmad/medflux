@@ -1,11 +1,17 @@
+# Contract for the detect_type stage configuration. Each section below documents
+# the knobs exposed to pipelines so future edits do not require guesswork.
 type: object
-required: [''stage'', ''io'']
+required:
+  - stage    # user-friendly stage name, shown in logs/metrics
+  - io       # required output targets for normalized artifacts
 properties:
   stage:
     type: string
   io:
     type: object
-    required: [''out_doc_path'', ''out_stats_path'']
+    required:
+      - out_doc_path      # where to persist unified document output
+      - out_stats_path    # where to persist stage stats output
     properties:
       out_doc_path:
         type: string
@@ -15,14 +21,14 @@ properties:
     type: object
     properties:
       sample_pages:
-        type: integer
+        type: integer     # number of sample pages used to infer doc type
       topk_image_pages:
-        type: integer
+        type: integer     # max number of image-heavy pages to inspect
       img_area_thr:
-        type: number
+        type: number      # min fraction of page covered by images to treat as scan
       text_len_thr:
-        type: integer
+        type: integer     # characters required before calling the page "text rich"
       words_thr:
-        type: integer
+        type: integer     # total detected words needed to classify as text
       blocks_thr:
-        type: integer
+        type: integer     # required number of text blocks before identifying layout

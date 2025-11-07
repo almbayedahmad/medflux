@@ -1,3 +1,6 @@
+# Redaction rules keep sensitive material out of structured logs. Keys strip
+# entire values, patterns scrub inline matches, and "never" guards identifiers
+# required for debugging.
 meta:
   version: 1
   id: redaction_rules
@@ -15,10 +18,11 @@ keys:
 
 patterns:
   # Regexes applied to message text; replaced with "[REDACTED]"
-  - "(?i)bearer\s+[a-z0-9\-\._~\+\/=]+"
-  - "(?i)apikey[=:]\s*[a-z0-9\-\._~\+\/=]+"
-  - "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
-  - "+?[0-9][0-9\-\s]{6,}[0-9]"
+  # Single quotes avoid YAML escaping of backslashes, making maintenance easier.
+  - '(?i)bearer\s+[a-z0-9\-\._~\+\/=]+'
+  - '(?i)apikey[=:]\s*[a-z0-9\-\._~\+\/=]+'
+  - '[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
+  - '+?[0-9][0-9\-\s]{6,}[0-9]'
 
 replacement: "[REDACTED]"
 

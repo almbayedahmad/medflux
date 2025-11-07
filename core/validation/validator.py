@@ -1,3 +1,5 @@
+"""Schema-driven validation entry points used across every preprocessing phase."""
+
 from __future__ import annotations
 
 import logging
@@ -19,10 +21,12 @@ import time
 
 
 def _iter_errors(validator: Draft202012Validator, payload: Any) -> Iterable[JSValidationError]:
+    """Wrapper kept separate for unit testing / monkeypatching validator behavior."""
     return validator.iter_errors(payload)
 
 
 def _summarize_errors(errors: Iterable[JSValidationError]) -> Tuple[str, list[dict]]:
+    """Convert jsonschema exceptions into log/telemetry friendly structures."""
     details: list[dict] = []
     for e in errors:
         path = list(e.path)
@@ -38,6 +42,7 @@ def _summarize_errors(errors: Iterable[JSValidationError]) -> Tuple[str, list[di
 
 
 def _build_store(root: _Path) -> dict[str, dict]:
+    """Create a $id aware lookup store so RefResolver can inline shared fragments."""
     store: dict[str, dict] = {}
     for p in root.rglob("*.json"):
         try:
@@ -54,6 +59,7 @@ def _build_store(root: _Path) -> dict[str, dict]:
 
 @lru_cache(maxsize=128)
 def _compile(schema_path_str: str, mtime: float) -> Draft202012Validator:
+    """Load and cache validators. The mtime busts cache when schemas change on disk."""
     schema_path = _Path(schema_path_str)
     sch = load_schema(schema_path)
     try:
@@ -79,6 +85,7 @@ def _compile(schema_path_str: str, mtime: float) -> Draft202012Validator:
 
 
 def _env_true(*names: str) -> bool:
+    """Return True when any provided env var is truthy (case-insensitive)."""
     for n in names:
         v = os.environ.get(n, "")
         if isinstance(v, str) and v.strip().lower() in {"1", "true", "yes"}:
@@ -104,6 +111,7 @@ def validate_input(phase: str, payload: Any, *, soft: bool | None = None) -> Non
         errors = list(_iter_errors(validator, payload))
         _ = (time.perf_counter() - t0)  # keep for parity, timing handled by validation_span
         if errors:
+            # Dry-run mode keeps prod deployments safe while surfacing bad payloads.
             if _env_true("MEDFLUX_VALIDATION_DRYRUN", "MFLUX_VALIDATION_DRYRUN"):
                 _, details = _summarize_errors(errors)
                 logging.getLogger("medflux.validation").warning(
@@ -111,6 +119,7 @@ def validate_input(phase: str, payload: Any, *, soft: bool | None = None) -> Non
                 )
                 v["ok"] = True
                 return
+            # Evaluate demotion policy: some errors only warrant a warning.
             rules = demotion_rules()
             demoted = [e for e in errors if should_demote(e, rules)]
             remaining = [e for e in errors if e not in demoted]
@@ -153,6 +162,7 @@ def validate_output(phase: str, payload: Any, *, soft: bool | None = None) -> No
                 )
                 v["ok"] = True
                 return
+            # Apply demotion rules before deciding whether to raise or warn.
             rules = demotion_rules()
             demoted = [e for e in errors if should_demote(e, rules)]
             remaining = [e for e in errors if e not in demoted]

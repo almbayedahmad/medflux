@@ -1,52 +1,78 @@
-﻿# === Preprocessing Rules (قابلة للتوسعة) ===
-# الهدف: تحديد مسار المعالجة لكل نوع ملف بدون إنشاء بايبلاين الآن.
+# === Preprocessing Rules (Extensible) ===
+# Goal: define the processing path for each file type without building the pipeline yet.
+# Sections:
+#   defaults  - global knobs (output roots, encoding policies)
+#   exclude   - helper filters that skip already-normalized assets
+#   rules     - ordered decision table describing how documents flow across phases
 
 defaults:
-  out_root: "output"           # جذر الإخراج المقترح
-  timestamped_runs: true       # اقتراح استخدام ختم وقت عند الحفظ (عند التفعيل لاحقًا)
+  out_root: "output"           # Suggested output root
+  timestamped_runs: true       # Recommend timestamping saved runs when enabled later
   encoding:
     enabled: true
     target_encoding: "utf-8"
-    normalize_bom: "remove"    # إزالة BOM من ملفات UTF-8-SIG
-    newline_policy: "lf"       # أو "crlf"
-    errors: "strict"           # أو "replace" / "ignore"
+    normalize_bom: "remove"    # Remove BOM from UTF-8-SIG files
+    newline_policy: "lf"       # or "crlf"
+    errors: "strict"           # or "replace" / "ignore"
 
-# تجاهُل ملفات ناتجة مسبقًا (مثل نسخ utf8)
+# Ignore previously generated files (such as utf8 copies)
 exclude:
-  name_regex: '\.utf8(\.|$)'   # أي ملف اسمه فيه ".utf8" قبل الامتداد
+  name_regex: '\.utf8(\.|$)'   # Any filename containing ".utf8" before the extension
 
 rules:
 
-  # 1) ملفات نصية خام → تمر أولًا على Encoding Normalizer ثم إلى Readers
+  # 1) Raw text files -> run through Encoding Normalizer before Readers
   - name: text_like_go_through_encoding
     when:
-      file_type_in: ["txt","csv","md","log"]
+      file_type_in:
+        - txt
+        - csv
+        - md
+        - log
     do:
       - phase_01_encoding:
           normalize: true
           newline: "{{ defaults.encoding.newline_policy }}"
           errors: "{{ defaults.encoding.errors }}"
-          outdir_rel: "normalized"   # مجلد فرعي مقترح لحفظ النسخة UTF-8
-      - next: "readers"              # بعد التطبيع، تنتقل لاحقًا إلى القرّاء
+          outdir_rel: "normalized"   # Proposed subfolder for the UTF-8 copy
+      - next: "readers"              # After normalization, move on to readers
 
-  # 2) غير نصي (DOCX / PDF / صورة) → تخطي Encoding والانتقال للقراء
+  # 2) Non-text (DOCX / PDF / image) -> skip encoding and go to readers
   - name: non_text_skip_encoding
     when:
-      file_type_in: ["docx","pdf_text","pdf_scanned","pdf_mixed","image","unknown"]
+      file_type_in:
+        - docx
+        - pdf_text
+        - pdf_scanned
+        - pdf_mixed
+        - image
+        - unknown
     do:
       - skip: "phase_01_encoding"
       - next: "readers"
 
-# ملاحظات:
-# - "readers" غير منشأة بعد، لكن هذه القاعدة تحدد المسار المتوقع لاحقًا.
-# - لاحقًا أضف قواعد أدق للـ PDF الممسوح (ocr) والصور.
-# - أي من القيم أعلاه يمكن تعديلها مركزيًا دون تغيير الأكواد.
+# Notes:
+# - "readers" pipeline not implemented yet; this rule defines the expected path.
+# - Later add finer rules for scanned PDFs (OCR) and images.
+# - Any value above can be adjusted centrally without changing code.
 
   - name: readers_pdf_routing
     when:
-      file_type_in: ["pdf_text","pdf_scanned","pdf_mixed"]
+      file_type_in:
+        - pdf_text
+        - pdf_scanned
+        - pdf_mixed
     do:
-      - set: {"readers.mode": "native"}
-      - if:   {"file_type":"pdf_scanned"} ; then: {"set":{"readers.mode":"ocr"}}
-      - elif: {"file_type":"pdf_mixed"}   ; then: {"set":{"readers.mode":"mixed"}}
+      - set:
+          "readers.mode": "native"
+      - if:
+          file_type: pdf_scanned
+        then:
+          set:
+            "readers.mode": "ocr"
+      - elif:
+          file_type: pdf_mixed
+        then:
+          set:
+            "readers.mode": "mixed"
       - next: "readers"

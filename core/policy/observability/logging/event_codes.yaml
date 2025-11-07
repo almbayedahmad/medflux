@@ -1,3 +1,5 @@
+# Event code registry used by logging + validation to keep consistent severity.
+# Codes are grouped by pipeline phase so alerts link directly to the failing component.
 meta:
   version: 1
   id: event_codes
@@ -34,6 +36,7 @@ codes:
         message: Failed to decode input file
         severity: ERROR
 
+  # Validation covers schema/demotions plus deeper cross-field rules.
   validation:
     warnings:
       - code: VL-W001
@@ -47,8 +50,8 @@ codes:
         severity: WARNING
     info:
       - code: VL-I000
-      message: Validation OK
-      severity: INFO
+        message: Validation OK
+        severity: INFO
     errors:
       - code: VL-E001
         message: Input validation failed

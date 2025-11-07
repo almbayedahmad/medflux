@@ -1,0 +1,5 @@
+# Normalize line endings for source and config files so diffs stay readable.
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
