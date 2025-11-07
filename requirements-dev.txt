@@ -5,3 +5,4 @@ httpx>=0.27
 prometheus-client>=0.17.0
 opentelemetry-sdk>=1.26.0
 opentelemetry-exporter-otlp>=1.26.0
+jsonschema>=4.22.0
