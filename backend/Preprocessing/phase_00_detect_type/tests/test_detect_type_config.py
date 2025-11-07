@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.Preprocessing.main_pre_phases.phase_00_detect_type.connecters.detect_type_connector_config import (
+from backend.Preprocessing.phase_00_detect_type.connecters.detect_type_connector_config import (
     connect_detect_type_config_connector,
 )
 

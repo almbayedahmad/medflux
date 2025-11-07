@@ -38,7 +38,7 @@ Note on alerts
 
 `powershell
 # Detect type stage (example)
-python -m backend.Preprocessing.main_pre_phases.phase_00_detect_type.pipeline_workflow.detect_type_cli samples\Sample.txt --log-json --log-level INFO
+python -m backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_cli samples\Sample.txt --log-json --log-level INFO
 `
 > Ensure `PYTHONPATH='.'` if running module entry points directly.
 

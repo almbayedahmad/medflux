@@ -10,4 +10,4 @@ Impact:
 -
 
 Tests:
-- pytest medflux_backend/Preprocessing/main_pre_phases/phase_00_detect_type/tests
+- pytest medflux_backend/Preprocessing/phase_00_detect_type/tests

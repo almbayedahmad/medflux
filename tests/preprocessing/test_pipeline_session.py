@@ -46,7 +46,7 @@ def _load_unified_text(readers_dir: Path) -> str:
 
 
 # ===================== Detection import (robust) =====================
-from backend.Preprocessing.main_pre_phases.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
+from backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
 
 
 def run_detection(file_path: Path) -> dict:

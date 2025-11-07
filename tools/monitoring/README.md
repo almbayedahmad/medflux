@@ -22,7 +22,7 @@ Usage
    docker compose up -d
 
 2) Run your app with exporter:
-   MEDFLUX_MONITORING=1 MEDFLUX_PROM_PORT=8000 python -m backend.Preprocessing.main_pre_phases.phase_00_detect_type.pipeline_workflow.detect_type_cli sample.txt --log-json --log-level INFO
+   MEDFLUX_MONITORING=1 MEDFLUX_PROM_PORT=8000 python -m backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_cli sample.txt --log-json --log-level INFO
 
 3) Open Grafana: http://localhost:3000 (admin/admin)
    Prometheus: http://localhost:9090

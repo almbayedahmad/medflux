@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 from core.preprocessing.output.output_router import OutputRouter
-from backend.Preprocessing.main_pre_phases.phase_00_detect_type.pipeline_workflow.detect_type_pipeline import (
+from backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_pipeline import (
     run_detect_type_pipeline,
 )
 from backend.Preprocessing.main_pre_phases.phase_01_encoding.pipeline_workflow.encoding_pipeline import (

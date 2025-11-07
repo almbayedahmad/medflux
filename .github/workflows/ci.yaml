@@ -240,7 +240,7 @@ jobs:
           MEDFLUX_LOG_PROFILE: dev
         run: |
           echo "hello" > sample.txt
-          python -m backend.Preprocessing.main_pre_phases.phase_00_detect_type.pipeline_workflow.detect_type_cli sample.txt --log-level INFO --log-json --log-stderr > cli_detect_type_output.json
+          python -m backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_cli sample.txt --log-level INFO --log-json --log-stderr > cli_detect_type_output.json
       - name: Validate detect_type logs
         run: python tools/logs/validate_records.py --root logs --glob "**/phase_00_detect_type.jsonl" --min-context 0.95
       - name: Validate detect_type CLI output via schema

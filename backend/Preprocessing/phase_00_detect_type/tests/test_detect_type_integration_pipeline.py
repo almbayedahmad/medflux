@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from backend.Preprocessing.main_pre_phases.phase_00_detect_type.pipeline_workflow.detect_type_pipeline import (
+from backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_pipeline import (
     run_detect_type_pipeline,
 )
 
