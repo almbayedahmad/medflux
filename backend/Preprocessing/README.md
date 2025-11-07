@@ -20,7 +20,7 @@ core/preprocessing/
 └── output/                      # Output router + helpers
 ```
 
-> Cross-phase code now lives in `core/preprocessing/...`. The `main_pre_*` packages remain as thin compatibility shims so older imports keep working, but new code must import from `core.preprocessing`.
+> Cross-phase code now lives in `core/preprocessing/...`. Legacy `main_pre_*` packages have been removed—update any remaining imports to the new modules before contributing.
 
 ## Phases
 

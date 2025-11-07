@@ -493,7 +493,7 @@ tree_structure:
       categories:
         utility_functions:
           description: "Pure utility functions (math, text, file operations)"
-          location: "main_pre_helpers/"
+          location: "core/preprocessing/cross_phase/helpers/"
           naming: "main_pre_helpers_<topic>.py"
           examples:
             - "Language processing utilities"
@@ -503,7 +503,7 @@ tree_structure:
 
         orchestration:
           description: "Multi-phase coordination and workflow management"
-          location: "main_pre_pipeline/"
+          location: "core/preprocessing/pipeline/"
           naming: "<purpose>_pipeline.py"
           examples:
             - "Full pipeline chains"
@@ -513,7 +513,7 @@ tree_structure:
 
         data_structures:
           description: "Shared schemas, contracts, and type definitions"
-          location: "main_pre_schemas/"
+          location: "core/preprocessing/cross_phase/schemas/"
           naming: "<entity>_schema.py"
           examples:
             - "Document metadata schemas"
@@ -543,7 +543,7 @@ tree_structure:
 
         testing:
           description: "Cross-phase integration and system tests"
-          location: "main_pre_tests/"
+          location: "backend/Preprocessing/main_pre_tests/"
           naming: "test_<topic>.py"
           examples:
             - "Pipeline integration tests"
@@ -758,12 +758,12 @@ tree_structure:
       multi_phase: "Place in core/preprocessing/pipeline/ as <purpose>_pipeline.py"
 
     creating_cross_phase_code:
-      utility_functions: "Place in main_pre_helpers/ as main_pre_helpers_<topic>.py"
-      orchestration: "Place in main_pre_pipeline/ as <purpose>_pipeline.py"
-      data_structures: "Place in main_pre_schemas/ as <entity>_schema.py"
-      configuration: "Place in main_pre_config/ as <topic>_config.yaml"
+      utility_functions: "Place in core/preprocessing/cross_phase/helpers/ as main_pre_helpers_<topic>.py"
+      orchestration: "Place in core/preprocessing/pipeline/ as <purpose>_pipeline.py"
+      data_structures: "Place in core/preprocessing/cross_phase/schemas/ as <entity>_schema.py"
+      configuration: "Place in core/preprocessing/cross_phase/config/ as <topic>_config.yaml"
       output_management: "Place in core/preprocessing/output/ as <functionality>_router.py"
-      testing: "Place in main_pre_tests/ as test_<topic>.py"
+      testing: "Place in backend/Preprocessing/main_pre_tests/ as test_<topic>.py"
       sample_data: "Place in main_pre_samples/ as <type>_samples/"
 
   # === COMMON PITFALLS ===
@@ -773,7 +773,7 @@ tree_structure:
       - "Missing required subfolders in phase directory"
       - "Using inconsistent naming patterns"
       - "Hardcoding values instead of using config"
-      - "Creating single-phase pipelines in main_pre_pipeline/"
+      - "Creating single-phase pipelines in core/preprocessing/pipeline/"
       - "Creating multi-phase pipelines in phase folders"
       - "Using 'core_processors' instead of 'core_functions'"
 
@@ -879,12 +879,12 @@ tree_structure:
     decision_question: "Is this code used by more than one phase?"
 
     if_yes_cross_phase:
-      utility_functions: "main_pre_helpers/main_pre_helpers_<topic>.py"
-      orchestration: "main_pre_pipeline/<purpose>_pipeline.py"
-      data_structures: "main_pre_schemas/<entity>_schema.py"
+      utility_functions: "core/preprocessing/cross_phase/helpers/main_pre_helpers_<topic>.py"
+      orchestration: "core/preprocessing/pipeline/<purpose>_pipeline.py"
+      data_structures: "core/preprocessing/cross_phase/schemas/<entity>_schema.py"
       configuration: "core/preprocessing/cross_phase/config/<topic>_config.yaml"
       output_management: "core/preprocessing/output/<functionality>_router.py"
-      testing: "main_pre_tests/test_<topic>.py"
+      testing: "backend/Preprocessing/main_pre_tests/test_<topic>.py"
       sample_data: "main_pre_samples/<type>_samples/"
 
     if_no_phase_specific:
@@ -1129,12 +1129,12 @@ tree_structure:
             forbidden_terms: \bload(?:er)?\b
           required_main_directories:
             - "core/policy/"
-            - "main_pre_helpers/"
-            - "main_pre_schemas/"
+            - "core/preprocessing/cross_phase/helpers/"
+            - "core/preprocessing/cross_phase/schemas/"
             - "core/preprocessing/cross_phase/config/"
-            - "main_pre_pipeline/"
+            - "core/preprocessing/pipeline/"
             - "core/preprocessing/output/"
-            - "main_pre_tests/"
+            - "backend/Preprocessing/main_pre_tests/"
             - "main_pre_samples/"
           phase_structure_validation:
             forbidden_directories:
@@ -1184,8 +1184,8 @@ tree_structure:
     reuse.'
   - 'Phase-layer placement: core functions → core_functions/, orchestration → pipeline_workflow/,
     types → schemas/, tests → tests/.'
-  - 'Main-layer placement: reusable helpers → main_pre_helpers/, shared types → main_pre_schemas/,
-    global tests → main_pre_tests/.'
+  - 'Main-layer placement: reusable helpers → core/preprocessing/cross_phase/helpers/, shared types → core/preprocessing/cross_phase/schemas/,
+    global tests → backend/Preprocessing/main_pre_tests/.'
   - Name files according to file_naming_rules; keep tests as test_<target>.py mirroring
     their modules.
   - Production artifacts go under core/preprocessing/output/; sample/demo artifacts go under
@@ -1289,7 +1289,7 @@ tree_structure:
         tests_go_to: phase_XX_<stage>/tests/test_<module>.py
         schemas_go_to: phase_XX_<stage>/schemas/<entity>_schema.py
       if_yes_cross_phase:
-        place_under: core/preprocessing/cross_phase/helpers/ (or main_pre_schemas/ if types)
+        place_under: core/preprocessing/cross_phase/helpers/ (or core/preprocessing/cross_phase/schemas/ if types)
         name_like: main_pre_helpers_<topic>.py (e.g., main_pre_helpers_lang.py)
         tests_go_to: backend/Preprocessing/main_pre_tests/test_<topic>.py
         schemas_go_to: core/preprocessing/cross_phase/schemas/<entity>_schema.py

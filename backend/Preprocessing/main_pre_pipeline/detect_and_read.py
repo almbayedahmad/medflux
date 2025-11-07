@@ -1,1 +1,0 @@
-"""Compatibility shim for legacy pipeline path."""\nfrom core.preprocessing.pipeline.detect_and_read import *  # noqa: F401,F403\n\nif __name__ == "__main__":\n    from core.preprocessing.pipeline.detect_and_read import main as _main\n    _main()\n

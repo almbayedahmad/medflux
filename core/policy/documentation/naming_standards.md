@@ -50,7 +50,7 @@ This document defines the standardized naming conventions for the preprocessing 
 
 ### Main Layer Files
 
-> The physical location for these files is `core/preprocessing/cross_phase/...`. The legacy `main_pre_*` packages remain only as compatibility shims.
+> The physical location for these files is `core/preprocessing/cross_phase/...`. The legacy `main_pre_*` packages have been deleted; update existing imports to the new modules.
 
 #### Cross-Phase Helpers
 - **Pattern**: `main_pre_helpers_<topic>.py`
