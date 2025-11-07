@@ -47,7 +47,7 @@ tree_structure:
 
       main_layer:
         description: "Code reused across MULTIPLE phases lives in the core preprocessing layer"
-        folders: ["core/preprocessing/cross_phase/helpers/", "core/preprocessing/cross_phase/schemas/", "core/preprocessing/pipeline/", "backend/Preprocessing/main_pre_tests/"]
+        folders: ["core/preprocessing/cross_phase/helpers/", "core/preprocessing/cross_phase/schemas/", "core/preprocessing/pipeline/", "tests/preprocessing/"]
         decision_question: "Will this code be reused by more than one phase?"
         if_yes: "Place in main-layer folder"
 
@@ -129,7 +129,7 @@ tree_structure:
           - "Handle output formatting"
           - "Store smoke/integration artifacts under MEDFLUX_OUTPUT_ROOT (or <repo>/outputs/preprocessing) and allow per-run overrides"
 
-      main_pre_tests:
+      tests_preprocessing:
         purpose: "Cross-phase integration and system tests"
         naming_pattern: "test_<topic>.py"
         examples:
@@ -543,7 +543,7 @@ tree_structure:
 
         testing:
           description: "Cross-phase integration and system tests"
-          location: "backend/Preprocessing/main_pre_tests/"
+          location: "tests/preprocessing/"
           naming: "test_<topic>.py"
           examples:
             - "Pipeline integration tests"
@@ -578,7 +578,7 @@ tree_structure:
       data_structures: "core/preprocessing/cross_phase/schemas/"
       configuration: "core/preprocessing/cross_phase/config/"
       output_management: "core/preprocessing/output/"
-      testing: "backend/Preprocessing/main_pre_tests/"
+      testing: "tests/preprocessing/"
       sample_data: "backend/Preprocessing/samples/"
 
     step_5:
@@ -636,7 +636,7 @@ tree_structure:
           - "core/preprocessing/cross_phase/helpers/"
           - "core/preprocessing/cross_phase/schemas/"
           - "core/preprocessing/pipeline/"
-          - "backend/Preprocessing/main_pre_tests/"
+          - "tests/preprocessing/"
 
       step_5:
         description: "Add required documentation and tests"
@@ -763,7 +763,7 @@ tree_structure:
       data_structures: "Place in core/preprocessing/cross_phase/schemas/ as <entity>_schema.py"
       configuration: "Place in core/preprocessing/cross_phase/config/ as <topic>_config.yaml"
       output_management: "Place in core/preprocessing/output/ as <functionality>_router.py"
-      testing: "Place in backend/Preprocessing/main_pre_tests/ as test_<topic>.py"
+      testing: "Place in tests/preprocessing/ as test_<topic>.py"
       sample_data: "Place in samples/ as <type>_samples/"
 
   # === COMMON PITFALLS ===
@@ -884,7 +884,7 @@ tree_structure:
       data_structures: "core/preprocessing/cross_phase/schemas/<entity>_schema.py"
       configuration: "core/preprocessing/cross_phase/config/<topic>_config.yaml"
       output_management: "core/preprocessing/output/<functionality>_router.py"
-      testing: "backend/Preprocessing/main_pre_tests/test_<topic>.py"
+      testing: "tests/preprocessing/test_<topic>.py"
       sample_data: "samples/<type>_samples/"
 
     if_no_phase_specific:
@@ -1134,7 +1134,7 @@ tree_structure:
             - "core/preprocessing/cross_phase/config/"
             - "core/preprocessing/pipeline/"
             - "core/preprocessing/output/"
-            - "backend/Preprocessing/main_pre_tests/"
+            - "tests/preprocessing/"
             - "samples/"
           phase_structure_validation:
             forbidden_directories:
@@ -1185,7 +1185,7 @@ tree_structure:
   - 'Phase-layer placement: core functions → core_functions/, orchestration → pipeline_workflow/,
     types → schemas/, tests → tests/.'
   - 'Main-layer placement: reusable helpers → core/preprocessing/cross_phase/helpers/, shared types → core/preprocessing/cross_phase/schemas/,
-    global tests → backend/Preprocessing/main_pre_tests/.'
+    global tests → tests/preprocessing/.'
   - Name files according to file_naming_rules; keep tests as test_<target>.py mirroring
     their modules.
   - Production artifacts go under core/preprocessing/output/; sample/demo artifacts go under
@@ -1272,7 +1272,7 @@ tree_structure:
         - core/preprocessing/cross_phase/helpers/
         - core/preprocessing/cross_phase/schemas/
         - core/preprocessing/pipeline/
-        - backend/Preprocessing/main_pre_tests/
+        - tests/preprocessing/
         - core/preprocessing/cross_phase/config/
         - core/preprocessing/output/
         - backend/Preprocessing/samples/
@@ -1291,7 +1291,7 @@ tree_structure:
       if_yes_cross_phase:
         place_under: core/preprocessing/cross_phase/helpers/ (or core/preprocessing/cross_phase/schemas/ if types)
         name_like: main_pre_helpers_<topic>.py (e.g., main_pre_helpers_lang.py)
-        tests_go_to: backend/Preprocessing/main_pre_tests/test_<topic>.py
+        tests_go_to: tests/preprocessing/test_<topic>.py
         schemas_go_to: core/preprocessing/cross_phase/schemas/<entity>_schema.py
       outputs_and_samples:
         production_outputs: core/preprocessing/output/ (official artifacts)

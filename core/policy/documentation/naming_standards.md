@@ -187,7 +187,7 @@ This document defines the standardized naming conventions for the preprocessing 
    - **Data Structures**: `main_pre_schemas/` - Shared schemas, contracts, and type definitions
    - **Configuration**: `core/preprocessing/cross_phase/config/` - Global configuration and rules
    - **Output Management**: `core/preprocessing/output/` - Cross-phase output management and routing
-   - **Testing**: `main_pre_tests/` - Cross-phase integration and system tests
+   - **Testing**: `tests/preprocessing/` - Cross-phase integration and system tests
    - **Samples**: `samples/` - Sample data and test files
 
 ## Standards Compliance

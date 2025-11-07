@@ -8,7 +8,6 @@ This directory contains the preprocessing pipeline for the medflux backend syste
 Preprocessing/
 ��� main_pre_standards/          # Scaffolding helpers (legacy wrappers live here)
 ��� main_pre_phases/             # Individual processing phases
-��� main_pre_tests/              # Integration tests
 
 core/preprocessing/
 ��� cross_phase/
@@ -19,6 +18,8 @@ core/preprocessing/
 ��� output/                      # Output router + helpers
 
 samples/                        # Sample files for testing (moved from main_pre_samples/)
+tests/
+��� preprocessing/               # Integration tests (detect_type -> encoding -> readers)
 ```
 
 > Cross-phase code now lives in `core/preprocessing/...`. Legacy `main_pre_*` packages have been removed—update any remaining imports to the new modules before contributing.
@@ -127,7 +128,7 @@ python -m pytest main_pre_phases/phase_XX_stage/tests/ -v
 ### Integration Tests
 
 ```bash
-python -m pytest main_pre_tests/ -v
+python -m pytest tests/preprocessing -v
 ```
 
 ## Configuration
