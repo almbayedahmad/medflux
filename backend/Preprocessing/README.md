@@ -6,7 +6,7 @@ This directory contains the preprocessing pipeline for the medflux backend syste
 
 ```
 Preprocessing/
-├── main_pre_standards/          # Project-wide standards and policies
+├── main_pre_standards/          # Scaffolding helpers (phase generator); policies live in core/policy/
 ├── main_pre_phases/             # Individual processing phases
 ├── main_pre_helpers/            # Cross-phase utility functions
 ├── main_pre_schemas/            # Shared data schemas
@@ -15,6 +15,8 @@ Preprocessing/
 ├── main_pre_samples/            # Sample files for testing
 └── main_pre_tests/              # Integration tests
 ```
+
+> Central governance docs live in `core/policy`; use the helpers under `main_pre_standards/` only for scaffolding automation.
 
 ## Phases
 
@@ -35,7 +37,7 @@ The preprocessing pipeline consists of 11 phases:
 ## Recent Changes (v2.0.0)
 
 **Major Structural Update**: The preprocessing pipeline has been restructured with a minimal phase approach:
-- **Centralized Standards**: All project-wide policies moved to `main_pre_standards/`
+- **Centralized Standards**: All project-wide policies moved to `core/policy/`
 - **Eliminated Templates**: Removed ~110 template files with placeholders
 - **Single Source of Truth**: Documentation duplication eliminated
 - **Automated Creation**: Phase generator script replaces manual setup
@@ -54,14 +56,14 @@ python main_pre_standards/development/phase_generator.py 11 validation
 
 ### Development Standards
 
-- Follow guidelines in `main_pre_standards/development/DEVELOPMENT_CHECKLIST.md`
-- Use phase creation guide in `main_pre_standards/development/PHASE_CREATION_GUIDE.md`
-- Adhere to documentation conventions in `main_pre_standards/documentation/`
+- Follow guidelines in `core/policy/developer_setup/development_checklist.md`
+- Use phase creation guide in `core/policy/developer_setup/phase_scaffolding_guide.md`
+- Adhere to documentation conventions in `core/policy/documentation/docs_conventions.yaml`
 
 ### Git Workflow
 
-- Follow commit conventions in `main_pre_standards/git/COMMIT_CONVENTIONS.md`
-- Use git rules in `main_pre_standards/git/GIT_RULES.md`
+- Follow commit conventions in `core/policy/git/commit_conventions.md`
+- Use git rules in `core/policy/git/git_rules.md`
 
 ## Phase Structure
 
@@ -106,6 +108,8 @@ make run INPUTS="samples/sample_file.txt"
 python main_pre_pipeline/preprocessing_chain.py
 ```
 
+Outputs default to `MEDFLUX_OUTPUT_ROOT` (or `<repo>/outputs/preprocessing`). Override with `--output-root` when running smoke tests to keep artifacts out of the repo.
+
 ## Testing
 
 ### Unit Tests
@@ -138,14 +142,14 @@ Test files are available in `main_pre_samples/`:
 ## Migration Notes
 
 - Template files with placeholders have been removed
-- Project-wide policies moved to `main_pre_standards/`
+- Project-wide policies moved to `core/policy/`
 - Phase-specific files remain in each phase's `common_files/`
 - Phase generator script replaces manual template copying
 
 ## Support
 
 For questions about the preprocessing pipeline:
-- Check the phase creation guide in `main_pre_standards/development/`
+- Check the phase creation guide in `core/policy/developer_setup/phase_scaffolding_guide.md`
 - Review existing phase examples
 - Use the phase generator script
 - Contact the development team

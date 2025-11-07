@@ -7,9 +7,9 @@ All notable changes to the Preprocessing Pipeline will be documented in this fil
 ### Major Structural Changes
 
 #### Added
-- **main_pre_standards/**: New centralized standards directory
-  - `development/`: Phase creation guide, development checklist, phase generator script
-  - `documentation/`: Project-wide documentation standards and language policies
+- **main_pre_standards/**: Lightweight scaffolding helpers (phase generator); canonical policies now live in core/policy/
+  - `development/`: Phase generator wrapper lives here; guides/checklists now live in `core/policy/developer_setup/`
+  - `documentation/`: Policies moved to `core/policy/documentation/`
   - `git/`: Git workflow rules and commit conventions
   - `policies/`: Stage contracts, validation rules, and KPIs
   - `versioning/`: Schema versioning and versioning policies
@@ -45,7 +45,7 @@ All notable changes to the Preprocessing Pipeline will be documented in this fil
 
 ### Migration Notes
 - Template files with placeholders have been removed
-- Project-wide policies moved to `main_pre_standards/`
+- Project-wide policies stored in `core/policy/`
 - Duplicate `docs/` directories eliminated
 - Phase-specific files remain in each phase's `common_files/`
 - Phase generator script replaces manual INIT_PHASE.md process

@@ -193,7 +193,7 @@ def _add_arguments(parser: argparse.ArgumentParser) -> None:
         default=None,
         help=(
             "Optional base directory for smoke outputs. "
-            "Defaults to main_pre_output/output_pre_smoke_results."
+            "Defaults to MEDFLUX_OUTPUT_ROOT (or <repo>/outputs/preprocessing)."
         ),
     )
     parser.add_argument(

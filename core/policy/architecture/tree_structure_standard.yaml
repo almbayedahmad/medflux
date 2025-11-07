@@ -10,7 +10,7 @@ structural_evolution:
   version_2_0_0:
     date: "2025-01-08"
     changes:
-      - "Created main_pre_standards/ for centralized policies"
+      - "Moved canonical policies to core/policy/ as single source of truth"
       - "Eliminated duplicate docs/ directories from phase roots"
       - "Consolidated all documentation to common_files/docs/"
       - "Removed ~110 template files with placeholders"
@@ -127,6 +127,7 @@ tree_structure:
           - "Route outputs to correct locations"
           - "Aggregate results from multiple phases"
           - "Handle output formatting"
+          - "Store smoke/integration artifacts under MEDFLUX_OUTPUT_ROOT (or <repo>/outputs/preprocessing) and allow per-run overrides"
 
       main_pre_tests:
         purpose: "Cross-phase integration and system tests"
@@ -156,26 +157,39 @@ tree_structure:
           - "Enable reproducible testing"
           - "Document expected formats"
 
-      main_pre_standards:
-        purpose: "Project-wide standards, policies, and development guidelines"
-        location: "Preprocessing/main_pre_standards/"
+      policy_source:
+        purpose: "Canonical project-wide standards, policies, and development guidelines"
+        location: "core/policy/"
         naming_pattern: "<category>/<topic>_<type>.md or .yaml"
         subdirectories:
           development:
             purpose: "Phase creation guides and automation"
-            files: ["PHASE_CREATION_GUIDE.md", "DEVELOPMENT_CHECKLIST.md", "phase_generator.py"]
+            files:
+              - "core/policy/developer_setup/phase_scaffolding_guide.md"
+              - "core/policy/developer_setup/development_checklist.md"
+              - "backend/Preprocessing/main_pre_standards/development/phase_generator.py"
           documentation:
             purpose: "Documentation and naming standards"
-            files: ["DOCS_CONVENTIONS.yaml", "LANGUAGE_POLICY.yaml", "NAMING_STANDARDS.md"]
+            files:
+              - "core/policy/documentation/docs_conventions.yaml"
+              - "core/policy/documentation/language_policy.yaml"
+              - "core/policy/documentation/naming_standards.md"
           git:
             purpose: "Git workflow and commit standards"
-            files: ["COMMIT_CONVENTIONS.md", "GIT_RULES.md"]
+            files:
+              - "core/policy/git/commit_conventions.md"
+              - "core/policy/git/git_rules.md"
           policies:
             purpose: "Contract and validation templates"
-            files: ["STAGE_CONTRACT_TEMPLATE.yaml", "VALIDATION_RULES_TEMPLATE.yaml", "KPIS_TEMPLATE.yaml"]
+            files:
+              - "core/policy/contracts/stage_contract.yaml"
+              - "core/policy/validation/validation_rules.yaml"
+              - "core/policy/observability/kpis.yaml"
           versioning:
             purpose: "Versioning policies and standards"
-            files: ["SCHEMA_VERSIONING.md", "VERSIONING_POLICY.md"]
+            files:
+              - "core/policy/versioning/schema_versioning.md"
+              - "core/policy/versioning/versioning_policy.md"
         benefits:
           - "Centralized control of all project-wide standards"
           - "Eliminated ~110 duplicate template files across 11 phases"
@@ -959,7 +973,7 @@ tree_structure:
         files: ["ENV.sample", "LOGGING_BASE.yaml", "SETTINGS_BASE.yaml"]
     notes:
       - "Template files with placeholders have been removed"
-      - "Project-wide policies moved to main_pre_standards/"
+      - "Project-wide policies stored in core/policy/"
       - "Phase-specific implementations only in common_files/"
       - "Single source of truth for all phase documentation"
     migration_benefits:
@@ -1112,7 +1126,7 @@ tree_structure:
             function_allowed_strict: ^(run|connect|normalize|process|deduplicate|compute|aggregate|cluster|segment|index|anchor|to|from|validate|check|save|emit|summarize|record)_[a-z0-9]+_[a-z0-9]+$
             forbidden_terms: \bload(?:er)?\b
           required_main_directories:
-            - "main_pre_standards/"
+            - "core/policy/"
             - "main_pre_helpers/"
             - "main_pre_schemas/"
             - "main_pre_config/"

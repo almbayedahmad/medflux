@@ -2,13 +2,26 @@ from __future__ import annotations
 
 """Helpers for consistent preprocessing output directories."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 import time
 
-_DEFAULT_BASE = Path(__file__).resolve().parent
-_DEFAULT_SMOKE_ROOT = _DEFAULT_BASE / "output_pre_smoke_results"
+from core.policy_utils import repo_root
+
+
+def _default_output_root() -> Path:
+    """Resolve the base directory for preprocessing outputs."""
+
+    env_override = os.environ.get("MEDFLUX_OUTPUT_ROOT")
+    if env_override:
+        return Path(env_override).expanduser().resolve()
+    return (repo_root() / "outputs" / "preprocessing").resolve()
+
+
+_DEFAULT_BASE = _default_output_root()
+_DEFAULT_SMOKE_ROOT = _DEFAULT_BASE / "pre_smoke_results"
 
 _STAGE_DIRS = {
     "detector": "output_pre_detector_results",

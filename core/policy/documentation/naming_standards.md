@@ -117,7 +117,7 @@ This document defines the standardized naming conventions for the preprocessing 
   - `main_pre_schemas`
   - `main_pre_pipeline`
   - `main_pre_config`
-  - `main_pre_standards`
+  - `core/policy` (canonical policies)
 
 ## Configuration Files
 
