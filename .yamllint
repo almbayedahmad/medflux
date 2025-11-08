@@ -1,3 +1,6 @@
+## PURPOSE: Repository YAML lint configuration to gate policy directory.
+## OUTCOME: Enforces baseline YAML hygiene (indentation, sequences) while
+## keeping long lines/doc-start flexible for existing policy files.
 extends: default
 
 ignore: []
