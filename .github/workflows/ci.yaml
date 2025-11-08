@@ -253,7 +253,7 @@ jobs:
         env:
           MEDFLUX_LOG_PROFILE: dev
         run: |
-          python -m backend.Preprocessing.main_pre_phases.phase_01_encoding.pipeline_workflow.encoding_cli sample.txt --log-level INFO --log-json --log-stderr > cli_encoding_output.json || true
+          python -m backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_cli sample.txt --log-level INFO --log-json --log-stderr > cli_encoding_output.json || true
           python tools/validation/validate_phase.py phase_01_encoding output cli_encoding_output.json --log-json
       - name: Consolidated validation report
         run: |

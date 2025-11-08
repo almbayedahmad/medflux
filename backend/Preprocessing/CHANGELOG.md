@@ -2,6 +2,14 @@
 
 All notable changes to the Preprocessing Pipeline will be documented in this file.
 
+## [2.0.1] - 2025-11-08
+
+### Changed
+- Moved `phase_01_encoding` from `backend/Preprocessing/main_pre_phases/` to
+  `backend/Preprocessing/phase_01_encoding` to align with `phase_00_detect_type`.
+ - Moved `phase_02_readers` from `backend/Preprocessing/main_pre_phases/` to
+   `backend/Preprocessing/phase_02_readers` for consistent phase placement.
+
 ## [2.0.0] - 2025-01-08
 
 ### Major Structural Changes

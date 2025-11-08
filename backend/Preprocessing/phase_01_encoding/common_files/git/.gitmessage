@@ -1,0 +1,13 @@
+Encoding: <summary>
+
+Problem:
+-
+
+Solution:
+-
+
+Impact:
+-
+
+Tests:
+- pytest backend/Preprocessing/phase_01_encoding/tests

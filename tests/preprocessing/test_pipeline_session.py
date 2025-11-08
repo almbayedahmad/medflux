@@ -46,7 +46,7 @@ def _load_unified_text(readers_dir: Path) -> str:
 
 
 # ===================== Detection import (robust) =====================
-from backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_detection_helper import process_detect_type_file
+from backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_helper_detection import process_detect_type_file
 
 
 def run_detection(file_path: Path) -> dict:
@@ -59,10 +59,10 @@ def run_detection(file_path: Path) -> dict:
 
 
 # ===================== Readers import =====================
-from backend.Preprocessing.main_pre_phases.phase_02_readers.internal_helpers.reader_helpers_runtime_options import (
+from backend.Preprocessing.phase_02_readers.schemas.readers_schema_options import (
     ReaderOptions,
 )
-from backend.Preprocessing.main_pre_phases.phase_02_readers.pipeline_workflow.readers_pipeline_main import (
+from backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_pipeline_main import (
     ReadersOrchestrator,
 )
 
@@ -90,7 +90,7 @@ def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> 
 def run_encoding(readers_dir: Path, outdir: Path, file_path: Path | None = None) -> dict:
     if file_path is not None:
         try:
-            from backend.Preprocessing.main_pre_phases.phase_01_encoding.pipeline_workflow.encoding_pipeline import (
+            from backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_pipeline import (
                 run_encoding_pipeline,
             )
 

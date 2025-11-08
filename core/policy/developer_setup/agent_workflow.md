@@ -5,7 +5,7 @@ High-level process to apply standards and deliver changes. For environment setup
 - core/policy/developer_setup/development_checklist.md
 
 ## Overview
-Use the consolidated standards (see core/policy/architecture/tree_structure_standard.yaml) for structure, naming, and validation.
+Use the consolidated standards (see <removed: consolidated into codebase and docs>) for structure, naming, and validation.
 
 ## Change Process
 
@@ -53,7 +53,7 @@ While collaborating on repo tasks:
 6) Deliver a concise summary of outcome
 
 ## Tools and References
-- Standards: core/policy/architecture/tree_structure_standard.yaml
+- Standards: <removed: consolidated into codebase and docs>
 - Docs conventions: core/policy/documentation/docs_conventions.yaml
 - Language policy: core/policy/documentation/language_policy.yaml
 - Naming standards: core/policy/documentation/naming_standards.md

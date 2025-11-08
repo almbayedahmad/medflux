@@ -6,22 +6,32 @@ This directory contains the preprocessing pipeline for the medflux backend syste
 
 ```
 Preprocessing/
-��� main_pre_phases/             # Individual processing phases
+??? phase_00_detect_type/
+??? phase_01_encoding/
+??? phase_02_readers/
+??? phase_03_merge/
+??? phase_04_cleaning/
+??? phase_05_light_normalization/
+??? phase_06_segmentation/
+??? phase_07_table_extraction/
+??? phase_08_heavy_normalization/
+??? phase_09_provenance/
+??? phase_10_offsets/
 
 core/preprocessing/
-��� cross_phase/
-�   ��� helpers/                 # Shared helper modules (lang, geom, num, etc.)
-�   ��� schemas/                 # Shared schema definitions (stage contracts, pipeline config)
-�   ��� config/                  # Centralized preprocessing config loaders
-��� pipeline/                    # Multi-phase orchestration entry points
-��� output/                      # Output router + helpers
+??? cross_phase/
+?   ??? helpers/                 # Shared helper modules (lang, geom, num, etc.)
+?   ??? schemas/                 # Shared schema definitions (stage contracts, pipeline config)
+?   ??? config/                  # Centralized preprocessing config loaders
+??? pipeline/                    # Multi-phase orchestration entry points
+??? output/                      # Output router + helpers
 
 samples/                        # Sample files for testing (moved from main_pre_samples/)
 tests/
-��� preprocessing/               # Integration tests (detect_type -> encoding -> readers)
+??? preprocessing/               # Integration tests (detect_type -> encoding -> readers)
 tools/
-��� preprocessing/
-    ��� phase_generator.py       # Generates phase scaffolding per policy
+??? preprocessing/
+    ??? phase_generator.py       # Generates phase scaffolding per policy
 ```
 
 > Cross-phase code now lives in `core/preprocessing/...`. Legacy `main_pre_*` packages have been removed-update any remaining imports to the new modules before contributing.
@@ -67,7 +77,7 @@ python tools/preprocessing/phase_generator.py 11 validation
 - Follow guidelines in `core/policy/developer_setup/development_checklist.md`
 - Use phase creation guide in `core/policy/developer_setup/phase_scaffolding_guide.md`
 - Adhere to documentation conventions in `core/policy/documentation/docs_conventions.yaml`
-- Place any cross-phase logic/config under `core/preprocessing/cross_phase/…`; never add new helpers to `main_pre_*`
+- Place any cross-phase logic/config under `core/preprocessing/cross_phase/.`; never add new helpers to `main_pre_*`
 
 ### Git Workflow
 
@@ -80,26 +90,26 @@ Each phase follows a minimal, standardized structure:
 
 ```
 phase_XX_stage/
-├── __init__.py
-├── config/                    # Phase-specific configuration
-├── core_functions/            # Core processing logic
-├── connecters/                # Cross-phase communication
-├── schemas/                   # Data type definitions
-├── outputs/                   # Output generation
-├── internal_helpers/          # Phase-specific utilities
-├── pipeline_workflow/         # Pipeline orchestration
-├── tests/                     # Unit tests
-└── common_files/             # Essential phase files
-    ├── docs/
-    │   ├── README.md
-    │   └── CHANGELOG.md
-    ├── git/
-    │   ├── Makefile
-    │   └── .gitmessage
-    └── configs/
-        ├── ENV.sample
-        ├── LOGGING_BASE.yaml
-        └── SETTINGS_BASE.yaml
+��� __init__.py
+��� config/                    # Phase-specific configuration
+��� core_functions/            # Core processing logic
+��� connecters/                # Cross-phase communication
+��� schemas/                   # Data type definitions
+��� outputs/                   # Output generation
+��� internal_helpers/          # Phase-specific utilities
+��� pipeline_workflow/         # Pipeline orchestration
+��� tests/                     # Unit tests
+��� common_files/             # Essential phase files
+    ��� docs/
+    �   ��� README.md
+    �   ��� CHANGELOG.md
+    ��� git/
+    �   ��� Makefile
+    �   ��� .gitmessage
+    ��� configs/
+        ��� ENV.sample
+        ��� LOGGING_BASE.yaml
+        ��� SETTINGS_BASE.yaml
 ```
 
 ## Running the Pipeline
@@ -124,7 +134,7 @@ Outputs default to `MEDFLUX_OUTPUT_ROOT` (or `<repo>/outputs/preprocessing`). Ov
 ### Unit Tests
 
 ```bash
-python -m pytest main_pre_phases/phase_XX_stage/tests/ -v
+python -m pytest backend/Preprocessing/phase_XX_stage/tests/ -v
 ```
 
 ### Integration Tests

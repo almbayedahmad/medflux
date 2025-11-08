@@ -33,7 +33,7 @@ Structure
 - testing/
   - smoke_testing.md - Smoke test process and criteria.
 - architecture/
-  - tree_structure_standard.yaml - Architecture and tree structure reference.
+  - Architecture references consolidated into per-component READMEs and code; legacy tree file removed.
   - phase_creation_guide.md - How to create phases following standards.
   - adr_template.md - Architecture decision record template.
 - security/

@@ -11,7 +11,7 @@ python tools/preprocessing/phase_generator.py 03 segment
 ```
 
 The script mirrors the folder and naming rules defined in:
-- `core/policy/architecture/tree_structure_standard.yaml`
+- `<removed: consolidated into codebase and docs>`
 - `core/policy/developer_setup/phase_scaffolding_guide.md`
 - `core/policy/documentation/naming_standards.md`
 

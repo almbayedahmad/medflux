@@ -1,6 +1,7 @@
 # Base logging policy used by CLI tools and workers. Dev/prod configs inherit
 # structure from here but override defaults (levels, handlers). Adjust handlers
 # or filters centrally to keep behavior consistent across the fleet.
+
 meta:
   version: 2
   id: logging_config_global
