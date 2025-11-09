@@ -15,7 +15,10 @@ def _read_any(path: Path, *, jsonl: bool = False) -> Any:
     if jsonl or path.suffix.lower() == ".jsonl":
         return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     # Fallback JSON
-    return json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        raise ValueError(f"Empty JSON input: {path}")
+    return json.loads(text)
 
 
 def main() -> None:

@@ -48,14 +48,25 @@ def _print(obj: Dict[str, Any]) -> None:
         get_logger("cli").info(str(obj))
 
 
-def cmd_phase_list(_args: argparse.Namespace) -> None:
+def _maybe_write_out_json(args: argparse.Namespace, obj: Dict[str, Any]) -> None:
+    """Write JSON summary to a file if --out-json is provided."""
+    out_path = getattr(args, "out_json", None)
+    if out_path:
+        Path(out_path).expanduser().resolve().write_text(
+            json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+
+def cmd_phase_list(args: argparse.Namespace) -> None:
     root = Path("backend/Preprocessing").resolve()
     phases: List[str] = []
     if root.exists():
         for child in root.iterdir():
             if child.is_dir() and child.name.startswith("phase_") and (child / "api.py").exists():
                 phases.append(child.name)
-    _print({"phases": sorted(phases)})
+    obj = {"phases": sorted(phases)}
+    _print(obj)
+    _maybe_write_out_json(args, obj)
 
 
 def cmd_phase_run_detect(args: argparse.Namespace) -> None:
@@ -71,7 +82,9 @@ def cmd_phase_run_detect(args: argparse.Namespace) -> None:
             "out_stats_path": str(out_dir / "detect_type_stage_stats.json"),
         }
     payload = run_detect_type(items, config_overrides=overrides or None, run_id=args.run_id)
-    _print({"phase": "phase_00_detect_type", "run_id": payload.get("run_id"), "io": payload.get("io"), "versioning": payload.get("versioning")})
+    obj = {"phase": "phase_00_detect_type", "run_id": payload.get("run_id"), "io": payload.get("io"), "versioning": payload.get("versioning")}
+    _print(obj)
+    _maybe_write_out_json(args, obj)
 
 
 def cmd_phase_run_encoding(args: argparse.Namespace) -> None:
@@ -89,7 +102,9 @@ def cmd_phase_run_encoding(args: argparse.Namespace) -> None:
         if args.normalize:
             overrides["normalization"] = {"enabled": True, "out_dir": str(out_dir / "normalized"), "newline_policy": "lf", "errors": "replace"}
     payload = run_encoding(items, config_overrides=overrides or None, run_id=args.run_id)
-    _print({"phase": "phase_01_encoding", "run_id": payload.get("run_id"), "io": payload.get("io"), "versioning": payload.get("versioning")})
+    obj = {"phase": "phase_01_encoding", "run_id": payload.get("run_id"), "io": payload.get("io"), "versioning": payload.get("versioning")}
+    _print(obj)
+    _maybe_write_out_json(args, obj)
 
 
 def cmd_phase_run_readers(args: argparse.Namespace) -> None:
@@ -102,7 +117,9 @@ def cmd_phase_run_readers(args: argparse.Namespace) -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
         overrides["io"] = {"out_doc_path": str(out_dir / "readers_doc_meta.json"), "out_stats_path": str(out_dir / "readers_stage_stats.json"), "out_summary_path": str(out_dir / "readers_summary.json")}
     payload = run_readers(items, config_overrides=overrides or None, run_id=args.run_id)
-    _print({"phase": "phase_02_readers", "run_id": payload.get("run_id"), "io": payload.get("io"), "versioning": payload.get("versioning")})
+    obj = {"phase": "phase_02_readers", "run_id": payload.get("run_id"), "io": payload.get("io"), "versioning": payload.get("versioning")}
+    _print(obj)
+    _maybe_write_out_json(args, obj)
 
 
 def cmd_chain_run(args: argparse.Namespace) -> None:
@@ -119,6 +136,7 @@ def cmd_chain_run(args: argparse.Namespace) -> None:
         include_cleaning=bool(getattr(args, "include_cleaning", False)),
     )
     _print(summary)
+    _maybe_write_out_json(args, summary)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -133,6 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--log-level", default=None, help="Logging level (e.g., INFO, DEBUG)")
     parser.add_argument("--log-json", action="store_true", help="Enable JSON logging format")
     parser.add_argument("--log-stderr", action="store_true", help="Log to stderr (console)")
+    parser.add_argument("--out-json", default=None, help="Write summary JSON to this path")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     # phase list
