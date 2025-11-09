@@ -41,6 +41,14 @@ def _ensure_configured(root_level: Optional[str] = None, fmt: Optional[str] = No
         "MEDFLUX_LOG_FORMAT",
         "%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
+    # Guard against invalid basic formatter values like 'json' which is a
+    # named formatter in dictConfig, not a %-style format string. In the
+    # simple fallback, default to a standard format if 'json' is requested.
+    try:
+        if isinstance(fmt_val, str) and fmt_val.strip().lower() == "json":
+            fmt_val = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+    except Exception:
+        fmt_val = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(fmt_val))
     root.addHandler(handler)

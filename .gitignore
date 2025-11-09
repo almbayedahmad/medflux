@@ -21,6 +21,7 @@ env/
 *.log
 *.tmp
 logs/
+.artifacts/
 
 # OS / Editor junk
 .DS_Store

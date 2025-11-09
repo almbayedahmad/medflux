@@ -26,3 +26,7 @@ runs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt || true; fi
         python .github/actions/python-setup/ensure_pytest.py
+
+    - name: Install project (editable)
+      shell: bash
+      run: pip install -e .
