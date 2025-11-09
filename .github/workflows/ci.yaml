@@ -149,7 +149,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Run tests with coverage (>=75%)
         env:
-          PYTHONPATH: .
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-fail-under=75 --junitxml=pytest-junit.xml
       - name: Upload coverage
@@ -352,7 +352,7 @@ jobs:
           python -m pip install httpx
       - name: Run integration tests
         env:
-          PYTHONPATH: .
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -q -m integration --disable-warnings --maxfail=1 --junitxml=pytest-junit-int.xml
       - name: Upload JUnit report (integration)
