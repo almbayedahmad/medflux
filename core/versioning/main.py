@@ -3,7 +3,7 @@
 #
 # OUTCOME:
 #   Provides a main() entry that logs version information via the central
-#   logging policy, satisfying CI rules that forbid print() in runtime code.
+#   logging policy, satisfying CI rules that forbid prints in runtime code.
 #
 # INPUTS:
 #   None. Reads version metadata from the package and environment (optional).
