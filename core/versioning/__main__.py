@@ -13,7 +13,8 @@ def main() -> None:
         prints. Tests should capture logs (caplog) instead of stdout.
     """
     try:
-        configure_logging(force=True)
+        # Do not force reconfigure to preserve existing handlers (e.g., caplog)
+        configure_logging(force=False)
     except Exception:
         pass
     info = get_version_info()
