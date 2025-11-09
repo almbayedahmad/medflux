@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import json
 from . import get_version_info
-from core.logging import get_logger
 
 
 def main() -> None:
-    """CLI entry to emit version info via logging (no prints)."""
+    """CLI entry to emit version info to stdout as JSON.
+
+    Outcome:
+        Prints a JSON object with version fields so test harnesses that
+        capture stdout can parse it directly.
+    """
     info = get_version_info()
-    logger = get_logger("cli")
-    try:
-        logger.info(json.dumps(info, ensure_ascii=False))
-    except Exception:
-        logger.info(str(info))
+    print(json.dumps(info, ensure_ascii=False))
 
 
 if __name__ == "__main__":
