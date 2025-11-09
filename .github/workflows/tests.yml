@@ -44,6 +44,8 @@ jobs:
 
       - name: Run fast pack with coverage (>=75%)
         shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -m "unit or contract or component" -q \
             --cov=core --cov=backend --cov-report=xml --cov-fail-under=75
