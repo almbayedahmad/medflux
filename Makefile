@@ -63,6 +63,37 @@ readers:
 chain:
 	python -m core.cli.medflux $(LOG_FLAGS) chain-run --inputs $(INPUTS) $(if $(OUTPUT_ROOT),--output-root $(OUTPUT_ROOT),) $(if $(INCLUDE_DOCS),--include-docs,)
 
+# -----------------------------------------------------------------------------
+# Samples smoke runner (first 3 phases)
+# -----------------------------------------------------------------------------
+
+.PHONY: smoke-samples smoke-open
+
+SMOKE_OUT?=.artifacts/smoke
+SMOKE_PHASES?=detect encoding readers
+LIMIT?=2
+
+smoke-samples:
+	python tools/smoke/run_samples_smoke.py --phases $(SMOKE_PHASES) --out-root $(SMOKE_OUT) --limit $(LIMIT)
+	@echo "Smoke summary written to $(SMOKE_OUT)/smoke_summary.json"
+
+smoke-open:
+	python - <<'PY'
+	import os, platform, subprocess, pathlib
+	p = pathlib.Path(os.environ.get('SMOKE_OUT','$(SMOKE_OUT)')).expanduser().resolve()
+	try:
+	    if platform.system() == 'Windows':
+	        os.startfile(str(p))  # type: ignore[attr-defined]
+	    elif platform.system() == 'Darwin':
+	        subprocess.run(['open', str(p)], check=False)
+	    else:
+	        subprocess.run(['xdg-open', str(p)], check=False)
+	except Exception:
+	    print(str(p))
+	PY
+
+# Intentionally no env bootstrap targets here; use scripts/environment_activate.ps1
+
 .PHONY: clean-repo clean-repo-dry
 
 clean-repo:

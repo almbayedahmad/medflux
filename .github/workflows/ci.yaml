@@ -302,11 +302,11 @@ jobs:
         run: |
           echo "hello" > sample.txt
           python -m core.cli.medflux --log-level INFO --log-json --log-stderr \
-            phase-detect --inputs sample.txt --output-root ./ci_artifacts/detect > cli_detect_type_output.json
+            phase-detect --inputs sample.txt --output-root ./ci_artifacts/detect
       - name: Validate detect_type logs
         run: python tools/logs/validate_records.py --root logs --glob "**/phase_00_detect_type.jsonl" --min-context 0.95
       - name: Validate detect_type CLI output via schema
-        run: python tools/validation/validate_phase.py phase_00_detect_type output cli_detect_type_output.json --log-json
+        run: python tools/validation/validate_phase.py phase_00_detect_type output ci_artifacts/detect/detect_type_unified_document.json --log-json
       - name: Validate detect_type saved artifacts
         run: |
           python tools/validation/validate_artifacts.py --auto \
@@ -318,12 +318,20 @@ jobs:
           MEDFLUX_LOG_PROFILE: dev
         run: |
           python -m core.cli.medflux --log-level INFO --log-json --log-stderr \
-            phase-encoding --inputs sample.txt --output-root ./ci_artifacts/encoding > cli_encoding_output.json || true
-          python tools/validation/validate_phase.py phase_01_encoding output cli_encoding_output.json --log-json
+            phase-encoding --inputs sample.txt --output-root ./ci_artifacts/encoding || true
+          python tools/validation/validate_phase.py phase_01_encoding output ci_artifacts/encoding/encoding_unified_document.json --log-json
+      - name: Smoke readers CLI and validate
+        shell: bash
+        env:
+          MEDFLUX_LOG_PROFILE: dev
+        run: |
+          python -m core.cli.medflux --log-level INFO --log-json --log-stderr \
+            phase-readers --inputs sample.txt --output-root ./ci_artifacts/readers || true
+          python tools/validation/validate_phase.py phase_02_readers output ci_artifacts/readers/readers_doc_meta.json --log-json
       - name: Consolidated validation report
         run: |
           python tools/validation/validation_report.py \
-            --phase-output phase_00_detect_type:cli_detect_type_output.json \
+            --phase-output phase_00_detect_type:ci_artifacts/detect/detect_type_unified_document.json \
             --logs-root logs \
             --artifact ci_artifacts/detect/detect_type_unified_document.json \
             --artifact ci_artifacts/detect/detect_type_stage_stats.json \
@@ -331,6 +339,19 @@ jobs:
             --out-md validation_report.md \
             --max-fail-rate 0.0 \
             --fail-on-codes VL-E010,VL-E002
+      - name: Samples smoke (first 3 phases)
+        shell: bash
+        env:
+          MEDFLUX_LOG_PROFILE: dev
+        run: |
+          python tools/smoke/run_samples_smoke.py --phases detect encoding readers --out-root .artifacts/smoke --limit 2
+          echo "Smoke summary:" && cat .artifacts/smoke/smoke_summary.json || true
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-samples
+          path: .artifacts/smoke/**
       - name: Upload validation report
         uses: actions/upload-artifact@v4
         with:
