@@ -24,8 +24,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 from core.logging import get_logger, configure_logging
 
-logger = get_logger("cli")
-
 
 def _coerce_inputs(values: List[str]) -> List[str]:
     paths: List[str] = []
@@ -44,10 +42,10 @@ def _print(obj: Dict[str, Any]) -> None:
         Replaces direct stdout printing with policy-compliant logging.
     """
     try:
-        logger.info(json.dumps(obj, ensure_ascii=False, indent=2))
+        get_logger("cli").info(json.dumps(obj, ensure_ascii=False, indent=2))
     except Exception:
         # Best-effort fallback to plain string if serialization fails
-        logger.info(str(obj))
+        get_logger("cli").info(str(obj))
 
 
 def cmd_phase_list(_args: argparse.Namespace) -> None:
