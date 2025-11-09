@@ -25,7 +25,11 @@ from .connectors.config import connect_readers_config_connector
 from .connectors.upstream import connect_readers_upstream_connector
 from .domain.process import process_readers_segment
 from core.preprocessing.services.readers import ReadersService
-from .io.writer import (\n    save_readers_doc_meta,\n    save_readers_stage_stats,\n    save_readers_summary,\n)
+from .io.writer import (
+    save_readers_doc_meta,
+    save_readers_stage_stats,
+    save_readers_summary,
+)
 
 
 PHASE_ID = "phase_02_readers"
