@@ -1,0 +1,21 @@
+{
+  "run_id": "00000000-0000-0000-0000-000000000000",
+  "unified_document": {
+    "stage": "detect_type",
+    "items": [],
+    "source": {"items_received": 0, "items_included": 0},
+    "errors": []
+  },
+  "stage_stats": {
+    "stage": "detect_type",
+    "total_items": 0,
+    "items_received": 0,
+    "items_included": 0,
+    "items_skipped": 0
+  },
+  "versioning": {
+    "schema_name": "phase_00_detect_type_output",
+    "schema_version": "1.0.0",
+    "app_version": "0.0.0"
+  }
+}

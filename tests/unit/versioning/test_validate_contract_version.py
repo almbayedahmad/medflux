@@ -11,14 +11,14 @@ def _load_json(p: Path) -> dict:
 
 
 def test_validate_contract_version_ok():
-    doc = _load_json(Path("outputs/detect_type_unified_document.json"))
+    doc = _load_json(Path("tests/fixtures/detect_type_unified_document.json"))
     ok, msg = validate_contract_version("stage_contract", doc)
     assert ok is True
     assert msg in {"ok", "no-expected-version"} or "ok" in msg
 
 
 def test_validate_contract_version_mismatch():
-    doc = _load_json(Path("outputs/detect_type_unified_document.json"))
+    doc = _load_json(Path("tests/fixtures/detect_type_unified_document.json"))
     # Tamper with version
     doc["versioning"]["schema_version"] = "9.9.9"
     ok, msg = validate_contract_version("stage_contract", doc)

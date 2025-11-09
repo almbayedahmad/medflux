@@ -51,7 +51,7 @@ def test_validate_output_ok() -> None:
 @pytest.mark.unit
 def test_validate_output_soft(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.WARNING)
-    doc = json.loads(Path("outputs/detect_type_unified_document.json").read_text(encoding="utf-8"))
+    doc = json.loads(Path("tests/fixtures/detect_type_unified_document.json").read_text(encoding="utf-8"))
     # Remove a required key to trigger errors, but soft=True downgrades to warning
     doc.pop("unified_document", None)
     validate_output("phase_00_detect_type", doc, soft=True)
