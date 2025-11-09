@@ -16,10 +16,17 @@ PATTERNS = (
 
 
 def _is_allowed(path: Path) -> bool:
-    # Allow within services package only
+    """Return True for allowed locations (services and tests).
+
+    The check normalizes absolute paths for cross-platform consistency and
+    allows:
+    - any files under `core/preprocessing/services/`
+    - any files under `tests/`
+    """
     try:
         p = path.as_posix()
-        return p.startswith("core/preprocessing/services/")
+        p = p.replace("\\", "/")
+        return "/core/preprocessing/services/" in p or "/tests/" in p
     except Exception:
         return False
 

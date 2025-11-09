@@ -33,6 +33,10 @@ class MergeRunner(PhaseRunner[Dict[str, Any], Dict[str, Any]]):
         return process_merge_items(list(upstream))
 
     def _save_outputs(self, payload: Dict[str, Any], *, config: Dict[str, Any]) -> None:
+        io_cfg = dict(config.get("io") or {})
+        if not io_cfg:
+            # Skip writing when no IO targets are configured (e.g., stamp-only tests)
+            return
         try:
             with io_op("write"):
                 save_merge_doc(payload.get("unified_document", {}), config)
@@ -73,6 +77,8 @@ def run_merge(
     final: Dict[str, Any] = {"config": result["config"], **payload}
     if "run_id" in result:
         final["run_id"] = result["run_id"]
+    if "versioning" in result:
+        final["versioning"] = result["versioning"]
     return final
 
 

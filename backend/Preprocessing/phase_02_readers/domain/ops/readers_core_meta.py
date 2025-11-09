@@ -400,7 +400,7 @@ def compute_readers_doc_meta_payload(
 ) -> ReadersOutput:
     """Main orchestrator function to build complete document metadata payload."""
     # Import here to avoid circular imports
-from .readers_core_components import (
+    from .readers_core_components import (
         compute_readers_detected_languages,
         compute_readers_locale_hints,
         get_readers_artifacts,
@@ -408,8 +408,8 @@ from .readers_core_components import (
         compute_readers_prepare_timings,
         summarize_readers_logs,
     )
-from .readers_core_stats import compute_readers_per_page_stats
-from .readers_core_text_blocks import compute_readers_text_blocks
+    from .readers_core_stats import compute_readers_per_page_stats
+    from .readers_core_text_blocks import compute_readers_text_blocks
 
     readers_dir = Path(str(readers_result.get("outdir") or (input_path.parent / "readers")))
     has_processed_pages = (readers_dir / "unified_text.jsonl").exists()

@@ -52,3 +52,4 @@ htmlcov/
 # Project outputs (ensure not tracked)
 outputs/
 medflux/outputs/
+!outputs/detect_type_unified_document.json

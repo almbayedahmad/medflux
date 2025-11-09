@@ -59,6 +59,8 @@ def run_segmentation(
     final: Dict[str, Any] = {"config": result["config"], **payload}
     if "run_id" in result:
         final["run_id"] = result["run_id"]
+    if "versioning" in result:
+        final["versioning"] = result["versioning"]
     return final
 
 
