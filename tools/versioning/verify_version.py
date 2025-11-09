@@ -35,9 +35,23 @@ def _check_pyproject() -> None:
     except Exception as exc:
         print(f"WARN: failed to parse pyproject.toml: {exc}", file=sys.stderr)
         return
-    ver = data.get("project", {}).get("version")
-    if not (isinstance(ver, dict) and ver.get("file") == "core/versioning/VERSION"):
-        print("ERROR: pyproject.toml does not point project.version to core/versioning/VERSION", file=sys.stderr)
+    proj = data.get("project", {}) or {}
+    # Expect dynamic versioning per PEP 621
+    dynamic = proj.get("dynamic") or []
+    if "version" not in (dynamic or []):
+        print("ERROR: project.version must be dynamic in pyproject.toml", file=sys.stderr)
+        sys.exit(3)
+    # Validate setuptools dynamic mapping points to our VERSION file
+    dyn = data.get("tool", {}).get("setuptools", {}).get("dynamic", {})
+    v = dyn.get("version") if isinstance(dyn, dict) else None
+    file_path = None
+    if isinstance(v, dict):
+        file_path = v.get("file")
+    if file_path != "core/versioning/VERSION":
+        print(
+            "ERROR: tool.setuptools.dynamic.version.file must be core/versioning/VERSION",
+            file=sys.stderr,
+        )
         sys.exit(3)
 
 
