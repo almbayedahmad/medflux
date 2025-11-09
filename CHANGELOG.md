@@ -5,9 +5,16 @@ All notable changes to this project will be documented here.
 ## [v0.1.0] - 2025-10-26
 - Initial internal versioning structure implemented.
 
-## [Unreleased]
-
-### Wave 2 - Centralized Config & Logging
+## [Unreleased]\n\n## [v2.0.0] - 2025-11-09
+- feat: v2 refactor waves 1–10 (services, CI, chain-run, docs)
+  - Chain runner: optional flags for merge, cleaning, light_normalization, segmentation, table_extraction, heavy_normalization, provenance, offsets
+  - Writers + stamped artifacts + tests for phases 03–05
+  - OutputRouter mappings added for all phases
+  - Services layer enforced with tests + pre-commit guard
+  - Centralized config defaults doc + per-phase stage.yaml templates (03–10)
+  - Standardized docs: phase READMEs, STRUCTURE_V2.md, CONTRIBUTING.md, services README
+  - CI: umbrella CLI smoke, static audits, pip cache; matrix 3.11/3.12
+  - DX: cleanup tool + Make targets### Wave 2 - Centralized Config & Logging
 - refactor(logging): Phase CLIs now apply central logging policy via `configure_logging()`,
   honoring `MEDFLUX_LOG_PROFILE` and CLI flags (`--log-level`, `--log-json`, `--log-stderr`).
 - refactor(cli): Umbrella CLI `medflux` configures logging via central policy and supports
