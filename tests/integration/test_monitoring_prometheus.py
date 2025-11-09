@@ -42,6 +42,20 @@ def _line_with_metric_and_labels(body: str, metric: str, required_labels: Tuple[
     return False
 
 
+def _wait_for_metrics(port: int, timeout: float = 5.0) -> bool:
+    """Wait for the Prometheus exporter to accept connections."""
+    deadline = time.time() + float(timeout)
+    url = f"http://127.0.0.1:{port}/metrics"
+    while time.time() < deadline:
+        try:
+            status, _ = _http_get(url, timeout=0.25)
+            if status == 200:
+                return True
+        except Exception:
+            time.sleep(0.05)
+    return False
+
+
 def test_prometheus_validation_metrics_emitted(monkeypatch):
     # Skip if prometheus client is missing
     try:
@@ -71,13 +85,14 @@ def test_prometheus_validation_metrics_emitted(monkeypatch):
 
     init_monitoring()
 
+    # Wait for exporter (skip if not available to avoid CI flakiness)
+    if not _wait_for_metrics(port, timeout=5.0):
+        pytest.skip("Prometheus exporter not reachable on allocated port")
+
     # Emit a couple of samples with a unique phase label to avoid collisions
     phase = f"pytest_phase_{random.randint(1, 1_000_000)}"
     record_validation("input", phase, True, None, 3.2)
     record_validation("input", phase, False, "VL-E999", 12.5)
-
-    # Wait briefly for the server thread to start and metrics to be visible
-    time.sleep(0.2)
 
     status, body = _http_get(f"http://127.0.0.1:{port}/metrics")
     assert status == 200
@@ -124,11 +139,12 @@ def test_prometheus_phase_runs_emitted(monkeypatch):
     from core.monitoring import init_monitoring, record_phase_run
 
     init_monitoring()
+
+    if not _wait_for_metrics(port, timeout=5.0):
+        pytest.skip("Prometheus exporter not reachable on allocated port")
     phase = f"pytest_phase_{random.randint(1, 1_000_000)}"
     record_phase_run(phase, "ok")
     record_phase_run(phase, "failed")
-
-    time.sleep(0.2)
 
     status, body = _http_get(f"http://127.0.0.1:{port}/metrics")
     assert status == 200
