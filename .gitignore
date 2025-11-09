@@ -8,6 +8,8 @@ __pycache__/
 
 # Local output files
 output/
+!core/preprocessing/output/
+!core/preprocessing/output/**
 medflux_backend/Preprocessing/test_preprocessing/results_tests/__pycache__/
 
 # Virtual environments
@@ -51,5 +53,7 @@ htmlcov/
 
 # Project outputs (ensure not tracked)
 outputs/
+!core/preprocessing/outputs/
+!core/preprocessing/outputs/**
 medflux/outputs/
 !outputs/detect_type_unified_document.json
