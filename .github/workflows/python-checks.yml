@@ -14,6 +14,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+          cache: 'pip'
       - name: Validate VERSION format
         shell: bash
         run: |
@@ -22,3 +23,31 @@ jobs:
             echo "Invalid VERSION: $V" >&2; exit 1; fi
       - name: Run version CLI
         run: python -m core.versioning
+
+  umbrella-cli-smoke:
+    name: Umbrella CLI Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: medflux phase-list
+        run: python -m core.cli.medflux phase-list
+      - name: medflux phase-detect (quick sample)
+        shell: bash
+        env:
+          MEDFLUX_LOG_PROFILE: dev
+        run: |
+          echo "hello" > sample.txt
+          python -m core.cli.medflux --log-level INFO --log-json --log-stderr \
+            phase-detect --inputs sample.txt --output-root ./.artifacts/detect

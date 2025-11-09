@@ -9,6 +9,9 @@
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, Optional
+from pathlib import Path
+import yaml
+from core.policy_utils import repo_root
 
 _REGISTRY: Dict[str, Callable[[Optional[str]], Dict[str, Any]]] = {}
 
@@ -69,3 +72,21 @@ def merge_overrides(base: Dict[str, Any], overrides: Optional[Dict[str, Any]]) -
         return out
 
     return _merge(base, overrides)
+
+
+def load_phase_defaults() -> Dict[str, Any]:
+    """Load centralized phase defaults from cross-phase config if available.
+
+    Returns:
+        A mapping with baseline keys (e.g., io/options). Empty if not present.
+    """
+
+    try:
+        defaults_path = repo_root() / "core" / "preprocessing" / "cross_phase" / "config" / "phase_defaults.yaml"
+        if defaults_path.exists():
+            data = yaml.safe_load(defaults_path.read_text(encoding="utf-8")) or {}
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {}

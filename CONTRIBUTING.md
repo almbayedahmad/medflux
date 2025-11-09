@@ -1,51 +1,54 @@
-Contributing Guidelines
+# Contributing to MedFlux
 
-Branching and Reviews
-- Use short‑lived feature branches (e.g., feat/x, fix/y).
-- Open Pull Requests into `main`; avoid committing directly to `main`.
-- Delete feature branches on merge to keep the repo tidy.
+## Purpose
+This guide explains how to contribute new code and phases to MedFlux following the v2 structure and policy.
 
-Branch Protections (enable in GitHub UI)
-- Settings → Branches → Add rule for `main`:
-  - Require a pull request before merging (1+ approval recommended).
-  - Dismiss stale approvals on new commits.
-  - Require status checks to pass (enable the CI workflow checks).
-  - Restrict who can push to matching branches (optional).
+## Quick Start
+- Install dependencies: `pip install -r requirements.txt` (plus dev requirements if present)
+- Run pre-commit once: `pre-commit install && pre-commit run -a`
+- Run tests: `pytest -q`
 
-Local Git Hygiene
-- Prune stale remotes regularly: `git fetch --prune`.
-- Rebase small, focused commits per PR.
+## Structure v2
+See `docs/STRUCTURE_V2.md` for the high-level layout and boundaries.
 
-Pre‑commit Hooks
-- Install once: `pip install pre-commit`
-- Enable in this repo: `pre-commit install`
-- Run manually: `pre-commit run --all-files`
+## Phase Development
+- Use the generator: `python tools/preprocessing/phase_generator.py <num> <name>`
+- The generator emits:
+  - `api.py` (PhaseRunner wrapper)
+  - `cli/*_cli_v2.py` (thin v2 CLI)
+  - `connectors/` (config + upstream; merges central defaults)
+  - `domain/` (core logic; no cross-phase imports)
+  - `io/` (writers only; add stamped artifacts here)
+  - `schemas/` (phase types/contracts)
+  - `common_files/` (docs + configs + Makefile stub)
+- All tests go under root `tests/` (no phase-local tests/ directories).
 
-What Hooks Enforce
-- No commits to `main` (use feature branches).
-- No large files (>2MB) added by mistake.
-- No merge conflicts, private keys, or trailing whitespace.
-- Valid YAML and normalized line endings.
+## Config & Defaults
+- Central defaults live at `core/preprocessing/cross_phase/config/phase_defaults.yaml`.
+- Phase connector pattern:
+  - `defaults = load_phase_defaults()` then `merge_overrides(defaults, local_cfg)`
+  - Local `config/stage.yaml` should only include true deltas.
 
-CI Workflow
-- Checks run on every push/PR:
-  - pre-commit (format, lint, no large files/secrets)
-  - Tests + coverage (project ≥ 80%) across a matrix
-  - Codecov (patch ≥ 80%)
-  - Schema validation + docs generation checks
-  - Schema compatibility guard vs last tag (breaking changes require MAJOR bump)
-  - Packaging parity (wheel version matches VERSION)
-  - Smoke + integration tests
+## Logging & Services
+- Apply logging via `core.logging.configure_logging()`; use v2 categories.
+- Cross-phase access must use `core.preprocessing.services.*` or phase APIs.
+  - Do not import another phase’s `domain/` or `domain/ops/` from outside services.
 
-Conventional Commits
-- Use `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`
-- Commitlint runs in CI.
+## Contracts & Artifacts
+- Stamp artifacts via `core.versioning.make_artifact_stamp(schema_name=...)`.
+- Register schema names in `core/versioning/schemas.yaml`.
+- Add JSON Schemas for artifacts under `core/validation/contracts/artifacts/<phase>/`.
+- Add contract tests to validate schema and stamping.
 
-Releases
-- Bump `core/versioning/VERSION`, tag `vX.Y.Z`, and push; or
-- Use the manual Release workflow (GitHub Actions) to bump and tag.
+## CI & Gates
+- Pre-commit enforces headers, forbids legacy imports and cross-phase domain imports, forbids phase-local tests, and lints policy YAML.
+- CI audits block legacy patterns and tracked caches/logs; smoke tests run umbrella CLI basics.
 
-Required status checks (suggested)
-- Lint (pre-commit), Tests (matrix), Schema & Docs, Policy & Version Checks,
-  Package Parity, Smoke, Integration, CodeQL, Commitlint
-  (see docs/BRANCH_PROTECTION.md for exact job names).
+## Commit Style
+- Conventional Commits (`feat:`, `fix:`, `docs:`, etc.)
+- No commits directly to `main`.
+
+## Cleanup
+- Use `make clean-repo-dry` then `make clean-repo` to remove outputs/logs/caches.
+
+Thanks for contributing!

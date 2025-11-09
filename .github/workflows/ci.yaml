@@ -57,6 +57,67 @@ jobs:
       - name: Pre-commit (all files)
         run: SKIP=no-commit-to-branch pre-commit run --all-files --show-diff-on-failure
 
+  static-audits:
+    name: Static Audits (legacy + structure)
+    needs: changes
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+      - name: Audit for legacy paths/imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Auditing for legacy paths/imports..."
+          if rg -n -S "\\b(connecters|internal_helpers|core_functions|pipeline_workflow)\\b" --glob '!**/CHANGELOG*' --glob '!**/README*'; then
+            echo "Found legacy references above. Please remove legacy dirs/imports and use v2 structure/services." >&2
+            exit 1
+          else
+            echo "OK: no legacy references found."
+          fi
+      - name: Audit for phase-local tests folders
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Checking for phase-local tests directories..."
+          if rg -n -S "phase_\\d\\d_\\w+/tests/" --glob '!**/CHANGELOG*' --glob '!**/README*'; then
+            echo "Found phase-local tests references above. Tests must live under root tests/." >&2
+            exit 1
+          else
+            echo "OK: no phase-local tests references."
+          fi
+      - name: Audit filesystem for phase-local tests directories
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Scanning filesystem for phase-local tests directories..."
+          if find backend/Preprocessing -type d -regex '.*/phase_[0-9][0-9]_[^/]+/tests$' -print -quit | grep -q . ; then
+            echo "Found phase-local tests directories in filesystem. Remove them; all tests must be under root tests/." >&2
+            find backend/Preprocessing -type d -regex '.*/phase_[0-9][0-9]_[^/]+/tests$' -print >&2 || true
+            exit 1
+          else
+            echo "OK: no phase-local tests directories present."
+          fi
+      - name: Audit for tracked cache/backup/log files
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Checking tracked files for caches/backups/logs..."
+          BAD=$(git ls-files | rg -n "(\\.pytest_cache/|\\.benchmarks/|\\.bak$|^logs/)") || true
+          if [ -n "$BAD" ]; then
+            echo "Found tracked cache/backup/log files:" >&2
+            echo "$BAD" >&2
+            echo "Please remove these from version control." >&2
+            exit 1
+          else
+            echo "OK: no tracked cache/backup/log files."
+          fi
+
   typecheck:
     name: Type Check (mypy)
     needs: changes
@@ -80,7 +141,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ['3.10','3.11','3.12']
+        python-version: ['3.11','3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-setup
@@ -240,28 +301,32 @@ jobs:
           MEDFLUX_LOG_PROFILE: dev
         run: |
           echo "hello" > sample.txt
-          python -m backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_cli sample.txt --log-level INFO --log-json --log-stderr > cli_detect_type_output.json
+          python -m core.cli.medflux --log-level INFO --log-json --log-stderr \
+            phase-detect --inputs sample.txt --output-root ./ci_artifacts/detect > cli_detect_type_output.json
       - name: Validate detect_type logs
         run: python tools/logs/validate_records.py --root logs --glob "**/phase_00_detect_type.jsonl" --min-context 0.95
       - name: Validate detect_type CLI output via schema
         run: python tools/validation/validate_phase.py phase_00_detect_type output cli_detect_type_output.json --log-json
       - name: Validate detect_type saved artifacts
         run: |
-          python tools/validation/validate_artifacts.py --auto outputs/detect_type_unified_document.json outputs/detect_type_stage_stats.json
+          python tools/validation/validate_artifacts.py --auto \
+            ci_artifacts/detect/detect_type_unified_document.json \
+            ci_artifacts/detect/detect_type_stage_stats.json
       - name: Smoke encoding CLI and validate
         shell: bash
         env:
           MEDFLUX_LOG_PROFILE: dev
         run: |
-          python -m backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_cli sample.txt --log-level INFO --log-json --log-stderr > cli_encoding_output.json || true
+          python -m core.cli.medflux --log-level INFO --log-json --log-stderr \
+            phase-encoding --inputs sample.txt --output-root ./ci_artifacts/encoding > cli_encoding_output.json || true
           python tools/validation/validate_phase.py phase_01_encoding output cli_encoding_output.json --log-json
       - name: Consolidated validation report
         run: |
           python tools/validation/validation_report.py \
             --phase-output phase_00_detect_type:cli_detect_type_output.json \
             --logs-root logs \
-            --artifact outputs/detect_type_unified_document.json \
-            --artifact outputs/detect_type_stage_stats.json \
+            --artifact ci_artifacts/detect/detect_type_unified_document.json \
+            --artifact ci_artifacts/detect/detect_type_stage_stats.json \
             --out-json validation_report.json \
             --out-md validation_report.md \
             --max-fail-rate 0.0 \

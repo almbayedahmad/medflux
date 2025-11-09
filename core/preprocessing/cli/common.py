@@ -52,11 +52,20 @@ def run_phase_cli(
     add_common_phase_args(parser)
     args = parser.parse_args(argv)
 
-    # Lazy logging setup to avoid global side-effects here.
-    # Phases can configure richer logging via policy configs if needed.
-    import logging
+    # Configure logging via central policy, honoring CLI flags and env profile.
+    # MEDFLUX_LOG_PROFILE selects the profile (dev/prod). CLI flags adjust runtime.
+    import os
+    from core.logging import configure_logging
 
-    logging.basicConfig(level=getattr(logging, (args.log_level or "INFO").upper(), logging.INFO))
+    if args.log_level:
+        os.environ["MEDFLUX_LOG_LEVEL"] = str(args.log_level)
+    # Toggle JSON and stderr based on flags
+    if bool(getattr(args, "log_json", False)):
+        os.environ["MEDFLUX_LOG_JSON"] = "1"
+    if bool(getattr(args, "log_stderr", False)):
+        os.environ["MEDFLUX_LOG_TO_STDERR"] = "1"
+    # Apply logging configuration (force reconfigure to honor flags)
+    configure_logging(force=True)
 
     from core.preprocessing.phase_api import PhaseSpec
 

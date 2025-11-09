@@ -40,6 +40,37 @@ test-golden:
 	OTEL_TRACES_EXPORTER=none \
 	pytest -m golden -q
 
+# -----------------------------------------------------------------------------
+# Umbrella CLI shortcuts (optional developer convenience)
+# -----------------------------------------------------------------------------
+
+.PHONY: phase-list detect encoding readers chain
+
+LOG_FLAGS?=--log-level INFO --log-json
+
+phase-list:
+	python -m core.cli.medflux phase-list
+
+detect:
+	python -m core.cli.medflux $(LOG_FLAGS) phase-detect --inputs $(INPUTS) $(if $(OUTPUT_ROOT),--output-root $(OUTPUT_ROOT),)
+
+encoding:
+	python -m core.cli.medflux $(LOG_FLAGS) phase-encoding --inputs $(INPUTS) $(if $(NORMALIZE),--normalize,) $(if $(OUTPUT_ROOT),--output-root $(OUTPUT_ROOT),)
+
+readers:
+	python -m core.cli.medflux $(LOG_FLAGS) phase-readers --inputs $(INPUTS) $(if $(OUTPUT_ROOT),--output-root $(OUTPUT_ROOT),)
+
+chain:
+	python -m core.cli.medflux $(LOG_FLAGS) chain-run --inputs $(INPUTS) $(if $(OUTPUT_ROOT),--output-root $(OUTPUT_ROOT),) $(if $(INCLUDE_DOCS),--include-docs,)
+
+.PHONY: clean-repo clean-repo-dry
+
+clean-repo:
+	python tools/maintenance/clean_repo.py --yes --verbose
+
+clean-repo-dry:
+	python tools/maintenance/clean_repo.py --dry-run
+
 .PHONY: monitoring-load-dashboards monitoring-reload-alerts
 
 monitoring-load-dashboards:

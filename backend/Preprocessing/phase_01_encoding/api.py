@@ -21,10 +21,10 @@ from core.preprocessing.metrics import io_op
 from core.versioning import make_artifact_stamp
 
 # Local imports from legacy modules (kept intact)
-from .connecters.encoding_connector_config import connect_encoding_config_connector
-from .connecters.encoding_connector_upstream import connect_encoding_upstream_connector
-from .core_functions.encoding_core_normalizer import process_encoding_stage
-from .outputs.encoding_output import save_encoding_doc, save_encoding_stats
+from .connectors.config import connect_encoding_config_connector
+from .connectors.upstream import connect_encoding_upstream_connector
+from .domain.process import process_encoding_stage
+from .io.writer import save_encoding_doc, save_encoding_stats
 
 
 PHASE_ID = "phase_01_encoding"

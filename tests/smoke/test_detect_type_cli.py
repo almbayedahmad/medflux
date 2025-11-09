@@ -24,7 +24,7 @@ def test_detect_type_cli_on_sample(tmp_path: Path) -> None:
     cmd = [
         sys.executable,
         "-m",
-        "backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_cli",
+        "backend.Preprocessing.phase_00_detect_type.cli.detect_type_cli_v2",
         str(sample),
         "--log-level",
         "INFO",

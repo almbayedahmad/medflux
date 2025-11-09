@@ -21,15 +21,11 @@ from core.preprocessing.phase_api import PhaseRunner, PhaseSpec
 from core.preprocessing.metrics import io_op
 from core.versioning import make_artifact_stamp
 
-from .connecters.readers_connector_config import connect_readers_config_connector
-from .connecters.readers_connector_upstream import connect_readers_upstream_connector
-from .core_functions.readers_core_process import process_readers_segment
-from .connecters.readers_connector_metadata import compute_readers_run_metadata
-from .outputs.readers_output import (
-    save_readers_doc_meta,
-    save_readers_stage_stats,
-    save_readers_summary,
-)
+from .connectors.config import connect_readers_config_connector
+from .connectors.upstream import connect_readers_upstream_connector
+from .domain.process import process_readers_segment
+from core.preprocessing.services.readers import ReadersService
+from .io.writer import (\n    save_readers_doc_meta,\n    save_readers_stage_stats,\n    save_readers_summary,\n)
 
 
 PHASE_ID = "phase_02_readers"
@@ -59,7 +55,7 @@ class ReadersRunner(PhaseRunner[Dict[str, Any], Dict[str, Any]]):
     def _process(self, upstream: Sequence[Dict[str, Any]], *, config: Dict[str, Any]) -> Dict[str, Any]:
         io_config = dict(config.get("io") or {})
         options_config = dict(config.get("options") or {})
-        run_meta = compute_readers_run_metadata()
+        run_meta = ReadersService.compute_run_metadata()
         payload = process_readers_segment(
             upstream,
             io_config=io_config,
@@ -102,6 +98,18 @@ def run_readers(
     run_id: str | None = None,
     stage_name: str = PHASE_NAME_DEFAULT,
 ) -> Dict[str, Any]:
+    """Run the readers phase using the standardized runner.
+
+    Args:
+        generic_items: Optional list of input items for the phase.
+        config_overrides: Optional configuration overrides.
+        run_id: Optional run identifier to stamp into outputs.
+        stage_name: Stage name (defaults to "readers").
+    Returns:
+        Mapping compatible with the legacy pipeline result structure.
+    Outcome:
+        Stable public API surface for invoking the readers phase.
+    """
     runner = ReadersRunner(PhaseSpec(phase_id=PHASE_ID, name=stage_name))
     result = runner.run(generic_items, config_overrides=config_overrides, run_id=run_id)
     payload = result.get("payload", {})

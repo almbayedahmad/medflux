@@ -1,0 +1,19 @@
+# PURPOSE: Enforce YAML style for policy/config files.
+# OUTCOME: Ensures UTF-8, LF, 2-space indentation, and consistent formatting.
+# INPUTS: Used by pre-commit and local CI to lint YAML.
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+  document-start: disable
+  truthy: disable
+  comments-indentation: enable
+  new-line-at-end-of-file: enable
+  trailing-spaces: enable

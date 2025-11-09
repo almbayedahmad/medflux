@@ -2,11 +2,6 @@
 # ✅ AGENTS MASTER POLICY (MedFlux)
 This is the ONLY file Agents must read before generating, modifying, or deleting any code in the MedFlux project.
 
-It includes:
-1) Policy Digest
-2) File Writing / Naming / Commenting Policy
-3) Minimal Bootstrap Rules
-4) Manifest Logic (Integrated)
 
 ============================================================
 # ✅ 1. POLICY DIGEST (Key Rules – Must Always Be Enforced)
@@ -283,3 +278,67 @@ If ANY part of this file is missing, unreadable, or incomplete:
 ============================================================
 # ✅ END OF AGENTS MASTER POLICY
 ============================================================
+
+## 4. MedFlux Development Strategy (Phases & Structure)
+
+This section aligns the Agent with the practical, v2 structure used across the repository so that new work is consistent, minimal, and policy‑compliant.
+
+### 4.1 Phase Architecture (v2)
+- Every phase lives under `backend/Preprocessing/phase_XX_<name>/` and follows this minimal layout:
+  - `api.py` (PhaseRunner public API)
+  - `cli/` (v2 CLI entrypoints; thin wrappers using `core.preprocessing.cli.common`)
+  - `connectors/` (config + upstream; config loaders must merge central defaults)
+  - `domain/` (core processing; readers use `domain/ops/*`)
+  - `io/` (writers only; no business logic)
+  - `schemas/` (data types/contracts if phase‑specific)
+  - `common_files/` (docs + configs + simple Makefile; no code duplication)
+- Legacy folders are retired and MUST NOT be reintroduced: `connecters/`, `internal_helpers/`, `core_functions/`, `outputs/`, `pipeline_workflow/`.
+
+### 4.2 Centralized Defaults & Config Merge
+- Central defaults live at `core/preprocessing/cross_phase/config/phase_defaults.yaml`.
+- Phase `connectors/config.py` MUST load defaults and deep‑merge phase overrides via:
+  - `from core.preprocessing.config.registry import load_phase_defaults, merge_overrides`
+  - `cfg = merge_overrides(load_phase_defaults(), <phase_yaml>)`
+- Keep per‑phase configs minimal; only specify true deltas from defaults.
+
+### 4.3 Logging & Policy
+- Logging is policy‑driven under `core/policy/observability/logging/` and applied via `core.logging.configure_logging()`.
+- Logger categories use v2 names: `domain`, `cli`, `io`, `connectors`, `schemas`, `tests`.
+- Do not copy full logging configs per phase; if a phase needs differences, place small overrides in `common_files/configs/`.
+
+### 4.4 CLI Strategy
+- Keep phase‑local CLIs (thin wrappers) under each phase `cli/` and standardize flags with `core.preprocessing.cli.common`.
+- Provide a top‑level umbrella CLI for operators/developers:
+  - Entry: `medflux` (see `core/cli/medflux.py`, configured in `pyproject.toml [project.scripts]`).
+  - Subcommands: `phase-list`, `phase-detect`, `phase-encoding`, `phase-readers`, `phase-merge`, `phase-cleaning`, `phase-light-normalization`, `phase-segmentation`, `phase-table-extraction`, `phase-heavy-normalization`, `phase-provenance`, `phase-offsets`, `chain-run`.
+- Prefer examples in docs using the umbrella CLI; phase READMEs may additionally show the v2 CLI for that phase.
+
+### 4.5 Tests
+- All executable tests live under the root `tests/` tree (unit/component/contract/golden/integration/e2e).
+- Do not add `tests/` folders inside phases. Use phase‑specific namespaces under root, e.g. `tests/unit/phases/phase_02_readers/…`.
+- `pytest.ini` points to `tests/`; CI relies on this structure.
+
+### 4.6 Generators & Makefiles
+- The phase generator (`tools/preprocessing/phase_generator.py`) emits v2 structure (domain/ops, v2 CLI) and creates root‑level unit tests under `tests/unit/phases/<phase>/`.
+- Phase Makefiles in `common_files/git/Makefile`:
+  - Use `medflux` umbrella CLI for early phases (00–02) or `python -m backend.Preprocessing.<phase>.cli.<stage>_cli_v2` for others.
+  - `validate`/`test` targets run `pytest -q tests`.
+
+### 4.7 Do’s & Don’ts (v2 enforcement)
+- Do:
+  - Add PURPOSE/OUTCOME headers and full docstrings per policy.
+  - Use `services` facade in `core/preprocessing/services/*` for cross‑phase calls.
+  - Use `merge_overrides(load_phase_defaults(), phase_cfg)` in config connectors.
+  - Keep writers in `io/` free of business logic; stamp artifacts with schema names.
+  - Prefer umbrella CLI in docs and examples.
+- Don’t:
+  - Reintroduce `connecters/`, `internal_helpers/`, `core_functions/`, `outputs/`, `pipeline_workflow/`.
+  - Scatter tests inside phases.
+  - Duplicate centralized configs or policy content in phases.
+
+### 4.8 Quick Reference
+- Central defaults: `core/preprocessing/cross_phase/config/phase_defaults.yaml`
+- Umbrella CLI: `core/cli/medflux.py` → `medflux` console script
+- Cross‑phase helpers: `core/preprocessing/cross_phase/helpers/*`
+- Services facades: `core/preprocessing/services/{detect,encoding,readers}.py`
+- Chain runner: `core/preprocessing/pipeline/preprocessing_chain.py`

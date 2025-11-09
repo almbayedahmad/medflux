@@ -7,10 +7,47 @@ repos:
       - id: mixed-line-ending
         args: ["--fix=lf"]
       - id: check-yaml
-        exclude: ^medflux_backend/Preprocessing/
+        files: ^core/policy/|^core/preprocessing/cross_phase/config/
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-added-large-files
         args: ["--maxkb=2048"]
       - id: no-commit-to-branch
         args: ["--branch", "main"]
+  - repo: local
+    hooks:
+      - id: forbid-connecters-imports
+        name: Forbid legacy 'connecters' imports (use 'connectors')
+        language: python
+        entry: python tools/hooks/forbid_connecters_imports.py
+        types: [python]
+      - id: forbid-legacy-imports
+        name: Forbid legacy internal_helpers/core_functions/pipeline_workflow imports
+        language: python
+        entry: python tools/hooks/forbid_legacy_imports.py
+        types: [python]
+      - id: check-headers
+        name: Enforce PURPOSE/OUTCOME headers (Python/YAML)
+        language: python
+        entry: python tools/hooks/check_headers.py
+        types: [python, yaml]
+      - id: forbid-legacy-dirs
+        name: Forbid legacy directories (outputs/, legacy internals)
+        language: python
+        entry: python tools/hooks/forbid_legacy_dirs.py
+        types: [file]
+      - id: forbid-phase-local-tests
+        name: Forbid tests under phases/*
+        language: python
+        entry: python tools/hooks/forbid_phase_local_tests.py
+        types: [file]
+      - id: forbid-cross-phase-domain-imports
+        name: Forbid cross-phase domain/ops imports (use services)
+        language: python
+        entry: python tools/hooks/forbid_cross_phase_domain_imports.py
+        types: [python]
+      - id: yamllint-policy
+        name: Yamllint policy directory
+        language: system
+        entry: yamllint -c .yamllint.yaml core/policy
+        pass_filenames: false

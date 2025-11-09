@@ -1,0 +1,10 @@
+##
+# PURPOSE: Centralized defaults for preprocessing phases (IO and options).
+# OUTCOME: Provides a common baseline that phase-specific configs can extend.
+# INPUTS: Merged by phase connectors with phase-local overrides.
+# OUTPUTS: A minimal mapping to reduce duplication across phases.
+
+io: {}
+options:
+  workers: 4
+  verbose: false

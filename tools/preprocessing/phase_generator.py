@@ -20,18 +20,15 @@ def create_directory_structure(phase_path: Path) -> None:
 
     directories = [
         "config",
-        "pipeline_workflow",
-        "connecters",
-        "core_functions",
+        "cli",
+        "connectors",
+        "domain",
+        "domain/ops",
+        "io",
         "schemas",
-        "outputs",
-        "internal_helpers",
-        "tests",
         "common_files/docs",
         "common_files/git",
         "common_files/configs",
-        "common_files/policies",
-        "common_files/others"
     ]
 
     for directory in directories:
@@ -46,13 +43,12 @@ def create_init_files(phase_path: Path, phase_name: str) -> None:
     init_dirs = [
         "",
         "config",
-        "pipeline_workflow",
-        "connecters",
-        "core_functions",
+        "cli",
+        "connectors",
+        "domain",
+        "domain/ops",
+        "io",
         "schemas",
-        "outputs",
-        "internal_helpers",
-        "tests"
     ]
 
     for init_dir in init_dirs:
@@ -91,7 +87,7 @@ class {stage_name.title()}Config(TypedDict):
 
 
 def create_core_function(phase_path: Path, phase_name: str, stage_name: str) -> None:
-    """Create core function file."""
+    """Create domain processing file (v2 layout)."""
 
     core_content = f'''"""Core processing logic for {stage_name} phase."""
 
@@ -118,51 +114,120 @@ def process_{stage_name}_items(items: List[Dict[str, Any]]) -> Dict[str, Any]:
     }}
 '''
 
-    core_path = phase_path / "core_functions" / f"{stage_name}_core_process.py"
+    core_path = phase_path / "domain" / "process.py"
     core_path.write_text(core_content)
     print(f"Created: {core_path}")
 
 
 def create_pipeline_workflow(phase_path: Path, phase_name: str, stage_name: str) -> None:
-    """Create pipeline workflow file."""
+    """Create v2 API and CLI files (no legacy pipeline_workflow)."""
 
-    pipeline_content = f'''"""Pipeline orchestration for {stage_name} phase."""
+    api_content = f'''# PURPOSE:
+#   Phase public API and PhaseRunner implementation.
+# OUTCOME:
+#   Standardized lifecycle while preserving a simple public entrypoint.
 
-from typing import List, Dict, Any
-from ..core_functions.{stage_name}_core_process import process_{stage_name}_items
+from __future__ import annotations
+
+from typing import Any, Dict, Optional, Sequence
+
+from core.preprocessing.phase_api import PhaseRunner, PhaseSpec
+from core.preprocessing.config.registry import merge_overrides
+
+from .domain.process import process_{stage_name}_items
 
 
-def run_{stage_name}_pipeline(
-    generic_items: List[Dict[str, Any]],
-    io_config: Dict[str, Any],
-    options_config: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Main entry point for {stage_name} pipeline.
+class {stage_name.title()}Runner(PhaseRunner[Dict[str, Any], Dict[str, Any]]):
+    def _connect_config(self, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        return merge_overrides({{}}, overrides)
 
-    Args:
-        generic_items: Input items to process
-        io_config: I/O configuration
-        options_config: Processing options
+    def _process(self, upstream: Sequence[Dict[str, Any]], *, config: Dict[str, Any]) -> Dict[str, Any]:
+        return process_{stage_name}_items(list(upstream))
 
-    Returns:
-        Dictionary containing pipeline results
-    """
-    # TODO: Implement pipeline orchestration
-    return process_{stage_name}_items(generic_items)
+
+def run_{stage_name}(generic_items: Sequence[Dict[str, Any]] | None = None, *, config_overrides: Dict[str, Any] | None = None, run_id: str | None = None) -> Dict[str, Any]:
+    runner = {stage_name.title()}Runner(PhaseSpec(phase_id="phase_xx_{stage_name}", name="{stage_name}"))
+    result = runner.run(generic_items, config_overrides=config_overrides, run_id=run_id)
+    payload = result.get("payload", {{}})
+    final: Dict[str, Any] = {{"config": result["config"], **payload}}
+    if "run_id" in result:
+        final["run_id"] = result["run_id"]
+    return final
 '''
 
-    pipeline_path = phase_path / "pipeline_workflow" / f"{stage_name}_pipeline.py"
-    pipeline_path.write_text(pipeline_content)
-    print(f"Created: {pipeline_path}")
+    api_path = phase_path / "api.py"
+    api_path.write_text(api_content)
+    print(f"Created: {api_path}")
+
+    cli_content = f'''# PURPOSE:
+#   Unified CLI entrypoint using the shared CLI toolkit.
+# OUTCOME:
+#   Consistent flags across phases.
+
+from __future__ import annotations
+
+from core.preprocessing.cli.common import run_phase_cli
+from core.preprocessing.phase_api import PhaseSpec
+from ..api import {stage_name.title()}Runner
+
+
+def main(argv: list[str] | None = None) -> int:
+    return run_phase_cli(
+        {stage_name.title()}Runner,
+        spec_kwargs={{"phase_id": "phase_xx_{stage_name}", "name": "{stage_name}"}},
+        argv=argv,
+    )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+'''
+    cli_path = phase_path / "cli" / f"{stage_name}_cli_v2.py"
+    cli_path.write_text(cli_content)
+    print(f"Created: {cli_path}")
 
 
 def create_test_file(phase_path: Path, phase_name: str, stage_name: str) -> None:
-    """Create test file."""
+    """Create root-level unit test only (no phase-local tests)."""
 
-    test_content = f'''"""Tests for {stage_name} core functions."""
+    test_content = f'''"""Tests for {stage_name} domain functions."""
 
 import pytest
-from ..core_functions.{stage_name}_core_process import process_{stage_name}_items
+from ..domain.process import process_{stage_name}_items
+
+
+def test_process_{stage_name}_items() -> None:
+    """Test basic processing functionality."""
+    # Test data
+    test_items = [
+        {{"id": "test_1", "data": "sample_data"}},
+        {{"id": "test_2", "data": "another_sample"}}
+    ]
+
+    # Run processing
+    result = process_{stage_name}_items(test_items)
+
+    # Assertions
+    assert "unified_document" in result
+    assert "stage_stats" in result
+    assert result["stage_stats"]["items_processed"] == 2
+    assert result["unified_document"]["status"] == "success"
+'''
+
+    # phase-local tests are not created; tests live under root `tests/`
+
+    # Also create a root-level unit test under tests/unit/phases
+    try:
+        pkg = str(phase_path.resolve().relative_to(Path.cwd().resolve())).replace("\\", ".").replace("/", ".")
+    except Exception:
+        pkg = phase_name
+
+    test_content_root = f'''# PURPOSE:
+#   Unit tests for {stage_name} domain functions.
+# OUTCOME:
+#   Verifies minimal processing functionality for generated scaffolds.\n
+import pytest
+from {pkg}.domain.process import process_{stage_name}_items
 
 
 def test_process_{stage_name}_items():
@@ -183,9 +248,11 @@ def test_process_{stage_name}_items():
     assert result["unified_document"]["status"] == "success"
 '''
 
-    test_path = phase_path / "tests" / f"test_{stage_name}_core.py"
-    test_path.write_text(test_content)
-    print(f"Created: {test_path}")
+    tests_root = phase_path.parent / "tests" / "unit" / "phases" / phase_name
+    tests_root.mkdir(parents=True, exist_ok=True)
+    test_path_root = tests_root / f"test_{stage_name}_core.py"
+    test_path_root.write_text(test_content_root)
+    print(f"Created: {test_path_root}")
 
 
 def create_common_files(phase_path: Path, phase_name: str, stage_name: str) -> None:
@@ -198,86 +265,71 @@ def create_common_files(phase_path: Path, phase_name: str, stage_name: str) -> N
 TODO: Describe the purpose of this stage.
 
 ## Workflow
-- Orchestrator: pipeline_workflow/{stage_name}_pipeline.py
-- Connectors: connecters/*
-- Core processors: core_functions/*
-- Schemas: schemas/*
-- Helpers: internal_helpers/*
-- Outputs: outputs/*
+- API: `api.py` (PhaseRunner-based)
+- CLI: `cli/{stage_name}_cli_v2.py`
+- Connectors: `connectors/*`
+- Domain: `domain/*`
+- IO: `io/*`
+- Schemas: `schemas/*`
 
 ## Outputs
-- cfg['io']['out_doc_path'] (unified_document)
-- cfg['io']['out_stats_path'] (stage_stats)
+- `cfg['io']['out_doc_path']` (unified_document)
+- `cfg['io']['out_stats_path']` (stage_stats)
 
 ## How to Run
+
+Preferred (umbrella CLI):
 ```bash
-make run INPUTS="samples/sample_file.txt"
+medflux phase-{stage_name} --inputs samples/sample_file.txt --output-root ./.artifacts/{stage_name}
 ```
-Override `INPUTS` with one or more paths (space separated) that should be processed.
+
+Phase-local v2 CLI:
+```bash
+python -m backend.Preprocessing.{phase_name}.cli.{stage_name}_cli_v2 samples/sample_file.txt
+```
+
+Pass one or more input items/paths as arguments.
+
+## Env & Logging
+- Use the root `.env.example` for environment variables (copy to `.env` if needed).
+- Logging is policy-driven under `core/policy/observability/logging/` and applied via `core.logging.configure_logging()`.
+  - CLI flags `--log-level`, `--log-json`, `--log-stderr` are available (umbrella + v2 CLIs).
 
 ## Validation
-Run stage checks before committing changes.
+Run repo tests before committing changes.
 
 ```bash
-make validate
+pytest -q tests
 ```
-
-## Change Log
-Entries are appended automatically by the documentation updater after each change. Replace the TODO text in each entry with real context when you review the update.
-
-### change-{datetime.now().strftime("%Y%m%dT%H%M%S")}-initial
-- What changed: Initial phase setup for {stage_name} stage.
-- Why it was needed: New phase created for {stage_name} processing.
-- Result: Phase structure created with basic functionality.
 '''
 
     readme_path = phase_path / "common_files" / "docs" / "README.md"
     readme_path.write_text(readme_content)
     print(f"Created: {readme_path}")
 
-    # CHANGELOG.md
-    changelog_content = f'''# Changelog
-
-All notable changes to the {stage_name} stage will be documented in this file.
-
-## [1.0.0] - {datetime.now().strftime("%Y-%m-%d")}
-
-### Added
-- Initial phase setup
-- Basic processing structure
-- Test framework
-- Documentation templates
-'''
-
-    changelog_path = phase_path / "common_files" / "docs" / "CHANGELOG.md"
-    changelog_path.write_text(changelog_content)
-    print(f"Created: {changelog_path}")
+    # Per-phase CHANGELOG.md is retired; entries are kept in the root CHANGELOG.
 
     # Makefile
-    makefile_content = f'''# {stage_name.title()} Stage Makefile
+    makefile_content = f'''# {stage_name.title()} Stage Makefile (v2)
 
-.PHONY: run validate clean test
+.PHONY: run validate test clean
 
-# Default target
-all: validate
-
-# Run the stage
+# Run the stage (v2 CLI; pass INPUTS="file1 file2" OUTPUT_ROOT=./.artifacts/{stage_name} RUN_ID=123)
 run:
-\tpython -m {phase_name}.pipeline_workflow.{stage_name}_pipeline
+	python -m backend.Preprocessing.{phase_name}.cli.{stage_name}_cli_v2 \
+		$$(if [ -n "$${INPUTS}" ]; then echo $${INPUTS}; fi) \
+		$$(if [ -n "$${OUTPUT_ROOT}" ]; then echo --output-root $${OUTPUT_ROOT}; fi) \
+		$$(if [ -n "$${RUN_ID}" ]; then echo --run-id $${RUN_ID}; fi)
 
-# Validate the stage
-validate:
-\tpython -m pytest {phase_name}/tests/ -v
-\tpython -c "from {phase_name}.pipeline_workflow.{stage_name}_pipeline import run_{stage_name}_pipeline; print('Import successful')"
+# Validate using root tests
+validate: test
 
-# Run tests
 test:
-\tpython -m pytest {phase_name}/tests/ -v
+	pytest -q tests
 
-# Clean up
 clean:
-\tfind . -type f -name "*.pyc" -delete
-\tfind . -type d -name "__pycache__" -delete
+	find . -type f -name "*.pyc" -delete || true
+	find . -type d -name "__pycache__" -delete || true
 '''
 
     makefile_path = phase_path / "common_files" / "git" / "Makefile"
@@ -468,11 +520,11 @@ def main():
     create_config_files(phase_path, phase_name, stage_name)
 
     print(f"\nPhase {phase_name} generated successfully!")
-    print(f"Next steps:")
-    print(f"1. cd {phase_path}")
-    print(f"2. python -m pytest tests/ -v")
-    print(f"3. Customize the implementation in core_functions/")
-    print(f"4. Update documentation in common_files/docs/")
+    print("Next steps:")
+    print("1. From repo root, run: pytest -q tests")
+    print(f"2. Try umbrella CLI: medflux phase-{stage_name} --inputs <files> --output-root ./.artifacts/{stage_name}")
+    print("3. Customize the implementation in domain/ and domain/ops/")
+    print("4. Update documentation in common_files/docs/")
 
 
 if __name__ == "__main__":

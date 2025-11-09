@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-"""Thin wrapper around the readers CLI for backwards compatibility."""
+"""Thin wrapper delegating to the v2 readers CLI."""
 
-from backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_cli import run_readers_cli
+from backend.Preprocessing.phase_02_readers.cli.readers_cli_v2 import main as _readers_main
 
 
 def main() -> None:
-    """Delegate to the unified run_readers CLI."""
-    run_readers_cli()
+    """Delegate to the unified v2 run_readers CLI."""
+    _readers_main()
 
 
 if __name__ == "__main__":

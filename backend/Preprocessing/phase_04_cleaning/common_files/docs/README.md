@@ -1,31 +1,28 @@
-# Readers Stage (phase_02_readers)
+# Cleaning Stage (phase_04_cleaning)
 
 ## Purpose
-Orchestrate document ingestion by dispatching native, OCR, and table extraction flows to produce structured metadata for downstream preprocessing steps.
+Remove noise and artifacts from merged content; normalize whitespace and discard low-signal elements.
 
-## Workflow
-- Orchestrator: pipeline_workflow/readers_pipeline.py
-- Connectors: connecters/*
-- Core processors: core_processors/*
+## Workflow (v2)
+- API: api.py
+- CLI: cli/cleaning_cli_v2.py
+- Connectors: connectors/*
+- Domain: domain/*
+- IO: io/*
 - Schemas: schemas/*
-- Internal helpers: internal_helpers/ (runtime models/options, language/logging, execution helpers)
-- Outputs: outputs/ (doc builders, documents/)
+- common_files: docs & configs
 
 ## Outputs
 - cfg['io']['out_doc_path']
 - cfg['io']['out_stats_path']
 - cfg['io']['out_summary_path']
 
-## How to Run
-```
-python -m backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_cli --out outputs/phase_02_readers samples/sample_text_smoke.txt
-```
+## Quick Run (v2 CLI)
 
-Run the detect_type -> encoding -> readers chain (smoke defaults write to ``MEDFLUX_OUTPUT_ROOT` (or <repo>/outputs/preprocessing/pre_smoke_results`)`):
+Use the phase-local v2 CLI to run this stage:
+
 ```
-python -m core.preprocessing.pipeline.preprocessing_chain \
-  --inputs samples/sample_text_smoke.txt samples/sample_pdf_smoke.pdf \
-  --include-docs
+python -m backend.Preprocessing.phase_04_cleaning.cli.cleaning_cli_v2 --help
 ```
 
 ## Latest Updates
@@ -35,3 +32,24 @@ python -m core.preprocessing.pipeline.preprocessing_chain \
 
 ## Change Log
 Entries are appended automatically by the documentation updater after each change. Replace the TODO text in each entry with real context when you review the update.
+
+
+## Env & Logging
+- Configure environment via the repo root `.env.example`.
+- Logging is policy-driven under `core/policy/observability/logging/`.
+  - Select profile using `MEDFLUX_LOG_PROFILE` (e.g., `dev`, `prod`).
+  - v2 CLI supports `--log-level`, `--log-json`, `--log-stderr`.
+
+## Quick Run (Umbrella CLI)
+
+Use the umbrella CLI for consistency:
+
+```
+medflux phase-cleaning --inputs path/to/file --output-root ./.artifacts/cleaning
+```
+
+## Examples
+
+- Umbrella CLI:
+  `\n  medflux phase-cleaning --inputs samples/Sample.txt --output-root ./.artifacts/cleaning\n  `\n- Phase v2 CLI:
+  `\n  python -m backend.Preprocessing.phase_04_cleaning.cli.cleaning_cli_v2 --inputs samples/Sample.txt --output-root ./.artifacts/cleaning\n  `\n

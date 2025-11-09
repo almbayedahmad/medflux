@@ -36,13 +36,64 @@ Note on alerts
 
 ## Running a stage on samples
 
+Prefer the umbrella CLI for a consistent UX across phases.
+
 `powershell
 # Detect type stage (example)
-python -m backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_cli samples\Sample.txt --log-json --log-level INFO
-`
-> Ensure `PYTHONPATH='.'` if running module entry points directly.
+medflux --log-json --log-level INFO phase-detect --inputs samples\Sample.txt --output-root .\.artifacts\detect
 
-All output artefacts (reports, per-file summaries, raw readers output) end up inside the folder passed to --outdir.
+# Run the early chain (00 -> 02)
+medflux --log-json --log-level INFO chain-run --inputs samples\Sample.txt --output-root .\.artifacts\chain
+`
+
+Notes
+- Set `MEDFLUX_OUTPUT_ROOT` to control the default output base directory.
+  When not set, MedFlux uses the OS temp directory (not a repo-local `outputs/`).
+- Phase-local CLIs under `backend.Preprocessing.*.cli.*_cli_v2` remain available,
+  but examples and docs prefer the `medflux` umbrella CLI.
+
+All output artefacts (reports, per-file summaries, raw readers output) end up inside the folder passed to `--output-root`.
+
+## Structure v2
+
+- Phases live under `backend/Preprocessing/phase_XX_<name>/` with this layout:
+  - `api.py`, `cli/`, `connectors/`, `domain/`, `io/`, `schemas/`, `common_files/`
+- Centralized defaults and logging policies:
+  - Config defaults at `core/preprocessing/cross_phase/config/phase_defaults.yaml`
+  - Logging policy at `core/policy/observability/logging/` applied via `core.logging.configure_logging()`
+- Prefer the umbrella CLI `medflux`; phase-local v2 CLIs remain available for targeted runs.
+- See `AGENTS.md` for the MedFlux policy and the full v2 development strategy (layout, tests, gates).
+
+## Using Services
+
+Cross-phase code must not import another phase’s `domain/` or `domain/ops/` directly. Use the service facades under `core/preprocessing/services/*` or the phase public APIs.
+
+- Detect: `core.preprocessing.services.detect.DetectService`
+  - Example:
+    ``
+    from core.preprocessing.services.detect import DetectService
+    info = DetectService.detect_file("samples/Sample.pdf")
+    mode = info.get("recommended", {}).get("mode")
+    ``
+- Encoding: `core.preprocessing.services.encoding.EncodingService`
+  - Example:
+    ``
+    from core.preprocessing.services.encoding import EncodingService
+    enc = EncodingService.detect_text_info("samples/Sample.txt")
+    is_utf8 = bool(enc.get("is_utf8"))
+    ``
+- Readers helpers: `core.preprocessing.services.readers.ReadersService`
+  - Example:
+    ``
+    from core.preprocessing.services.readers import ReadersService
+    detect_meta = ReadersService.get_detect_meta("samples/Sample.pdf")
+    enc_meta = ReadersService.get_encoding_meta("samples/Sample.txt", file_type="txt")
+    run_meta = ReadersService.compute_run_metadata()
+    ```
+- Future phases: thin facades exist so reusable signals can be exposed without cross-imports
+  - `core.preprocessing.services.{merge,cleaning,segmentation,table_extraction,heavy_normalization,provenance,offsets}`
+
+If a phase API is more appropriate (e.g., to execute a phase), import its `api.py` and call `run_*`. Do not import another phase’s `domain/` internals.
 
 The detect phase now surfaces a lightweight table detector. Per-file summaries include a `table_stats` list and `table_pages` flag,
 and you can tune the heuristics via `--table-detect-min-area` and `--table-detect-max-cells` when running the CLI.
@@ -211,3 +262,44 @@ Use the standard Git workflow (git status, git commit, git push) from the reposi
 2. Introduce the YAML-backed readers config (`configs/readers.yaml`) and loader, wiring thresholds/feature flags via `CFG[...]`.
 3. Re-run `python -m pytest medflux_backend/Preprocessing/test_preprocessing/unit_tests -q` and smoke the CLI to confirm the refactor.
 4. Capture updated screenshots/log outputs once the new config and utils are active.
+## CLI (Umbrella)
+
+Use the top-level CLI for a unified developer and operator experience.
+
+Examples
+
+`powershell
+# List available phases
+medflux phase-list
+
+# Run detect_type (phase 00)
+medflux phase-detect --inputs samples\Sample.txt --output-root outputs\preprocessing
+
+# Run encoding (phase 01), enable normalization
+medflux phase-encoding --inputs samples\Sample.txt --normalize --output-root outputs\preprocessing
+
+# Run readers (phase 02)
+medflux phase-readers --inputs samples\Sample.pdf --output-root outputs\preprocessing
+
+# Run the chain: detect -> encoding -> readers
+medflux chain-run --inputs samples\Sample.txt --output-root outputs\preprocessing --include-docs
+`
+
+Notes
+- The umbrella CLI delegates to each phase’s v2 API/CLI and uses consistent options.
+- Use `--output-root` to control where artifacts are written (defaults are kept in each phase unless overridden).
+
+Subcommands
+- `medflux phase-list` – list available phases
+- `medflux phase-detect` – run phase_00_detect_type
+- `medflux phase-encoding` – run phase_01_encoding (use `--normalize` for UTF-8 normalization)
+- `medflux phase-readers` – run phase_02_readers
+- `medflux phase-merge` – run phase_03_merge
+- `medflux phase-cleaning` – run phase_04_cleaning
+- `medflux phase-light-normalization` – run phase_05_light_normalization
+- `medflux phase-segmentation` – run phase_06_segmentation
+- `medflux phase-table-extraction` – run phase_07_table_extraction
+- `medflux phase-heavy-normalization` – run phase_08_heavy_normalization
+- `medflux phase-provenance` – run phase_09_provenance
+- `medflux phase-offsets` – run phase_10_offsets
+- `medflux chain-run` – run detect → encoding → readers

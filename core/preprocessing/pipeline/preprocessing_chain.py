@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-"""Integration harness chaining phases 00 -> 02."""
+# PURPOSE:
+#   Integration harness chaining preprocessing phases (00 detect_type -> 01 encoding -> 02 readers -> (optional) 03 merge).
+#
+# OUTCOME:
+#   Provides a simple programmatic API to run the chain with
+#   consistent IO handling and an on-disk summary artifact for smoke runs.
 
 import argparse
 import json
@@ -9,21 +14,32 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 from core.preprocessing.output.output_router import OutputRouter
-from backend.Preprocessing.phase_00_detect_type.pipeline_workflow.detect_type_pipeline import (
-    run_detect_type_pipeline,
+from backend.Preprocessing.phase_00_detect_type.api import (
+    run_detect_type,
 )
-from backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_pipeline import (
-    run_encoding_pipeline,
+from backend.Preprocessing.phase_01_encoding.api import (
+    run_encoding,
 )
-from backend.Preprocessing.phase_02_readers.connecters.readers_connector_metadata import (
-    compute_readers_run_metadata,
+from core.preprocessing.services.readers import ReadersService
+from backend.Preprocessing.phase_02_readers.api import (
+    run_readers,
 )
-from backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_pipeline import (
-    run_readers_pipeline,
+from backend.Preprocessing.phase_03_merge.api import (
+    run_merge,
 )
 
 
 def _resolve_inputs(inputs: Sequence[str]) -> List[str]:
+    """Resolve and validate input file paths.
+
+    Args:
+        inputs: Raw input paths.
+    Returns:
+        Absolute, existing paths suitable for downstream phases.
+    Outcome:
+        Raises if no inputs are provided or a path does not exist.
+    """
+
     resolved: List[str] = []
     for raw in inputs:
         path = Path(raw).expanduser().resolve()
@@ -42,8 +58,21 @@ def run_preprocessing_chain(
     run_id: str | None = None,
     normalize: bool = True,
     include_docs: bool = False,
+    include_merge: bool = False,
+    include_cleaning: bool = False,
+    include_light_normalization: bool = False,
+    include_segmentation: bool = False,
+    include_table_extraction: bool = False,
+    include_heavy_normalization: bool = False,
+    include_provenance: bool = False,
+    include_offsets: bool = False,
 ) -> Dict[str, Any]:
-    """Execute detect_type -> encoding -> readers for the given inputs."""
+    """Execute detect_type -> encoding -> readers (-> merge) for the given inputs.
+
+    Outcome:
+        Returns a summary mapping with resolved output paths and optional
+        embedded documents; writes a JSON summary under the router root.
+    """
 
     resolved_inputs = _resolve_inputs(inputs)
     root_override: Path | None = None
@@ -59,7 +88,7 @@ def run_preprocessing_chain(
     detect_overrides: Dict[str, Any] = {
         "io": detect_io.as_overrides(),
     }
-    detect_payload = run_detect_type_pipeline(
+    detect_payload = run_detect_type(
         [{"path": path} for path in resolved_inputs],
         config_overrides=detect_overrides,
     )
@@ -93,7 +122,7 @@ def run_preprocessing_chain(
             "newline_policy": "lf",
             "errors": "strict",
         }
-    encoding_payload = run_encoding_pipeline(
+    encoding_payload = run_encoding(
         encoding_items,
         config_overrides=encoding_overrides,
     )
@@ -131,8 +160,8 @@ def run_preprocessing_chain(
     readers_overrides: Dict[str, Any] = {
         "io": readers_io.as_overrides(),
     }
-    readers_run_meta = compute_readers_run_metadata(pipeline_id="preprocessing.chain")
-    readers_payload = run_readers_pipeline(
+    readers_run_meta = ReadersService.compute_run_metadata(pipeline_id="preprocessing.chain")
+    readers_payload = run_readers(
         readers_items,
         config_overrides=readers_overrides,
         run_metadata=readers_run_meta,
@@ -175,6 +204,212 @@ def run_preprocessing_chain(
         outputs["readers"]["document"] = readers_payload.get("items")
         outputs["readers"]["summary"] = reader_summary
 
+    # Optional Stage 3: merge
+    if include_merge:
+        merge_items = readers_payload.get("items") or []
+        merge_io = router.stage_io("merge")
+        merge_overrides: Dict[str, Any] = {
+            "io": merge_io.as_overrides(),
+        }
+        merge_payload = run_merge(
+            merge_items,
+            config_overrides=merge_overrides,
+        )
+        outputs["merge"] = {
+            "stage_stats": merge_payload.get("stage_stats", {}),
+            "doc_path": str(merge_io.doc_path),
+            "stats_path": str(merge_io.stats_path),
+        }
+        if include_docs:
+            outputs["merge"]["document"] = merge_payload.get("unified_document")
+
+    # Optional Stage 4: cleaning
+    if include_cleaning:
+        from backend.Preprocessing.phase_04_cleaning.api import run_cleaning
+
+        # Prefer merged document items if available
+        cleaning_items = []
+        try:
+            if include_merge:
+                cleaning_items = (merge_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            cleaning_items = []
+        if not cleaning_items:
+            cleaning_items = readers_payload.get("items") or []
+
+        cleaning_io = router.stage_io("cleaning")
+        cleaning_overrides: Dict[str, Any] = {"io": cleaning_io.as_overrides()}
+        cleaning_payload = run_cleaning(
+            cleaning_items,
+            config_overrides=cleaning_overrides,
+        )
+        outputs["cleaning"] = {
+            "stage_stats": cleaning_payload.get("stage_stats", {}),
+            "doc_path": str(cleaning_io.doc_path),
+            "stats_path": str(cleaning_io.stats_path),
+        }
+        if include_docs:
+            outputs["cleaning"]["document"] = cleaning_payload.get("unified_document")
+
+    # Optional Stage 5: light_normalization
+    if include_light_normalization:
+        from backend.Preprocessing.phase_05_light_normalization.api import run_light_normalization
+
+        ln_items = []
+        try:
+            if include_cleaning:
+                ln_items = (cleaning_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            ln_items = []
+        if not ln_items:
+            try:
+                if include_merge:
+                    ln_items = (merge_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+            except Exception:
+                ln_items = []
+        if not ln_items:
+            ln_items = readers_payload.get("items") or []
+
+        ln_io = router.stage_io("light_normalization")
+        ln_overrides: Dict[str, Any] = {"io": ln_io.as_overrides()}
+        ln_payload = run_light_normalization(
+            ln_items,
+            config_overrides=ln_overrides,
+        )
+        outputs["light_normalization"] = {
+            "stage_stats": ln_payload.get("stage_stats", {}),
+            "doc_path": str(ln_io.doc_path),
+            "stats_path": str(ln_io.stats_path),
+        }
+        if include_docs:
+            outputs["light_normalization"]["document"] = ln_payload.get("unified_document")
+
+    # Optional Stage 6: segmentation
+    if include_segmentation:
+        from backend.Preprocessing.phase_06_segmentation.api import run_segmentation
+
+        seg_items = []
+        try:
+            if include_light_normalization:
+                seg_items = (ln_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            seg_items = []
+        if not seg_items:
+            try:
+                if include_cleaning:
+                    seg_items = (cleaning_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+            except Exception:
+                seg_items = []
+        if not seg_items:
+            seg_items = readers_payload.get("items") or []
+
+        seg_io = router.stage_io("segmentation")
+        seg_overrides: Dict[str, Any] = {"io": seg_io.as_overrides()}
+        seg_payload = run_segmentation(seg_items, config_overrides=seg_overrides)
+        outputs["segmentation"] = {
+            "stage_stats": seg_payload.get("stage_stats", {}),
+            "doc_path": str(seg_io.doc_path),
+            "stats_path": str(seg_io.stats_path),
+        }
+        if include_docs:
+            outputs["segmentation"]["document"] = seg_payload.get("unified_document")
+
+    # Optional Stage 7: table_extraction
+    if include_table_extraction:
+        from backend.Preprocessing.phase_07_table_extraction.api import run_table_extraction
+
+        te_items = []
+        try:
+            if include_segmentation:
+                te_items = (seg_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            te_items = []
+        if not te_items:
+            te_items = readers_payload.get("items") or []
+
+        te_io = router.stage_io("table_extraction")
+        te_overrides: Dict[str, Any] = {"io": te_io.as_overrides()}
+        te_payload = run_table_extraction(te_items, config_overrides=te_overrides)
+        outputs["table_extraction"] = {
+            "stage_stats": te_payload.get("stage_stats", {}),
+            "doc_path": str(te_io.doc_path),
+            "stats_path": str(te_io.stats_path),
+        }
+        if include_docs:
+            outputs["table_extraction"]["document"] = te_payload.get("unified_document")
+
+    # Optional Stage 8: heavy_normalization
+    if include_heavy_normalization:
+        from backend.Preprocessing.phase_08_heavy_normalization.api import run_heavy_normalization
+
+        hn_items = []
+        try:
+            if include_segmentation:
+                hn_items = (seg_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            hn_items = []
+        if not hn_items:
+            hn_items = readers_payload.get("items") or []
+
+        hn_io = router.stage_io("heavy_normalization")
+        hn_overrides: Dict[str, Any] = {"io": hn_io.as_overrides()}
+        hn_payload = run_heavy_normalization(hn_items, config_overrides=hn_overrides)
+        outputs["heavy_normalization"] = {
+            "stage_stats": hn_payload.get("stage_stats", {}),
+            "doc_path": str(hn_io.doc_path),
+            "stats_path": str(hn_io.stats_path),
+        }
+        if include_docs:
+            outputs["heavy_normalization"]["document"] = hn_payload.get("unified_document")
+
+    # Optional Stage 9: provenance
+    if include_provenance:
+        from backend.Preprocessing.phase_09_provenance.api import run_provenance
+
+        prov_items = []
+        try:
+            if include_heavy_normalization:
+                prov_items = (hn_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            prov_items = []
+        if not prov_items:
+            prov_items = readers_payload.get("items") or []
+
+        prov_io = router.stage_io("provenance")
+        prov_overrides: Dict[str, Any] = {"io": prov_io.as_overrides()}
+        prov_payload = run_provenance(prov_items, config_overrides=prov_overrides)
+        outputs["provenance"] = {
+            "stage_stats": prov_payload.get("stage_stats", {}),
+            "doc_path": str(prov_io.doc_path),
+            "stats_path": str(prov_io.stats_path),
+        }
+        if include_docs:
+            outputs["provenance"]["document"] = prov_payload.get("unified_document")
+
+    # Optional Stage 10: offsets
+    if include_offsets:
+        from backend.Preprocessing.phase_10_offsets.api import run_offsets
+
+        off_items = []
+        try:
+            if include_heavy_normalization:
+                off_items = (hn_payload.get("unified_document") or {}).get("items") or []  # type: ignore[name-defined]
+        except Exception:
+            off_items = []
+        if not off_items:
+            off_items = readers_payload.get("items") or []
+
+        off_io = router.stage_io("offsets")
+        off_overrides: Dict[str, Any] = {"io": off_io.as_overrides()}
+        off_payload = run_offsets(off_items, config_overrides=off_overrides)
+        outputs["offsets"] = {
+            "stage_stats": off_payload.get("stage_stats", {}),
+            "doc_path": str(off_io.doc_path),
+            "stats_path": str(off_io.stats_path),
+        }
+        if include_docs:
+            outputs["offsets"]["document"] = off_payload.get("unified_document")
+
     summary_path = router.chain_summary_path()
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     summary["summary_path"] = str(summary_path)
@@ -182,6 +417,8 @@ def run_preprocessing_chain(
 
 
 def _add_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add CLI arguments for the chain runner."""
+
     parser.add_argument(
         "--inputs",
         nargs="+",
@@ -211,9 +448,50 @@ def _add_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Embed stage documents and readers summary inside the chain summary JSON.",
     )
+    parser.add_argument(
+        "--include-merge",
+        action="store_true",
+        help="Include phase 03 (merge) after readers.",
+    )
+    parser.add_argument(
+        "--include-cleaning",
+        action="store_true",
+        help="Include phase 04 (cleaning) after readers or merge.",
+    )
+    parser.add_argument(
+        "--include-light-normalization",
+        action="store_true",
+        help="Include phase 05 (light_normalization) after cleaning/merge/readers.",
+    )
+    parser.add_argument(
+        "--include-segmentation",
+        action="store_true",
+        help="Include phase 06 (segmentation) after previous stages.",
+    )
+    parser.add_argument(
+        "--include-table-extraction",
+        action="store_true",
+        help="Include phase 07 (table_extraction) after previous stages.",
+    )
+    parser.add_argument(
+        "--include-heavy-normalization",
+        action="store_true",
+        help="Include phase 08 (heavy_normalization) after previous stages.",
+    )
+    parser.add_argument(
+        "--include-provenance",
+        action="store_true",
+        help="Include phase 09 (provenance) after previous stages.",
+    )
+    parser.add_argument(
+        "--include-offsets",
+        action="store_true",
+        help="Include phase 10 (offsets) after previous stages.",
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entry point for running the preprocessing chain."""
     parser = argparse.ArgumentParser(
         description="Run detect_type, encoding, and readers stages in sequence.",
     )
@@ -226,6 +504,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_id=args.run_id,
         normalize=not args.no_normalize,
         include_docs=args.include_docs,
+        include_merge=args.include_merge,
+        include_cleaning=args.include_cleaning,
+        include_light_normalization=args.include_light_normalization,
+        include_segmentation=args.include_segmentation,
+        include_table_extraction=args.include_table_extraction,
+        include_heavy_normalization=args.include_heavy_normalization,
+        include_provenance=args.include_provenance,
+        include_offsets=args.include_offsets,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0

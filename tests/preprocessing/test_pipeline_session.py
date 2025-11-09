@@ -46,39 +46,39 @@ def _load_unified_text(readers_dir: Path) -> str:
 
 
 # ===================== Detection import (robust) =====================
-from backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_helper_detection import process_detect_type_file
+from core.preprocessing.services.detect import DetectService
 
 
 def run_detection(file_path: Path) -> dict:
-    result = process_detect_type_file(str(file_path))  # May return a dataclass instance
-    try:
-        result = asdict(result)
-    except Exception:
-        pass
+    result = DetectService.detect_file(str(file_path))
     return _convert(result)
 
 
-# ===================== Readers import =====================
-from backend.Preprocessing.phase_02_readers.schemas.readers_schema_options import (
-    ReaderOptions,
-)
-from backend.Preprocessing.phase_02_readers.pipeline_workflow.readers_pipeline_main import (
-    ReadersOrchestrator,
-)
+# ===================== Readers via v2 API =====================
+from backend.Preprocessing.phase_02_readers.api import run_readers as run_readers_api
 
 
 def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> dict:
-    opts = ReaderOptions(
-        mode=rec.get("mode", "mixed"),
-        lang=rec.get("lang", "deu+eng"),
-        export_xlsx=export_xlsx,
-        native_ocr_overlay=True,
-        overlay_area_thr=0.12,
-        overlay_min_images=1,
-    )
-    orchestrator = ReadersOrchestrator(outdir, opts)
-    orchestrator.process([file_path])  # Produces readers/readers_summary.json and related outputs
-    summary_path = outdir / "readers" / "readers_summary.json"
+    readers_root = outdir / "readers"
+    readers_root.mkdir(parents=True, exist_ok=True)
+    overrides = {
+        "io": {
+            "out_doc_path": str(readers_root / "readers_doc_meta.json"),
+            "out_stats_path": str(readers_root / "readers_stage_stats.json"),
+            "out_summary_path": str(readers_root / "readers_summary.json"),
+        },
+        "options": {
+            # Map detection recommendations when present
+            "mode": rec.get("mode") or "mixed",
+            "lang": rec.get("lang") or "deu+eng",
+            # Best-effort export flag pass-through
+            "export_xlsx": bool(export_xlsx),
+        },
+    }
+    items = [{"path": str(file_path)}]
+    # Execute readers via standardized API; writers persist outputs based on overrides
+    run_readers_api(items, config_overrides=overrides)
+    summary_path = readers_root / "readers_summary.json"
     if summary_path.exists():
         try:
             return json.loads(summary_path.read_text(encoding="utf-8"))
@@ -88,70 +88,31 @@ def run_readers(file_path: Path, outdir: Path, rec: dict, export_xlsx: bool) -> 
 
 
 def run_encoding(readers_dir: Path, outdir: Path, file_path: Path | None = None) -> dict:
-    if file_path is not None:
-        try:
-            from backend.Preprocessing.phase_01_encoding.pipeline_workflow.encoding_pipeline import (
-                run_encoding_pipeline,
-            )
+    # Use v2 API; readers_dir not required anymore.
+    if file_path is None:
+        return {}
+    from backend.Preprocessing.phase_01_encoding.api import run_encoding as run_encoding_api
 
-            normalized_dir = outdir / "normalized"
-            payload = run_encoding_pipeline(
-                generic_items=[{"path": str(file_path), "normalize": True}],
-                config_overrides={
-                    "io": {
-                        "out_doc_path": str(outdir / "encoding_unified_document.json"),
-                        "out_stats_path": str(outdir / "encoding_stage_stats.json"),
-                    },
-                    "normalization": {
-                        "enabled": True,
-                        "out_dir": str(normalized_dir),
-                        "errors": "replace",
-                        "newline_policy": "lf",
-                    },
-                },
-            )
-            unified = _convert(payload.get("unified_document") or {})
-            (outdir / "encoding_unified_document.json").write_text(
-                json.dumps(unified, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            stats = _convert(payload.get("stage_stats") or {})
-            (outdir / "encoding_stage_stats.json").write_text(
-                json.dumps(stats, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            return unified
-        except Exception:
-            pass
-
-    raw_text = _load_unified_text(readers_dir)
-    if not raw_text:
-        stats = {
-            "error": "no unified_text (txt/jsonl) found",
-            "orig_len": 0,
-            "enc_len": 0,
-            "bytes_utf8": 0,
-            "lines": 0,
-        }
-        (outdir / "encoding_stats.json").write_text(
-            json.dumps(stats, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        return stats
-
-    normalized = _encode_text(raw_text)
-    (outdir / "text_utf8_nfc.txt").write_text(normalized, encoding="utf-8")
-    stats = {
-        "orig_len": len(raw_text),
-        "enc_len": len(normalized),
-        "bytes_utf8": len(normalized.encode("utf-8")),
-        "lines": normalized.count("\n") + (1 if normalized else 0),
+    normalized_dir = outdir / "normalized"
+    overrides = {
+        "io": {
+            "out_doc_path": str(outdir / "encoding_unified_document.json"),
+            "out_stats_path": str(outdir / "encoding_stage_stats.json"),
+        },
+        "normalization": {
+            "enabled": True,
+            "out_dir": str(normalized_dir),
+            "errors": "replace",
+            "newline_policy": "lf",
+        },
     }
-    (outdir / "encoding_stats.json").write_text(
-        json.dumps(stats, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    payload = run_encoding_api(
+        generic_items=[{"path": str(file_path), "normalize": True}],
+        config_overrides=overrides,
     )
-    return stats
+    # Files are already written by the writer; still return the unified doc
+    unified = _convert(payload.get("unified_document") or {})
+    return unified
 
 
 # ===================== Main =====================

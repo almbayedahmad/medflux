@@ -5,11 +5,19 @@
 # OUTCOME:
 #   Other phases or tools can request detection metadata via a single, stable
 #   method without importing phase internals directly.
+#
+# INPUTS:
+#   - input_path: str path to the document to detect.
+#
+# OUTPUTS:
+#   - Plain dict with detection details including recommended settings.
+#
+# DEPENDENCIES:
+#   - backend.Preprocessing.phase_00_detect_type.domain.process (v2 domain entry).
 
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 class DetectService:
@@ -27,18 +35,30 @@ class DetectService:
             Provides downstream-agnostic detection metadata.
         """
 
-        from backend.Preprocessing.phase_00_detect_type.internal_helpers.detect_type_helper_detection import (  # noqa: E501
-            process_detect_type_file,
+        # Use the v2 domain entrypoint to avoid direct dependence
+        # on legacy internal_helpers. Domain returns a unified payload
+        # with a list of items; we extract the one that matches input_path.
+        from backend.Preprocessing.phase_00_detect_type.domain.process import (
+            process_detect_type_classifier,
         )
 
-        result = process_detect_type_file(input_path)
-        if is_dataclass(result):
-            try:
-                return asdict(result)
-            except Exception:
-                pass
-        # best effort conversion
+        items: List[Dict[str, Any]] = [{"path": input_path}]
+        payload = process_detect_type_classifier(items, detection_overrides=None)  # type: ignore[arg-type]
         try:
-            return dict(result)  # type: ignore[arg-type]
+            docs = payload.get("unified_document", {}).get("items", [])  # type: ignore[assignment]
         except Exception:
-            return {"value": str(result)}
+            docs = []
+        # Prefer exact file match; fallback to first item
+        match = None
+        for it in docs:
+            try:
+                if str(it.get("file_path")) == str(input_path):
+                    match = it
+                    break
+            except Exception:
+                continue
+        match = match or (docs[0] if docs else None)
+        if isinstance(match, dict):
+            return match
+        # Fallback: return minimal mapping
+        return {"file_path": input_path, "details": {}, "recommended": {}}

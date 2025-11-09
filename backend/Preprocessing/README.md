@@ -112,6 +112,37 @@ phase_XX_stage/
         ��� SETTINGS_BASE.yaml
 ```
 
+Note: Entries marked “legacy” are deprecated and retained only for historical reference.
+
+### Phase Structure (v2 default)
+
+The v2 layout is the default going forward. Legacy folders above remain for a
+short deprecation window and emit import-time DeprecationWarning.
+
+```
+phase_XX_stage/
+??? __init__.py
+??? api.py                     # PhaseRunner-based public API
+??? cli/                       # v2 CLI(s)
+??? config/                    # Phase-specific configuration
+??? connectors/                # Connectors (config, upstream, metadata)
+??? domain/                    # Core processing logic
+??? io/                        # Writers / IO helpers
+??? schemas/                   # Data type definitions
+??? tests/                     # Unit tests
+??? common_files/              # Essential phase files
+    ??? docs/
+    ?   ??? README.md
+    ?   ??? CHANGELOG.md
+    ??? git/
+    ?   ??? Makefile
+    ?   ??? .gitmessage
+    ??? configs/
+        ??? ENV.sample
+        ??? LOGGING_BASE.yaml
+        ??? SETTINGS_BASE.yaml
+```
+
 ## Running the Pipeline
 
 ### Individual Phase
@@ -121,13 +152,23 @@ cd phase_XX_stage
 make run INPUTS="samples/sample_file.txt"
 ```
 
+### Individual Phase (v2 CLI)
+
+Use the phase-local v2 CLI under `cli/`:
+
+```bash
+python -m backend.Preprocessing.phase_00_detect_type.cli.detect_type_cli_v2 --help
+python -m backend.Preprocessing.phase_01_encoding.cli.encoding_cli_v2 --help
+python -m backend.Preprocessing.phase_02_readers.cli.readers_cli_v2 --help
+```
+
 ### Full Pipeline
 
 ```bash
 python -m core.preprocessing.pipeline.preprocessing_chain
 ```
 
-Outputs default to `MEDFLUX_OUTPUT_ROOT` (or `<repo>/outputs/preprocessing`). Override with `--output-root` when running smoke tests to keep artifacts out of the repo. The legacy `python main_pre_pipeline/preprocessing_chain.py` entrypoint remains as a compatibility shim that simply imports the new module.
+Outputs default to `MEDFLUX_OUTPUT_ROOT` (or `<repo>/outputs/preprocessing`). Override with `--output-root` when running smoke tests to keep artifacts out of the repo. Use the v2 CLIs under each phase’s `cli/` directory; legacy `pipeline_workflow/*` entrypoints are retired.
 
 ## Testing
 
@@ -164,6 +205,20 @@ Test files are available in `samples/`:
 - Project-wide policies moved to `core/policy/`
 - Phase-specific files remain in each phase's `common_files/`
 - Phase generator script replaces manual template copying
+
+## Deprecations & Guards
+
+- Legacy import path `connecters/` is deprecated. Use `connectors/` in all new code.
+- A pre-commit hook blocks adding new imports of `connecters/`. Existing usages
+  remain for a deprecation window and emit `DeprecationWarning` at import time.
+- New preferred module layout per phase (v2):
+  - `api.py` (PhaseRunner-based public API)
+  - `cli/` (v2 CLI entrypoint)
+  - `connectors/` (config + upstream)
+  - `domain/` (core processing)
+  - `io/` (writers)
+
+See `CHANGELOG.md` for the PhaseRunner adoption notes and migration plan.
 
 ## Support
 

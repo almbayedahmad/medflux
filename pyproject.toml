@@ -5,6 +5,9 @@ requires-python = ">=3.11"
 description = "MedFlux core services"
 readme = "README.md"
 
+[project.scripts]
+medflux = "core.cli.medflux:main"
+
 [project.optional-dependencies]
 monitoring = [
   "prometheus-client>=0.17.0",

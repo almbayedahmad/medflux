@@ -9,11 +9,15 @@
 from __future__ import annotations
 
 from core.preprocessing.cli.common import run_phase_cli
-from core.preprocessing.phase_api import PhaseSpec
 from ..api import EncodingRunner, PHASE_ID, PHASE_NAME_DEFAULT
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the encoding phase CLI wrapper using the shared toolkit.
+
+    Outcome:
+        Ensures a consistent CLI UX across phases.
+    """
     return run_phase_cli(
         EncodingRunner,
         spec_kwargs={"phase_id": PHASE_ID, "name": PHASE_NAME_DEFAULT},

@@ -1,63 +1,26 @@
-# Base Logging Configuration
+# PURPOSE: Minimal per-phase logging overrides for v2 categories.
+# OUTCOME: Relies on central policy; only tweak logger levels per phase if needed.
 
-# This file defines the base logging configuration for all phases
-# It should be extended by phase-specific logging configurations
-
-meta:
-  version: "1.0.0"
-  id: "logging_base"
-  updated_at: "{{CREATED_AT}}"
-  description: "Base logging configuration for all phases"
-
-# Logging configuration
 logging:
-  # Version
-  version: 1
-
-  # Disable existing loggers
-  disable_existing_loggers: false
-
-  # Formatters
-  formatters:
-    # Standard formatter
-    standard:
-      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-      datefmt: "%Y-%m-%d %H:%M:%S"
-
-    # Detailed formatter
-    detailed:
-      format: "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s"
-      datefmt: "%Y-%m-%d %H:%M:%S"
-
-    # JSON formatter
-    json:
-      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-      datefmt: "%Y-%m-%d %H:%M:%S"
-
-    # Simple formatter
-    simple:
-      format: "%(levelname)s - %(message)s"
-
-    # Colored formatter
-    colored:
-      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-      datefmt: "%Y-%m-%d %H:%M:%S"
-      class: "colorlog.ColoredFormatter"
-      style: "%"
-      log_colors:
-        DEBUG: "cyan"
-        INFO: "green"
-        WARNING: "yellow"
-        ERROR: "red"
-        CRITICAL: "red,bg_white"
-
-  # Handlers
-  handlers:
-    # Console handler
-    console:
-      class: "logging.StreamHandler"
-      level: "INFO"
-      formatter: "standard"
+  loggers:
+    domain:
+      level: INFO
+      propagate: true
+    cli:
+      level: INFO
+      propagate: true
+    io:
+      level: INFO
+      propagate: true
+    connectors:
+      level: INFO
+      propagate: true
+    schemas:
+      level: WARNING
+      propagate: true
+    tests:
+      level: INFO
+      propagate: true
       stream: "ext://sys.stdout"
 
     # File handler
@@ -115,19 +78,19 @@ logging:
       propagate: false
 
     # Core functions logger
-    "{{PHASE_NAME}}.core_functions":
+    "{{PHASE_NAME}}.domain":
       level: "DEBUG"
       handlers: ["file", "error_file"]
       propagate: false
 
     # Pipeline workflow logger
-    "{{PHASE_NAME}}.pipeline_workflow":
+    "{{PHASE_NAME}}.cli":
       level: "DEBUG"
       handlers: ["console", "file", "error_file"]
       propagate: false
 
     # Connectors logger
-    "{{PHASE_NAME}}.connecters":
+    "{{PHASE_NAME}}.connectors":
       level: "DEBUG"
       handlers: ["file", "error_file"]
       propagate: false
@@ -139,13 +102,13 @@ logging:
       propagate: false
 
     # Outputs logger
-    "{{PHASE_NAME}}.outputs":
+    "{{PHASE_NAME}}.io":
       level: "DEBUG"
       handlers: ["file", "error_file"]
       propagate: false
 
     # Internal helpers logger
-    "{{PHASE_NAME}}.internal_helpers":
+    "{{PHASE_NAME}}.domain":
       level: "DEBUG"
       handlers: ["file"]
       propagate: false

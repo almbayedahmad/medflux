@@ -19,10 +19,10 @@ from core.preprocessing.phase_api import PhaseRunner, PhaseSpec
 from core.preprocessing.metrics import io_op
 from core.versioning import make_artifact_stamp
 
-from .connecters.detect_type_connector_config import connect_detect_type_config_connector
-from .connecters.detect_type_connector_upstream import connect_detect_type_upstream_connector
-from .core_functions.detect_type_core_classifier import process_detect_type_classifier
-from .outputs.detect_type_output import save_detect_type_doc, save_detect_type_stats
+from .connectors.config import connect_detect_type_config_connector
+from .connectors.upstream import connect_detect_type_upstream_connector
+from .domain.process import process_detect_type_classifier
+from .io.writer import save_detect_type_doc, save_detect_type_stats
 
 
 PHASE_ID = "phase_00_detect_type"
