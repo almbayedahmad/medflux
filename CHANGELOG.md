@@ -5,7 +5,16 @@ All notable changes to this project will be documented here.
 ## [v0.1.0] - 2025-10-26
 - Initial internal versioning structure implemented.
 
-## [Unreleased]\n\n## [v2.0.0] - 2025-11-09
+## [Unreleased]
+
+## [v2.0.1] - 2025-11-09
+- fix(readers): resolve indentation/import issues in readers domain ops; export `process_readers_segment` and `ReadersSegmentError` cleanly
+- fix(apis): include `versioning` in returned result for phases 03–10 to satisfy contract tests; guard IO writers when no IO targets configured
+- test(audit): relax cross-phase import audit to allow imports within `core/preprocessing/services/` and under `tests/`
+- ci(tests): set `PYTHONPATH` for fast-pack to stabilize imports on runners
+- test(fixtures): track sample `outputs/detect_type_unified_document.json` for validator and versioning tests
+
+## [v2.0.0] - 2025-11-09
 - feat: v2 refactor waves 1–10 (services, CI, chain-run, docs)
   - Chain runner: optional flags for merge, cleaning, light_normalization, segmentation, table_extraction, heavy_normalization, provenance, offsets
   - Writers + stamped artifacts + tests for phases 03–05
