@@ -27,6 +27,9 @@ from backend.Preprocessing.phase_02_readers.api import (
 from backend.Preprocessing.phase_03_merge.api import (
     run_merge,
 )
+from core.logging import get_logger
+
+logger = get_logger("cli")
 
 
 def _resolve_inputs(inputs: Sequence[str]) -> List[str]:
@@ -513,7 +516,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         include_provenance=args.include_provenance,
         include_offsets=args.include_offsets,
     )
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    logger.info(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
 

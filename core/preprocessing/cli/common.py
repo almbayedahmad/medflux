@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from typing import Any, Dict, Optional, Sequence, Type
+from core.logging import get_logger
 
 from core.preprocessing.phase_api import PhaseRunner
 
@@ -75,11 +76,11 @@ def run_phase_cli(
         config_overrides={"io": {"out_root": args.output_root}} if args.output_root else None,
         run_id=args.run_id,
     )
-    # Print minimal JSON for quick inspection
+    # Log minimal JSON for quick inspection (no stdout prints)
+    logger = get_logger("cli")
     try:
         import json
-
-        print(json.dumps({k: v for k, v in result.items() if k != "payload"}, ensure_ascii=False, indent=2))
+        logger.info(json.dumps({k: v for k, v in result.items() if k != "payload"}, ensure_ascii=False, indent=2))
     except Exception:
-        pass
+        logger.info("{result}")
     return 0

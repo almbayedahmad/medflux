@@ -22,6 +22,9 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any, Dict, List
+from core.logging import get_logger, configure_logging
+
+logger = get_logger("cli")
 
 
 def _coerce_inputs(values: List[str]) -> List[str]:
@@ -35,7 +38,16 @@ def _coerce_inputs(values: List[str]) -> List[str]:
 
 
 def _print(obj: Dict[str, Any]) -> None:
-    print(json.dumps(obj, ensure_ascii=False, indent=2))
+    """Emit JSON payload via structured logging (CLI channel).
+
+    Outcome:
+        Replaces direct stdout printing with policy-compliant logging.
+    """
+    try:
+        logger.info(json.dumps(obj, ensure_ascii=False, indent=2))
+    except Exception:
+        # Best-effort fallback to plain string if serialization fails
+        logger.info(str(obj))
 
 
 def cmd_phase_list(_args: argparse.Namespace) -> None:
