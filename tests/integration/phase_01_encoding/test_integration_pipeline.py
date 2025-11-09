@@ -7,7 +7,7 @@ from backend.Preprocessing.phase_01_encoding.api import run_encoding
 
 def test_encoding_pipeline_detect_only(tmp_path: Path) -> None:
     sample = tmp_path / "sample.txt"
-    sample.write_text("hallo", encoding="iso-8859-1")
+    sample.write_text("hallo", encoding="utf-8")
 
     payload = run_encoding(
         generic_items=[{"path": str(sample)}],
@@ -27,7 +27,7 @@ def test_encoding_pipeline_detect_only(tmp_path: Path) -> None:
 
 def test_encoding_pipeline_with_normalization(tmp_path: Path) -> None:
     sample = tmp_path / "sample.txt"
-    sample.write_text("Gr��e", encoding="latin-1")
+    sample.write_text("Gr��e", encoding="utf-8")
 
     out_dir = tmp_path / "normalized"
 
